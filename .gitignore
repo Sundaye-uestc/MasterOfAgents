@@ -1,0 +1,29 @@
+# AgentVerse reference project (not part of AgentHub)
+AgentVerse/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.vite/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+
+# Logs
+*.log
