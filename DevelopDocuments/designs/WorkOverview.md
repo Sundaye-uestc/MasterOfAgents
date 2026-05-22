@@ -3,7 +3,7 @@
 ## 1. 文档定位
 
 本文用于说明 AgentHub 的整体工作范围、阶段划分和交付节奏。  
-具体系统架构、模块边界和接口细节以 `DevelopDocuments/` 下的设计文档为准。
+具体系统架构、模块边界和接口细节以 `DevelopDocuments/designs/` 下的设计文档为准。
 
 简版时间线见：
 
@@ -24,18 +24,21 @@
 D:\Projects\MasterOfAgents\
 ├── AgentHub-_多Agent协作平台设计.pdf
 ├── DevelopDocuments/
-│   ├── WorkOverview.md
-│   ├── Timeline.md
-│   ├── AgentHub-web端系统设计.md
-│   ├── AgentHub-web端模块设计.md
-│   ├── AgentHub-桌面端系统设计.md
-│   ├── AgentHub-桌面端模块设计.md
-│   ├── AgentHub-移动端系统设计.md
-│   └── AgentHub-移动端模块设计.md
+│   ├── designs/
+│   │   ├── WorkOverview.md
+│   │   ├── Timeline.md
+│   │   ├── AgentHub-web端系统设计.md
+│   │   ├── AgentHub-web端模块设计.md
+│   │   ├── AgentHub-桌面端系统设计.md
+│   │   ├── AgentHub-桌面端模块设计.md
+│   │   ├── AgentHub-移动端系统设计.md
+│   │   └── AgentHub-移动端模块设计.md
+│   └── log/
 ├── AgentVerse/
 └── AgentHub/
     ├── apps/web/
     ├── apps/server/
+    ├── DevelopDocuments/log/
     └── packages/shared/
 ```
 
@@ -43,13 +46,13 @@ D:\Projects\MasterOfAgents\
 
 | 交付物 | 说明 |
 |---|---|
-| 产品/技术设计文档 | `DevelopDocuments/` 下的系统设计、模块设计、工作总览、时间线 |
+| 产品/技术设计文档 | `DevelopDocuments/designs/` 下的系统设计、模块设计、工作总览、时间线 |
 | 可运行 Demo | 以 Web 端为主，覆盖单聊、群聊、产物预览和基础部署 |
 | AI 协作开发记录 | 记录 Spec、Skill、Rules、关键技术决策 |
 | 3 分钟 Demo 视频 | 展示核心链路和产品亮点 |
 
 ## 4. 开发阶段
-//TODO 
+
 ### Phase 0：平台接入验证
 
 目标：
