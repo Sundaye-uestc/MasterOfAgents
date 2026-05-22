@@ -1,6 +1,3 @@
-# AgentVerse reference project (not part of AgentHub)
-AgentVerse/
-
 # Dependencies
 node_modules/
 
@@ -34,6 +31,9 @@ AgentHub/apps/web/pnpm-lock.yaml
 
 # TypeScript build info
 *.tsbuildinfo
+
+# Python
+__pycache__/
 
 # Logs
 *.log
