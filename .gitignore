@@ -35,5 +35,8 @@ AgentHub/apps/web/pnpm-lock.yaml
 # Python
 __pycache__/
 
+# Design documents (PDF)
+*.pdf
+
 # Logs
 *.log
