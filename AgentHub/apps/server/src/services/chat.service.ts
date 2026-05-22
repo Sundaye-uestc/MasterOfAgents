@@ -1,5 +1,5 @@
 // ============================================================
-// ChatService �?conversation & message management
+// ChatService �?conversation & message management
 // ============================================================
 
 import { getDb, schema } from "../db/index.js";
@@ -33,7 +33,7 @@ export class ChatService {
     const members = db
       .select()
       .from(schema.conversationMembers)
-      .innerJoin(schema.agents, eq(schema.conversationMembers.agentId, schema.agents.id))
+      .leftJoin(schema.agents, eq(schema.conversationMembers.agentId, schema.agents.id))
       .all() as any[];
     const map: Record<string, any> = {};
     for (const row of members) {
@@ -59,7 +59,7 @@ export class ChatService {
       .get() as any;
   }
 
-  async createConversation(input: { title: string; type?: "direct" | "group"; agentId?: string }): Promise<ConversationRow> {
+  async createConversation(input: { title: string; type?: "direct" | "group"; agentId?: string; agentIds?: string[] }): Promise<ConversationRow> {
     const db = getDb();
     const now = nowISO();
     const row: typeof schema.conversations.$inferInsert = {
@@ -72,12 +72,13 @@ export class ChatService {
     };
     db.insert(schema.conversations).values(row).run();
 
-    // If an agent is specified, add as conversation member
-    if (input.agentId) {
+    // Collect agent IDs from both single and multi params
+    const ids = input.agentIds ?? (input.agentId ? [input.agentId] : []);
+    for (const agentId of ids) {
       db.insert(schema.conversationMembers).values({
         id: newId(),
         conversationId: row.id,
-        agentId: input.agentId,
+        agentId,
         role: "participant",
         autoReply: 1,
         joinedAt: now,
@@ -88,6 +89,59 @@ export class ChatService {
   }
 
   /** Get the agent ID assigned to a conversation (first member) */
+  // --- Member Management ---
+
+  async addMember(conversationId: string, agentId: string, role: string = "participant"): Promise<any> {
+    const db = getDb();
+    const now = nowISO();
+    const row = {
+      id: newId(),
+      conversationId,
+      agentId,
+      role,
+      autoReply: 1,
+      joinedAt: now,
+    };
+    db.insert(schema.conversationMembers).values(row).run();
+    return row;
+  }
+
+  async removeMember(conversationId: string, agentId: string): Promise<void> {
+    const db = getDb();
+    db.delete(schema.conversationMembers)
+      .where(
+        and(
+          eq(schema.conversationMembers.conversationId, conversationId),
+          eq(schema.conversationMembers.agentId, agentId)
+        )
+      )
+      .run();
+  }
+
+  async listMembers(conversationId: string): Promise<Array<{ member: any; agent: any }>> {
+    const db = getDb();
+    const rows = db
+      .select()
+      .from(schema.conversationMembers)
+      .leftJoin(schema.agents, eq(schema.conversationMembers.agentId, schema.agents.id))
+      .where(eq(schema.conversationMembers.conversationId, conversationId))
+      .all() as any[];
+    return rows.map((r: any) => ({
+      member: r.conversation_members,
+      agent: r.agents,
+    }));
+  }
+
+  async getMembersForConversation(conversationId: string): Promise<Array<{ agentId: string; agentName: string; role: string; adapterKind: string }>> {
+    const members = await this.listMembers(conversationId);
+    return members.map((m) => ({
+      agentId: m.agent?.id ?? m.member?.agentId ?? m.member?.agent_id,
+      agentName: m.agent?.name ?? "",
+      role: m.member?.role ?? "participant",
+      adapterKind: (m.agent?.adapterKind ?? m.agent?.adapter_kind ?? "custom") as string,
+    }));
+  }
+
   async getConversationAgent(conversationId: string): Promise<string | null> {
     const db = getDb();
     const member = db
@@ -301,5 +355,47 @@ export class ChatService {
       .limit(limit)
       .all()
       .reverse() as any;
+  }
+
+  // --- Intent Detection ---
+
+  /** Detect "create agent" intent from user message */
+  detectCreateAgentIntent(message: string): {
+    name: string;
+    platform: string;
+    capabilities: string[];
+    systemPrompt?: string;
+  } | null {
+    const patterns = [
+      /(?:创建|新建|添加|create|add|new|做一个|写一个|帮我做)\s*(?:一个|个)?(?:(?:名叫|叫|名称是|名为|named)\s*\S+\s*(?:的|之)?)?\s*(?:agent|智能体|助手|机器人|codex|opencode)/i,
+      /(?:create|make|build)\s+(?:a\s+)?(?:new\s+)?(?:agent|智能体|助手|机器人|bot)\s*(?:called|named|名叫|叫)?/i,
+    ];
+
+    const matched = patterns.some((p) => p.test(message));
+    if (!matched) return null;
+
+    // Extract name
+    const nameMatch = message.match(/(?:名叫|叫|名称是|名为|called|named|name\s*(?:is|:)?)\s*["""]?(\S+)/i);
+    const name = nameMatch?.[1]?.trim() ?? "Custom Agent";
+
+    // Extract platform
+    const platform = message.includes("codex") ? "codex"
+      : message.includes("opencode") ? "opencode"
+      : "claude-code";
+
+    // Extract capabilities from keywords
+    const capabilities: string[] = [];
+    if (/(?:代码|code|编程|programming)/i.test(message)) capabilities.push("code-generation");
+    if (/(?:调试|debug|bug|fix)/i.test(message)) capabilities.push("debugging");
+    if (/(?:文件|file|read|write|读写)/i.test(message)) capabilities.push("file-management");
+    if (/(?:测试|test)/i.test(message)) capabilities.push("testing");
+    if (/(?:分析|analysis|review|审查)/i.test(message)) capabilities.push("analysis");
+    if (capabilities.length === 0) capabilities.push("code-generation");
+
+    // Extract system prompt
+    const spMatch = message.match(/(?:system\s*prompt|系统提示|prompt|指令|要求)[：:]\s*(.+?)(?:$|(?:\n|。|\.\s))/i);
+    const systemPrompt = spMatch?.[1]?.trim();
+
+    return { name, platform, capabilities, systemPrompt };
   }
 }

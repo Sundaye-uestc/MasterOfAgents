@@ -23,6 +23,7 @@ export class AgentRuntimeService {
   private adapters = new Map<string, AgentPlatformAdapter>();
   private activeRuns = new Map<string, AbortController>();
   private abortedRuns = new Set<string>();
+  private runAdapterMap = new Map<string, string>(); // runId -> agentConfigId
 
   async getAdapter(agentConfig: AgentConfig): Promise<AgentPlatformAdapter> {
     const key = agentConfig.id;
@@ -80,6 +81,7 @@ export class AgentRuntimeService {
     this.activeRuns.set(runId, abortController);
 
     const adapter = await this.getAdapter(agentConfig);
+    this.runAdapterMap.set(runId, agentConfig.id);
 
     // Run async — stream events back through callback
     (async () => {
@@ -158,6 +160,23 @@ export class AgentRuntimeService {
 
   isRunAborted(runId: string): boolean {
     return this.abortedRuns.has(runId);
+  }
+
+  async handlePermissionResponse(runId: string, permissionId: string, approved: boolean): Promise<void> {
+    const agentConfigId = this.runAdapterMap.get(runId);
+    if (!agentConfigId) {
+      console.warn(`[runtime] no adapter mapping for run ${runId}`);
+      return;
+    }
+    const adapter = this.adapters.get(agentConfigId);
+    if (!adapter) {
+      console.warn(`[runtime] adapter not found for ${agentConfigId}`);
+      return;
+    }
+    // Call respondToPermission if the adapter supports it
+    if ("respondToPermission" in adapter && typeof (adapter as any).respondToPermission === "function") {
+      (adapter as any).respondToPermission(runId, permissionId, approved ? "allow" : "deny");
+    }
   }
 
   async stopRun(runId: string): Promise<void> {

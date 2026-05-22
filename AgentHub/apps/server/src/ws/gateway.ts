@@ -4,6 +4,7 @@
 
 import { WebSocketServer, WebSocket } from "ws";
 import type { AgentEvent, ServerWsEvent, ClientWsEvent } from "@agenthub/shared";
+import { getAgentRuntimeService } from "../services/agent-runtime.service.js";
 
 const rooms = new Map<string, Set<WebSocket>>();
 
@@ -40,7 +41,7 @@ export function initWsGateway(httpServer: HttpServerLike): WebSocketServer {
   return wss;
 }
 
-function handleClientEvent(ws: WebSocket, event: ClientWsEvent) {
+async function handleClientEvent(ws: WebSocket, event: ClientWsEvent) {
   switch (event.type) {
     case "join:conversation":
       joinRoom(event.conversationId, ws);
@@ -52,6 +53,11 @@ function handleClientEvent(ws: WebSocket, event: ClientWsEvent) {
     case "typing":
       broadcastToConversation(event.conversationId, { type: "typing", conversationId: event.conversationId });
       break;
+    case "permission:respond": {
+      const runtime = getAgentRuntimeService();
+      await runtime.handlePermissionResponse(event.runId, event.permissionId, event.approved);
+      break;
+    }
   }
 }
 
@@ -108,6 +114,8 @@ export function agentEventToWsEvent(event: AgentEvent): ServerWsEvent | null {
       return { type: "file:changed", change: event };
     case "artifact_created":
       return { type: "artifact:created", artifact: event };
+    case "permission_request":
+      return { type: "permission:requested", permission: event };
     default:
       return null;
   }

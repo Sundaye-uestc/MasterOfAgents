@@ -5,6 +5,7 @@
 import { Hono } from "hono";
 import { ChatService } from "../services/chat.service.js";
 import { getAgentRuntimeService } from "../services/agent-runtime.service.js";
+import { OrchestratorService } from "../services/orchestrator.service.js";
 import type { AgentConfig } from "@agenthub/shared";
 import { broadcastToConversation, agentEventToWsEvent } from "../ws/gateway.js";
 
@@ -82,6 +83,25 @@ conversationRoutes.patch("/:id/unarchive", async (c) => {
   return c.json({ ok: true });
 });
 
+// --- List members ---
+conversationRoutes.get("/:id/members", async (c) => {
+  const members = await chat.getMembersForConversation(c.req.param("id")!);
+  return c.json(members);
+});
+
+// --- Add member ---
+conversationRoutes.post("/:id/members", async (c) => {
+  const body = await c.req.json<{ agentId: string; role?: string }>();
+  const member = await chat.addMember(c.req.param("id")!, body.agentId, body.role);
+  return c.json(member, 201);
+});
+
+// --- Remove member ---
+conversationRoutes.delete("/:id/members/:agentId", async (c) => {
+  await chat.removeMember(c.req.param("id")!, c.req.param("agentId")!);
+  return c.json({ ok: true });
+});
+
 // --- List messages ---
 conversationRoutes.get("/:id/messages", async (c) => {
   const msgs = await chat.listMessages(c.req.param("id")!);
@@ -112,6 +132,10 @@ conversationRoutes.post("/:id/messages", async (c) => {
   }>();
   const conversationId = c.req.param("id")!;
 
+  // Get conversation info to decide direct vs orchestrated
+  const conv = await chat.getConversation(conversationId);
+  const members = await chat.getMembersForConversation(conversationId);
+
   // Persist user message
   const userMsg = await chat.createMessage({
     conversationId,
@@ -119,6 +143,34 @@ conversationRoutes.post("/:id/messages", async (c) => {
     content: body.content,
     replyToId: body.replyToId,
   });
+
+  const isGroupChat = conv?.type === "group" && members.length > 1;
+
+  if (isGroupChat) {
+    // --- Orchestrated run ---
+    const agentConfigs: AgentConfig[] = members.map((m) => ({
+      id: m.agentId,
+      name: m.agentName,
+      platform: "claude-code" as const,
+      status: "online" as const,
+      capabilities: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }));
+
+    const orchestrator = new OrchestratorService(chat);
+    const { runId, plan } = await orchestrator.startOrchestratedRun({
+      conversationId,
+      triggerMessageId: userMsg.id,
+      prompt: body.content,
+      agentConfigs,
+      systemPrompt: body.systemPrompt,
+    });
+
+    return c.json({ userMessage: userMsg, runId, plan, mode: "orchestrated" }, 201);
+  }
+
+  // --- Direct run (existing flow) ---
 
   // Build agent config
   const agentConfig: AgentConfig = {

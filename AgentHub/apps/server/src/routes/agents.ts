@@ -44,6 +44,34 @@ agentRoutes.post("/", async (c) => {
   return c.json(row, 201);
 });
 
+// --- Create agent from draft (conversational) ---
+agentRoutes.post("/from-draft", async (c) => {
+  const body = await c.req.json<{
+    name: string;
+    platform?: string;
+    capabilities?: string[];
+    systemPrompt?: string;
+  }>();
+  const db = getDb();
+  const now = nowISO();
+  const id = newId();
+  const row = {
+    id,
+    name: body.name,
+    slug: body.name.toLowerCase().replace(/\s+/g, "-"),
+    adapterKind: body.platform ?? "claude-code",
+    configJson: JSON.stringify({ systemPrompt: body.systemPrompt ?? "" }),
+    capabilitiesJson: JSON.stringify(body.capabilities ?? []),
+    status: "online",
+    isCustom: 1,
+    enabled: 1,
+    createdAt: now,
+    updatedAt: now,
+  };
+  db.insert(schema.agents).values(row).run();
+  return c.json(row, 201);
+});
+
 // --- Get agent ---
 agentRoutes.get("/:id", (c) => {
   const db = getDb();

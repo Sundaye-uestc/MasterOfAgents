@@ -65,7 +65,7 @@ export class ProcessSupervisor extends EventEmitter {
     const child = spawn(spec.command, spec.args, {
       cwd: spec.cwd,
       env: { ...process.env, ...spec.env },
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["pipe", "pipe", "pipe"],
     });
 
     const timer = setTimeout(() => {
@@ -163,6 +163,13 @@ export class ProcessSupervisor extends EventEmitter {
       // Process already exited
     }
     this.processes.delete(processId);
+  }
+
+  writeStdin(processId: string, data: string): void {
+    const proc = this.processes.get(processId);
+    if (proc?.child.stdin && !proc.child.stdin.destroyed) {
+      proc.child.stdin.write(data);
+    }
   }
 
   async dispose(): Promise<void> {

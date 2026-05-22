@@ -19,11 +19,28 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
   private supervisor = new ProcessSupervisor();
   private agentConfig: AgentConfig | null = null;
   private activeRunIds = new Set<string>();
+  private activeSupervisors = new Map<string, ProcessSupervisor>();
+  private permissionMode: "bypass" | "interactive";
+
+  constructor(options?: { permissionMode?: "bypass" | "interactive" }) {
+    this.permissionMode = options?.permissionMode ?? "interactive";
+  }
 
   async prepare(agent: AgentConfig): Promise<void> {
     this.agentConfig = agent;
-    // Verify claude is available
     await this.verifyCli();
+  }
+
+  /** Respond to a permission request by writing to the subprocess stdin */
+  respondToPermission(runId: string, permissionId: string, response: "allow" | "deny"): void {
+    const sup = this.activeSupervisors.get(runId);
+    if (!sup) {
+      console.warn(`[claude-adapter] no supervisor for run ${runId}`);
+      return;
+    }
+    // Claude CLI expects "allow\n" or "deny\n" on stdin
+    const input = response === "allow" ? `allow\n` : `deny\n`;
+    sup.writeStdin(`claude-${runId}`, input);
   }
 
   private async verifyCli(): Promise<void> {
@@ -61,8 +78,11 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
       "--output-format", "stream-json",
       "--no-session-persistence",
       "--verbose",
-      "--permission-mode", "bypassPermissions",
     ];
+
+    if (this.permissionMode === "bypass") {
+      args.push("--permission-mode", "bypassPermissions");
+    }
 
     if (systemPrompt) {
       args.push("--system-prompt", systemPrompt);
@@ -77,6 +97,7 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
     }
 
     try {
+      this.activeSupervisors.set(runId, sup);
       const events = this.runViaEventEmitter(sup, processId, args, workingDir, runId, agentId, signal);
       for await (const event of events) {
         yield event;
@@ -90,6 +111,7 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
       };
     } finally {
       this.activeRunIds.delete(runId);
+      this.activeSupervisors.delete(runId);
       await sup.dispose();
     }
   }
@@ -151,7 +173,19 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
             break;
           }
           case "stderr":
-            yield { type: "log", runId, level: "warn", message: ev.line, timestamp: Date.now() };
+            // Detect permission prompts from stderr patterns
+            if (/permission|approval|grant|authorization/i.test(ev.line)) {
+              yield {
+                type: "permission_request",
+                runId,
+                permissionId: `perm-${runId}-${Date.now()}`,
+                toolName: "unknown",
+                description: ev.line,
+                timestamp: Date.now(),
+              };
+            } else {
+              yield { type: "log", runId, level: "warn", message: ev.line, timestamp: Date.now() };
+            }
             break;
           case "error":
             yield { type: "run_failed", runId, error: ev.error, timestamp: Date.now() };
