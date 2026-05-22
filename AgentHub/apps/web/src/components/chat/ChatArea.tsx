@@ -1,29 +1,90 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { MessageRow } from "@agenthub/shared";
-import { listMessages, sendMessage, stopRun, deleteMessage } from "../../lib/api.js";
+import { listMessages, sendMessage, stopRun, deleteMessage, listMembers, listAgents } from "../../lib/api.js";
 import { useWebSocket } from "../../hooks/useWebSocket.js";
 import type { WsServerEvent } from "../../hooks/useWebSocket.js";
+import { useOrchestrationState } from "../../hooks/useOrchestrationState.js";
 import { MessageInput } from "./MessageInput.js";
+import { PermissionModal } from "./PermissionModal.js";
+import { OrchestratorStatusBar } from "./OrchestratorStatusBar.js";
+import { AgentBadge } from "./AgentBadge.js";
+
+interface MemberInfo {
+  agentId: string;
+  agentName: string;
+  role: string;
+  adapterKind: string;
+}
 
 interface Props {
   conversationId: string;
   onRefreshList: () => void;
   agentId?: string;
+  conversationType?: "direct" | "group";
+  conversationTitle?: string;
+  adapterKind?: string;
+  userAvatar?: string | null;
 }
 
-export function ChatArea({ conversationId, onRefreshList, agentId }: Props) {
+export function ChatArea({ conversationId, onRefreshList, agentId, conversationType, conversationTitle, adapterKind, userAvatar }: Props) {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null);
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [members, setMembers] = useState<MemberInfo[]>([]);
+  const [permRequest, setPermRequest] = useState<{
+    permissionId: string;
+    toolName: string;
+    description: string;
+    command?: string;
+    runId: string;
+  } | null>(null);
+  const [orchBarExpanded, setOrchBarExpanded] = useState(false);
+  const [agentCapabilities, setAgentCapabilities] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const { state: orch, handleWsEvent: handleOrchEvent, reset: resetOrch } = useOrchestrationState();
+
+  // Load members for group chats
+  useEffect(() => {
+    if (conversationType === "group") {
+      listMembers(conversationId)
+        .then(setMembers)
+        .catch(() => {});
+    } else {
+      setMembers([]);
+    }
+  }, [conversationId, conversationType]);
+
+  // Load agent capabilities for direct chats
+  useEffect(() => {
+    if (conversationType !== "group" && agentId) {
+      listAgents()
+        .then((agents) => {
+          const agent = agents.find((a) => a.id === agentId);
+          if (agent?.capabilitiesJson) {
+            try {
+              const caps = JSON.parse(agent.capabilitiesJson) as Array<{ label: string; value: string }>;
+              setAgentCapabilities(caps.map((c) => c.label ?? c.value ?? c).slice(0, 5));
+              return;
+            } catch {}
+          }
+          setAgentCapabilities([]);
+        })
+        .catch(() => setAgentCapabilities([]));
+    } else {
+      setAgentCapabilities([]);
+    }
+  }, [conversationId, conversationType, agentId]);
 
   // Load messages on mount / conversation change
   useEffect(() => {
     setLoading(true);
     setMessages([]);
     setStreamingMsgId(null);
+    resetOrch();
+    setPermRequest(null);
     listMessages(conversationId)
       .then((msgs) => {
         setMessages(msgs);
@@ -36,6 +97,9 @@ export function ChatArea({ conversationId, onRefreshList, agentId }: Props) {
   // WebSocket for real-time events
   const onWsEvent = useCallback(
     (event: WsServerEvent) => {
+      // Route orchestration events
+      handleOrchEvent(event);
+
       switch (event.type) {
         case "message:created": {
           const msg = event.message as MessageRow;
@@ -83,21 +147,42 @@ export function ChatArea({ conversationId, onRefreshList, agentId }: Props) {
           setStreamingMsgId(null);
           setCurrentRunId(null);
           break;
+        case "permission:requested": {
+          const perm = event.permission as any;
+          setPermRequest({
+            permissionId: perm.permissionId ?? perm.id ?? "",
+            toolName: perm.toolName ?? "unknown",
+            description: perm.description ?? "",
+            command: perm.command,
+            runId: perm.runId ?? "",
+          });
+          break;
+        }
+        case "tool:invocation": {
+          // Tool invocation will be displayed via tool_invocations DB records
+          break;
+        }
+        case "orchestrator:plan_created":
+          setOrchBarExpanded(true);
+          break;
       }
     },
-    [onRefreshList]
+    [onRefreshList, handleOrchEvent]
   );
 
-  useWebSocket(conversationId, onWsEvent);
+  const { send: wsSend } = useWebSocket(conversationId, onWsEvent);
 
   const scrollToBottom = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const handleSend = useCallback(
-    async (content: string, replyToId?: string) => {
+    async (content: string, replyToId?: string, mentionedAgentIds?: string[]) => {
       try {
-        const result = await sendMessage(conversationId, content, replyToId, agentId);
+        const effectiveAgentId = mentionedAgentIds && mentionedAgentIds.length === 1 && !agentId
+          ? mentionedAgentIds[0]
+          : agentId;
+        const result = await sendMessage(conversationId, content, replyToId, effectiveAgentId);
         const agentPlaceholder: MessageRow = {
           id: result.agentMessageId,
           conversationId,
@@ -106,7 +191,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId }: Props) {
           status: "streaming",
           runId: null,
           taskId: null,
-          agentId: null,
+          agentId: effectiveAgentId ?? null,
           replyToId: null,
           segmentsJson: null,
           metadataJson: null,
@@ -141,6 +226,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId }: Props) {
     setRunning(false);
     setStreamingMsgId(null);
     setCurrentRunId(null);
+    resetOrch();
   }, [currentRunId]);
 
   const handleDeleteMessage = useCallback(async (msgId: string) => {
@@ -152,18 +238,143 @@ export function ChatArea({ conversationId, onRefreshList, agentId }: Props) {
     }
   }, []);
 
+  const handleApprovePermission = useCallback(() => {
+    if (!permRequest) return;
+    wsSend({
+      type: "permission:respond",
+      runId: permRequest.runId,
+      permissionId: permRequest.permissionId,
+      approved: true,
+    });
+    setPermRequest(null);
+  }, [permRequest, wsSend]);
+
+  const handleDenyPermission = useCallback(() => {
+    if (!permRequest) return;
+    wsSend({
+      type: "permission:respond",
+      runId: permRequest.runId,
+      permissionId: permRequest.permissionId,
+      approved: false,
+    });
+    setPermRequest(null);
+  }, [permRequest, wsSend]);
+
+  // Multi-agent color mapping for messages
+  const agentColor = (adapterKind: string) => {
+    const colors: Record<string, string> = {
+      "claude-code": "border-l-blue-500",
+      codex: "border-l-green-500",
+      opencode: "border-l-purple-500",
+      custom: "border-l-yellow-500",
+    };
+    return colors[adapterKind] ?? "border-l-gray-500";
+  };
+
+  const getMemberInfo = (msgAgentId?: string | null) => {
+    if (!msgAgentId || members.length === 0) return null;
+    return members.find((m) => m.agentId === msgAgentId);
+  };
+
+  const isOrchestrating = orch.runId && orch.tasks.length > 0;
+
+  // Capability → emoji mapping
+  const capabilityEmoji = (cap: string): string => {
+    const emojis: Record<string, string> = {
+      debugging: "🐛",
+      testing: "🧪",
+      analysis: "🔍",
+      review: "👀",
+      "code-generation": "🔧",
+      "file-management": "📁",
+      "web-scraping": "🌐",
+      security: "🔒",
+    };
+    const key = (cap ?? "").toLowerCase();
+    for (const [k, v] of Object.entries(emojis)) {
+      if (key.includes(k) || k.includes(key)) return v;
+    }
+    return "⚡";
+  };
+
+  // Capability → Chinese label mapping
+  const capabilityLabel = (cap: string): string => {
+    const labels: Record<string, string> = {
+      "code-generation": "代码生成",
+      debugging: "调试",
+      testing: "测试",
+      analysis: "分析",
+      review: "审查",
+      "file-management": "文件管理",
+      "web-scraping": "网络爬取",
+      security: "安全",
+      refactoring: "重构",
+      "code-review": "代码审查",
+      documentation: "文档",
+    };
+    const key = (cap ?? "").toLowerCase();
+    for (const [k, v] of Object.entries(labels)) {
+      if (key.includes(k) || k.includes(key)) return v;
+    }
+    return cap;
+  };
+
+  // Get member count for group chats
+  const memberCount = conversationType === "group" ? members.length : 0;
+
   return (
     <>
       {/* Header */}
       <div className="border-b border-gray-800 p-4 bg-gray-900 flex items-center justify-between">
-        <h2 className="text-sm font-medium text-gray-300">
-          <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2" />
-          对话
-        </h2>
-        {running && (
-          <span className="text-xs text-green-400">Agent 正在回复...</span>
-        )}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="inline-block w-2 h-2 bg-green-500 rounded-full flex-shrink-0" />
+          <h2 className="text-sm font-medium text-gray-300 truncate">
+            {conversationType === "group"
+              ? `${conversationTitle ?? "群聊"} (${memberCount})`
+              : conversationTitle ?? "对话"}
+          </h2>
+          {/* Capability badges for direct chats */}
+          {conversationType !== "group" && agentCapabilities.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {agentCapabilities.map((cap) => (
+                <span
+                  key={cap}
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] bg-gray-800 text-gray-400 border border-gray-700"
+                >
+                  {capabilityEmoji(cap)} {capabilityLabel(cap)}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {conversationType === "group" && members.length > 0 && (
+            <div className="flex items-center gap-1">
+              {members.slice(0, 3).map((m) => (
+                <AgentBadge key={m.agentId} agentName={m.agentName} adapterKind={m.adapterKind} size="sm" />
+              ))}
+              {members.length > 3 && (
+                <span className="text-xs text-gray-600">+{members.length - 3}</span>
+              )}
+            </div>
+          )}
+          {running && (
+            <span className="text-xs text-green-400">Agent 正在回复...</span>
+          )}
+        </div>
       </div>
+
+      {/* Orchestrator status bar */}
+      {isOrchestrating && (
+        <OrchestratorStatusBar
+          runId={orch.runId!}
+          status={orch.runStatus}
+          tasks={orch.tasks}
+          progress={orch.progress}
+          expanded={orchBarExpanded}
+          onToggle={() => setOrchBarExpanded((v) => !v)}
+        />
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
@@ -175,18 +386,86 @@ export function ChatArea({ conversationId, onRefreshList, agentId }: Props) {
             发送消息开始对话
           </p>
         )}
-        {messages.map((msg) => (
-          <MessageBubble
-            key={msg.id}
-            message={msg}
-            isStreaming={msg.id === streamingMsgId}
-            onDelete={handleDeleteMessage}
-          />
-        ))}
+        {messages.map((msg) => {
+          const memberInfo = getMemberInfo(msg.agentId);
+          const isUser = msg.role === "user";
+          const isAgent = msg.role === "agent";
+          const isSystem = msg.role === "system";
+
+          const agentAdapterKind =
+            memberInfo?.adapterKind ?? adapterKind ?? "custom";
+          const agentName = memberInfo?.agentName ?? conversationTitle ?? "Agent";
+          const showAgentName = conversationType === "group" && !!memberInfo;
+
+          // System messages: centered, no avatar
+          if (isSystem) {
+            return (
+              <div key={msg.id} className="flex justify-center mb-4">
+                <MessageBubble
+                  message={msg}
+                  isStreaming={msg.id === streamingMsgId}
+                  onDelete={handleDeleteMessage}
+                />
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={msg.id}
+              className={`flex items-start gap-2 mb-4 ${isUser ? "justify-end" : "justify-start"}`}
+            >
+              {/* Agent avatar on the LEFT */}
+              {isAgent && (
+                <AgentBadge
+                  agentName={agentName}
+                  adapterKind={agentAdapterKind}
+                  size="lg"
+                />
+              )}
+
+              {/* Message content column */}
+              <div className="max-w-[75%]">
+                {isAgent && showAgentName && (
+                  <div className="text-xs text-gray-500 mb-1">{agentName}</div>
+                )}
+                <MessageBubble
+                  message={msg}
+                  isStreaming={msg.id === streamingMsgId}
+                  onDelete={handleDeleteMessage}
+                  agentColor={isAgent ? agentColor(agentAdapterKind) : undefined}
+                />
+              </div>
+
+              {/* User avatar on the RIGHT */}
+              {isUser && (
+                userAvatar ? (
+                  <img
+                    src={userAvatar}
+                    className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                    alt="用户头像"
+                  />
+                ) : (
+                  <span className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center text-base flex-shrink-0 border border-gray-600">
+                    👤
+                  </span>
+                )
+              )}
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
       </div>
 
-      <MessageInput onSend={handleSend} disabled={running} onStop={handleStop} />
+      <MessageInput onSend={handleSend} disabled={running} onStop={handleStop} members={members} />
+
+      {/* Permission modal */}
+      <PermissionModal
+        open={permRequest !== null}
+        permission={permRequest}
+        onApprove={handleApprovePermission}
+        onDeny={handleDenyPermission}
+      />
     </>
   );
 }
@@ -197,13 +476,16 @@ function MessageBubble({
   message,
   isStreaming,
   onDelete,
+  agentColor,
 }: {
   message: MessageRow;
   isStreaming: boolean;
   onDelete: (msgId: string) => void;
+  agentColor?: string;
 }) {
   const isUser = message.role === "user";
   const isAgent = message.role === "agent";
+  const isSystem = message.role === "system";
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -229,17 +511,27 @@ function MessageBubble({
     onDelete(message.id);
   };
 
+  const borderClass = agentColor ? `border-l-2 ${agentColor}` : "";
+
   return (
-    <div className={`flex mb-4 group ${isUser ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`max-w-[75%] rounded-lg px-4 py-2.5 text-sm relative ${
-          isUser
-            ? "bg-blue-600 text-white"
-            : isAgent
-            ? "bg-gray-800 text-gray-100 border border-gray-700"
-            : "bg-gray-800/50 text-gray-400 italic"
-        }`}
-      >
+    <div
+      className={`rounded-lg px-4 py-2.5 text-sm relative group ${borderClass} ${
+        isUser
+          ? "bg-blue-600 text-white"
+          : isAgent
+          ? "bg-gray-800 text-gray-100 border border-gray-700"
+          : isSystem
+          ? "bg-gray-800/50 text-gray-400 italic border border-gray-700/50"
+          : "bg-gray-800 text-gray-100 border border-gray-700"
+      }`}
+    >
+        {/* System message: timestamp centered at top */}
+        {isSystem && (
+          <div className="text-center text-xs text-gray-500 mb-1">
+            {new Date(message.createdAt).toLocaleTimeString()}
+          </div>
+        )}
+
         {/* Dropdown menu trigger */}
         {message.content && message.status !== "streaming" && (
           <div className={`absolute bottom-1 ${isUser ? "left-1" : "right-1"}`} ref={menuOpen ? menuRef : null}>
@@ -294,11 +586,13 @@ function MessageBubble({
           {message.status === "error" && (
             <span className="text-xs text-red-400">❌️对话被打断</span>
           )}
-          <span className="text-xs text-gray-600 ml-auto">
-            {new Date(message.createdAt).toLocaleTimeString()}
-          </span>
+          {/* Timestamp: bottom-left for user, bottom-right for agent; system timestamp at top */}
+          {!isSystem && (
+            <span className={`text-xs ${isUser ? "text-blue-200" : "text-gray-600"} ${isAgent ? "ml-auto" : ""}`}>
+              {new Date(message.createdAt).toLocaleTimeString()}
+            </span>
+          )}
         </div>
-      </div>
     </div>
   );
 }

@@ -8,6 +8,8 @@ import {
   pinConversation,
   listAgents,
 } from "../../lib/api.js";
+import { AgentPicker } from "./AgentPicker.js";
+import { AgentBadge } from "./AgentBadge.js";
 
 export interface AgentInfo {
   agentId: string;
@@ -48,6 +50,8 @@ export function ConversationList({
   const [showNewModal, setShowNewModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newAgentId, setNewAgentId] = useState("default-claude");
+  const [isGroupChat, setIsGroupChat] = useState(false);
+  const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
   const [agents, setAgents] = useState<AgentRow[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -101,6 +105,8 @@ export function ConversationList({
     setShowNewModal(true);
     setNewTitle("");
     setNewAgentId("default-claude");
+    setIsGroupChat(false);
+    setSelectedAgentIds([]);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
@@ -108,8 +114,14 @@ export function ConversationList({
     const title = newTitle.trim() || "New Chat";
     setShowNewModal(false);
     try {
-      const conv = await createConversation(title, "direct", newAgentId);
-      onConversationCreated(conv, newAgentId);
+      if (isGroupChat) {
+        const ids = selectedAgentIds.length > 0 ? selectedAgentIds : [newAgentId];
+        const conv = await createConversation(title, "group", undefined, ids);
+        onConversationCreated(conv, ids[0]);
+      } else {
+        const conv = await createConversation(title, "direct", newAgentId, undefined);
+        onConversationCreated(conv, newAgentId);
+      }
     } catch (err) {
       console.error("Failed to create conversation", err);
     }
@@ -196,8 +208,9 @@ export function ConversationList({
                 <div className="flex items-center gap-2">
                   {agent && (
                     <AgentBadge
-                      name={agent.agentName}
+                      agentName={agent.agentName}
                       adapterKind={agent.adapterKind}
+                      size="sm"
                     />
                   )}
                   {isEditing ? (
@@ -279,8 +292,28 @@ export function ConversationList({
       {/* New conversation modal */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-80 shadow-xl">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-96 shadow-xl max-h-[80vh] overflow-y-auto">
             <p className="text-sm text-gray-200 text-center mb-4">新建对话</p>
+
+            {/* Chat type toggle */}
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={() => { setIsGroupChat(false); setSelectedAgentIds([]); }}
+                className={`flex-1 py-1.5 text-sm rounded border ${
+                  !isGroupChat ? "border-blue-500 bg-blue-900/20 text-blue-300" : "border-gray-700 text-gray-500"
+                }`}
+              >
+                单聊
+              </button>
+              <button
+                onClick={() => setIsGroupChat(true)}
+                className={`flex-1 py-1.5 text-sm rounded border ${
+                  isGroupChat ? "border-blue-500 bg-blue-900/20 text-blue-300" : "border-gray-700 text-gray-500"
+                }`}
+              >
+                群聊
+              </button>
+            </div>
 
             <label className="block text-xs text-gray-400 mb-1">对话名称</label>
             <input
@@ -296,18 +329,29 @@ export function ConversationList({
               className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
 
-            <label className="block text-xs text-gray-400 mb-1 mt-3">选择 Agent</label>
-            <select
-              value={newAgentId}
-              onChange={(e) => setNewAgentId(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 focus:outline-none focus:border-blue-500"
-            >
-              {agents.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name} ({a.adapterKind})
-                </option>
-              ))}
-            </select>
+            <label className="block text-xs text-gray-400 mb-1 mt-3">
+              {isGroupChat ? "选择多个 Agent" : "选择 Agent"}
+            </label>
+            {isGroupChat ? (
+              <AgentPicker
+                agents={agents}
+                selectedIds={selectedAgentIds}
+                onChange={setSelectedAgentIds}
+                multiSelect
+              />
+            ) : (
+              <select
+                value={newAgentId}
+                onChange={(e) => setNewAgentId(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 focus:outline-none focus:border-blue-500"
+              >
+                {agents.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} ({a.adapterKind})
+                  </option>
+                ))}
+              </select>
+            )}
 
             <div className="flex justify-center gap-3 mt-4">
               <button
@@ -352,34 +396,5 @@ export function ConversationList({
         </div>
       )}
     </div>
-  );
-}
-
-function AgentBadge({ name, adapterKind }: { name: string; adapterKind: string }) {
-  const logos: Record<string, string> = {
-    "claude-code": "/agents/claude-code.png",
-    codex: "/agents/codex.png",
-  };
-
-  const logoSrc = logos[adapterKind];
-
-  if (logoSrc) {
-    return (
-      <img
-        src={logoSrc}
-        alt={name}
-        className="w-5 h-5 rounded-full object-cover flex-shrink-0"
-        title={name}
-      />
-    );
-  }
-
-  return (
-    <span
-      className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-600 text-white text-[10px] font-bold flex-shrink-0"
-      title={name}
-    >
-      {name.slice(0, 2).toUpperCase()}
-    </span>
   );
 }

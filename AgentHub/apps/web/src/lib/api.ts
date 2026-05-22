@@ -24,11 +24,26 @@ export function listConversations(q?: string) {
   return request<ConversationRow[]>(`/conversations${qs}`);
 }
 
-export function createConversation(title: string, type: "direct" | "group" = "direct", agentId?: string) {
+export function createConversation(title: string, type: "direct" | "group" = "direct", agentId?: string, agentIds?: string[]) {
   return request<ConversationRow>("/conversations", {
     method: "POST",
-    body: JSON.stringify({ title, type, agentId }),
+    body: JSON.stringify({ title, type, agentId, agentIds }),
   });
+}
+
+export function listMembers(conversationId: string) {
+  return request<Array<{ agentId: string; agentName: string; role: string; adapterKind: string }>>(`/conversations/${conversationId}/members`);
+}
+
+export function addMember(conversationId: string, agentId: string, role?: string) {
+  return request<unknown>(`/conversations/${conversationId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ agentId, role }),
+  });
+}
+
+export function removeMember(conversationId: string, agentId: string) {
+  return request<{ ok: boolean }>(`/conversations/${conversationId}/members/${agentId}`, { method: "DELETE" });
 }
 
 export function getConversationAgent(conversationId: string) {
@@ -110,4 +125,18 @@ export function stopRun(runId: string) {
 
 export function listAgents() {
   return request<AgentRow[]>("/agents");
+}
+
+export function createAgentFromDraft(draft: { name: string; platform?: string; capabilities?: string[]; systemPrompt?: string }) {
+  return request<AgentRow>("/agents/from-draft", {
+    method: "POST",
+    body: JSON.stringify(draft),
+  });
+}
+
+export function respondToPermission(runId: string, permissionId: string, approved: boolean) {
+  return request<{ ok: boolean }>(`/runs/${runId}/permissions`, {
+    method: "POST",
+    body: JSON.stringify({ permissionId, approved }),
+  });
 }
