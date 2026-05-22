@@ -15,8 +15,8 @@ export interface ProcessSpec {
   cwd?: string;
   /** Timeout in milliseconds, default 600000 (10 min) */
   timeoutMs?: number;
-  /** AbortSignal for external cancellation */
-  signal?: AbortSignal;
+  /** AbortSignal-like for external cancellation */
+  signal?: { aborted: boolean; addEventListener(type: "abort", listener: () => void, options?: { once?: boolean }): void };
 }
 
 export type ProcessEventType = "stdout" | "stderr" | "exit" | "timeout" | "error";

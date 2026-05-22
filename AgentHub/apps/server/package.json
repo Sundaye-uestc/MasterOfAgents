@@ -12,12 +12,17 @@
   "dependencies": {
     "@agenthub/shared": "workspace:*",
     "@hono/node-server": "^1.13.0",
+    "drizzle-orm": "^0.45.2",
     "hono": "^4.6.0",
     "rxjs": "^7.8.0",
+    "sql.js": "^1.14.1",
+    "ws": "^8.20.1",
     "zod": "^3.25.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/sql.js": "^1.4.11",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }

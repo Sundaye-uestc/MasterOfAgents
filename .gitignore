@@ -25,5 +25,15 @@ Thumbs.db
 # Claude
 .claude/
 
+# AgentHub — runtime data
+AgentHub/apps/server/data/
+
+# pnpm — only root lock file is tracked
+AgentHub/apps/server/pnpm-lock.yaml
+AgentHub/apps/web/pnpm-lock.yaml
+
+# TypeScript build info
+*.tsbuildinfo
+
 # Logs
 *.log

@@ -1,37 +1,73 @@
 // ============================================================
-// AgentHub Server — Hono + WebSocket entry point (Phase 0: minimal)
+// AgentHub Server — Hono + WebSocket entry point
 // ============================================================
 
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
+import { conversationRoutes } from "./routes/conversations.js";
+import { agentRoutes } from "./routes/agents.js";
+import { runRoutes } from "./routes/runs.js";
+import { initWsGateway } from "./ws/gateway.js";
+import { initDb, saveDb } from "./db/index.js";
+import { seedAgents } from "./db/seed.js";
+import { mkdirSync } from "node:fs";
+import { resolve } from "node:path";
+
+// Ensure data directory exists
+const DATA_DIR = resolve(process.cwd(), "data");
+mkdirSync(DATA_DIR, { recursive: true });
 
 const app = new Hono();
 
 // --- Health check ---
 app.get("/health", (c) => c.json({ status: "ok", uptime: process.uptime() }));
 
-// --- Placeholder REST endpoints (Phase 1+) ---
-app.get("/api/agents", (c) => c.json({ agents: [] }));
-app.get("/api/conversations", (c) => c.json({ conversations: [] }));
+// --- REST API ---
+app.route("/api/conversations", conversationRoutes);
+app.route("/api/agents", agentRoutes);
+app.route("/api/runs", runRoutes);
 
 export { app };
 
-// --- Start server only when this is the entry point ---
+// --- Start server ---
 const PORT = parseInt(process.env["PORT"] ?? "3001", 10);
 
-serve({
-  fetch: app.fetch,
-  port: PORT,
-}, (info) => {
-  console.log(`[AgentHub Server] listening on http://localhost:${info.port}`);
-  console.log(`[AgentHub Server] health: http://localhost:${info.port}/health`);
-});
+async function main() {
+  // Initialize database
+  await initDb();
+  seedAgents();
+  console.log("[AgentHub] Database initialized");
 
-// Graceful shutdown
-function shutdown(signal: string) {
-  console.log(`\n[AgentHub Server] ${signal} received, shutting down...`);
-  process.exit(0);
+  const server = serve({
+    fetch: app.fetch,
+    port: PORT,
+  }, (info) => {
+    console.log(`[AgentHub Server] REST http://localhost:${info.port}`);
+    console.log(`[AgentHub Server] WS   ws://localhost:${info.port}/ws`);
+  });
+
+  // Attach WebSocket server
+  initWsGateway(server);
+
+  // Periodic DB save (every 30 seconds)
+  const saveInterval = setInterval(() => {
+    try { saveDb(); } catch { /* ignore */ }
+  }, 30_000);
+
+  // Graceful shutdown
+  function shutdown(signal: string) {
+    console.log(`\n[AgentHub Server] ${signal} received, shutting down...`);
+    clearInterval(saveInterval);
+    try { saveDb(); } catch { /* ignore */ }
+    server.close();
+    process.exit(0);
+  }
+
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+main().catch((err) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
+});
