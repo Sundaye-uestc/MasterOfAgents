@@ -5,9 +5,9 @@
 import { Hono } from "hono";
 import { getDb, schema } from "../db/index.js";
 import { eq, desc } from "drizzle-orm";
-import { AgentRuntimeService } from "../services/agent-runtime.service.js";
+import { getAgentRuntimeService } from "../services/agent-runtime.service.js";
 
-const runtime = new AgentRuntimeService();
+const runtime = getAgentRuntimeService();
 
 export const runRoutes = new Hono();
 

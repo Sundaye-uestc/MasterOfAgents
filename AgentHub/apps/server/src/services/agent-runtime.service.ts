@@ -10,9 +10,19 @@ import { eq } from "drizzle-orm";
 import { newId, nowISO } from "../lib/ids.js";
 import type { ChatService } from "./chat.service.js";
 
+let singleton: AgentRuntimeService | null = null;
+
+export function getAgentRuntimeService(): AgentRuntimeService {
+  if (!singleton) {
+    singleton = new AgentRuntimeService();
+  }
+  return singleton;
+}
+
 export class AgentRuntimeService {
   private adapters = new Map<string, AgentPlatformAdapter>();
   private activeRuns = new Map<string, AbortController>();
+  private abortedRuns = new Set<string>();
 
   async getAdapter(agentConfig: AgentConfig): Promise<AgentPlatformAdapter> {
     const key = agentConfig.id;
@@ -113,13 +123,23 @@ export class AgentRuntimeService {
           }
         }
 
-        // Mark completed
-        db.update(schema.runs)
-          .set({ status: "completed", completedAt: nowISO() } as any)
-          .where(eq(schema.runs.id, runId))
-          .run();
-
-        await chatService.updateMessageStatus(agentMsg.id, "sent");
+        // Mark completed only if run was not aborted externally
+        if (this.activeRuns.has(runId)) {
+          db.update(schema.runs)
+            .set({ status: "completed", completedAt: nowISO() } as any)
+            .where(eq(schema.runs.id, runId))
+            .run();
+          await chatService.updateMessageStatus(agentMsg.id, "sent");
+        } else {
+          // Run was aborted — overwrite content and mark as error
+          await chatService.setContent(agentMsg.id, "");
+          db.update(schema.runs)
+            .set({ status: "failed", errorJson: JSON.stringify({ message: "Run aborted by user" }), completedAt: nowISO() } as any)
+            .where(eq(schema.runs.id, runId))
+            .run();
+          await chatService.updateMessageStatus(agentMsg.id, "error");
+          this.abortedRuns.delete(runId);
+        }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
         db.update(schema.runs)
@@ -136,7 +156,12 @@ export class AgentRuntimeService {
     return { runId, agentMessageId: agentMsg.id };
   }
 
+  isRunAborted(runId: string): boolean {
+    return this.abortedRuns.has(runId);
+  }
+
   async stopRun(runId: string): Promise<void> {
+    this.abortedRuns.add(runId);
     const controller = this.activeRuns.get(runId);
     if (controller) {
       controller.abort();

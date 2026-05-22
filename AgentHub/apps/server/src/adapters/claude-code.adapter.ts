@@ -61,6 +61,7 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
       "--output-format", "stream-json",
       "--no-session-persistence",
       "--verbose",
+      "--permission-mode", "bypassPermissions",
     ];
 
     if (systemPrompt) {

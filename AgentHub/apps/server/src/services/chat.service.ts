@@ -1,5 +1,5 @@
 // ============================================================
-// ChatService â€” conversation & message management
+// ChatService â€?conversation & message management
 // ============================================================
 
 import { getDb, schema } from "../db/index.js";
@@ -197,6 +197,14 @@ export class ChatService {
       .run();
   }
 
+  async setContent(id: string, content: string): Promise<void> {
+    const db = getDb();
+    db.update(schema.messages)
+      .set({ content, updatedAt: nowISO() } as any)
+      .where(eq(schema.messages.id, id))
+      .run();
+  }
+
   async appendContent(id: string, delta: string): Promise<void> {
     const db = getDb();
     const msg = await this.getMessage(id);
@@ -233,6 +241,13 @@ export class ChatService {
     });
   }
 
+  async deleteMessage(id: string): Promise<boolean> {
+    const db = getDb();
+    const msg = await this.getMessage(id);
+    if (!msg) return false;
+    db.delete(schema.messages).where(eq(schema.messages.id, id)).run();
+    return true;
+  }
   async deleteConversation(id: string): Promise<boolean> {
     const db = getDb();
     const conv = await this.getConversation(id);

@@ -125,8 +125,8 @@ export function App() {
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-500">
             <div className="text-center">
-              <p className="text-lg">Select a conversation or create a new one</p>
-              <p className="text-sm mt-2">Start chatting with your AI Agents</p>
+              <p className="text-lg">选择一个对话或创建新的对话</p>
+              <p className="text-sm mt-2">开始与 AI Agent 对话</p>
             </div>
           </div>
         )}

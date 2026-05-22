@@ -92,6 +92,10 @@ export function pinMessage(messageId: string, pinned: boolean) {
   });
 }
 
+export function deleteMessage(messageId: string) {
+  return request<{ ok: boolean }>(`/conversations/messages/${messageId}`, { method: "DELETE" });
+}
+
 // --- Runs ---
 
 export function getActiveRuns() {

@@ -4,12 +4,12 @@
 
 import { Hono } from "hono";
 import { ChatService } from "../services/chat.service.js";
-import { AgentRuntimeService } from "../services/agent-runtime.service.js";
+import { getAgentRuntimeService } from "../services/agent-runtime.service.js";
 import type { AgentConfig } from "@agenthub/shared";
 import { broadcastToConversation, agentEventToWsEvent } from "../ws/gateway.js";
 
 const chat = new ChatService();
-const runtime = new AgentRuntimeService();
+const runtime = getAgentRuntimeService();
 
 export const conversationRoutes = new Hono();
 
@@ -95,6 +95,13 @@ conversationRoutes.patch("/messages/:id/pin", async (c) => {
   return c.json({ ok: true });
 });
 
+// --- Delete message ---
+conversationRoutes.delete("/messages/:id", async (c) => {
+  const ok = await chat.deleteMessage(c.req.param("id")!);
+  if (!ok) return c.json({ error: "Not found" }, 404);
+  return c.json({ ok: true });
+});
+
 // --- Send message (trigger agent) ---
 conversationRoutes.post("/:id/messages", async (c) => {
   const body = await c.req.json<{
@@ -135,9 +142,11 @@ conversationRoutes.post("/:id/messages", async (c) => {
     triggerMessageId: userMsg.id,
     chatService: chat,
     onEvent: (event, msgId) => {
-      // Append text deltas to the agent message in DB
+      // Append text deltas to the agent message in DB (skip if aborted)
       if (event.type === "text_delta") {
-        chat.appendContent(msgId, event.delta);
+        if (!runtime.isRunAborted(event.runId)) {
+          chat.appendContent(msgId, event.delta);
+        }
       }
       // Broadcast via WS
       const wsEvent = agentEventToWsEvent(event);

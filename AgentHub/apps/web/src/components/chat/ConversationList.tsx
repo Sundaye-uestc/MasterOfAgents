@@ -167,11 +167,11 @@ export function ConversationList({
           onClick={handleNewClick}
           className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
         >
-          + New Conversation
+          + 新建对话
         </button>
         <input
           type="text"
-          placeholder="Search..."
+          placeholder="搜索..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full mt-2 px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-gray-600"
@@ -223,10 +223,10 @@ export function ConversationList({
                 </div>
                 <div className="flex items-center gap-2 mt-0.5 ml-7">
                   <span className="text-xs text-gray-500">
-                    {conv.type === "direct" ? "Direct" : "Group"}
+                    {conv.type === "direct" ? "单聊" : "群聊"}
                   </span>
                   {conv.status === "archived" && (
-                    <span className="text-xs text-yellow-600">Archived</span>
+                    <span className="text-xs text-yellow-600">已归档</span>
                   )}
                 </div>
               </button>
@@ -271,7 +271,7 @@ export function ConversationList({
         })}
         {filtered.length === 0 && (
           <p className="text-center text-gray-600 text-sm mt-8">
-            No conversations yet
+            暂无对话
           </p>
         )}
       </div>
