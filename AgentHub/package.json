@@ -1,0 +1,16 @@
+{
+  "name": "agenthub",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AgentHub - Multi-Agent Collaboration Platform",
+  "scripts": {
+    "dev:server": "pnpm --filter @agenthub/server dev",
+    "dev:web": "pnpm --filter @agenthub/web dev",
+    "build": "pnpm -r build",
+    "check": "pnpm -r check",
+    "verify": "pnpm --filter @agenthub/server verify"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

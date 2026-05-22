@@ -1,0 +1,24 @@
+{
+  "name": "@agenthub/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --watch src/index.ts",
+    "check": "tsc --noEmit",
+    "build": "tsc",
+    "verify": "tsx src/verify.ts"
+  },
+  "dependencies": {
+    "@agenthub/shared": "workspace:*",
+    "@hono/node-server": "^1.13.0",
+    "hono": "^4.6.0",
+    "rxjs": "^7.8.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
