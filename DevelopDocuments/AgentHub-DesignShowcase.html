@@ -578,7 +578,7 @@ consumeAgentEvents(run, stream) → void</code></pre>
 <!-- ── Agent Adapter ── -->
 <h2 id="web-adapter">Agent Adapter 设计</h2>
 
-<pre><code><span style="color:var(--purple">export interface</span> <span style="color:var(--cyan)">AgentPlatformAdapter</span> {
+<pre><code><span style="color:var(--purple)">export interface</span> <span style="color:var(--cyan)">AgentPlatformAdapter</span> {
   id: <span style="color:var(--green)">string</span>;
   name: <span style="color:var(--green)">string</span>;
   kind: <span style="color:var(--orange)">"claude-code"</span> | <span style="color:var(--orange)">"codex"</span> | <span style="color:var(--orange)">"opencode"</span> | <span style="color:var(--orange)">"custom"</span>;
@@ -597,7 +597,7 @@ consumeAgentEvents(run, stream) → void</code></pre>
 }</code></pre>
 
 <h3>AgentRunInput</h3>
-<pre><code><span style="color:var(--purple">export interface</span> <span style="color:var(--cyan)">AgentRunInput</span> {
+<pre><code><span style="color:var(--purple)">export interface</span> <span style="color:var(--cyan)">AgentRunInput</span> {
   runId: <span style="color:var(--green)">string</span>;
   taskId?: <span style="color:var(--green)">string</span>;
   conversationId: <span style="color:var(--green)">string</span>;
@@ -611,7 +611,7 @@ consumeAgentEvents(run, stream) → void</code></pre>
 }</code></pre>
 
 <h3>统一 AgentEvent（10 种事件）</h3>
-<pre><code><span style="color:var(--purple">export type</span> <span style="color:var(--cyan)">AgentEvent</span> =
+<pre><code><span style="color:var(--purple)">export type</span> <span style="color:var(--cyan)">AgentEvent</span> =
   | { type: <span style="color:var(--orange)">"run_started"</span>;        runId, agentId }
   | { type: <span style="color:var(--orange)">"text_delta"</span>;         runId, messageId, content }
   | { type: <span style="color:var(--orange)">"thinking"</span>;           runId, content }
@@ -633,7 +633,7 @@ consumeAgentEvents(run, stream) → void</code></pre>
 </table>
 
 <h3>ProcessSupervisor</h3>
-<pre><code><span style="color:var(--purple">export interface</span> <span style="color:var(--cyan)">ProcessSupervisor</span> {
+<pre><code><span style="color:var(--purple)">export interface</span> <span style="color:var(--cyan)">ProcessSupervisor</span> {
   start(spec: ProcessSpec): AsyncIterable&lt;ProcessEvent&gt;;
   stop(processId: <span style="color:var(--green)">string</span>): <span style="color:var(--purple)">Promise</span>&lt;<span style="color:var(--green)">void</span>&gt;;
   getActiveCount(): <span style="color:var(--green)">number</span>;
@@ -861,7 +861,7 @@ detail_json, created_at</code></pre>
 <div class="two-col">
   <div>
     <h3>Client → Server</h3>
-    <pre><code><span style="color:var(--purple">type</span> <span style="color:var(--cyan)">ClientEvent</span> =
+    <pre><code><span style="color:var(--purple)">type</span> <span style="color:var(--cyan)">ClientEvent</span> =
   | { type: <span style="color:var(--orange)">"message:send"</span>; ... }
   | { type: <span style="color:var(--orange)">"message:reply"</span>; ... }
   | { type: <span style="color:var(--orange)">"message:retry"</span>; ... }
