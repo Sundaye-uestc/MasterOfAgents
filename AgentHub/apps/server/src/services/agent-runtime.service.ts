@@ -65,17 +65,15 @@ export class AgentRuntimeService {
       createdAt: now,
     }).run();
 
-    // Create agent message placeholder
+    // Create agent message placeholder (streaming so WS message:created shows "思考中")
     const agentMsg = await chatService.createMessage({
       conversationId,
       role: "agent",
       content: "",
       agentId,
       runId,
+      status: "streaming",
     });
-
-    // Update message status to streaming
-    await chatService.updateMessageStatus(agentMsg.id, "streaming");
 
     const abortController = new AbortController();
     this.activeRuns.set(runId, abortController);

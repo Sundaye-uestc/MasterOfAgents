@@ -180,41 +180,42 @@ export class PlannerService {
       ? `\n\nIMPORTANT: Your previous response was invalid. Error: ${errorContext}\nPlease fix the issues and output valid JSON.`
       : "";
 
-    return `You are a task planning assistant. Given a user request and available agents, decompose the request into a structured task plan.
+    return `你是一个任务规划助手。根据用户请求和可用的 Agent 列表，将请求分解为结构化的任务计划。
 
-Available agents:
+可用 Agent：
 ${agentList}
 
-User request:
+用户请求：
 ${input.prompt}${historySection}
 
-Output a JSON object with the following schema exactly:
+请严格按照以下 JSON schema 输出：
 {
   "tasks": [
     {
       "id": "unique-task-id",
-      "title": "short task title",
-      "description": "detailed task description for the agent",
-      "agentId": "id of the assigned agent from the list above",
-      "dependencies": ["id of task that must complete first", "..."],
-      "expectedOutput": "what this task should produce",
+      "title": "简短的任务标题（中文）",
+      "description": "给 Agent 的详细任务描述（中文）",
+      "agentId": "从上方列表中选择的 Agent ID",
+      "dependencies": ["依赖的前置任务 id", "..."],
+      "expectedOutput": "该任务应产出的内容（中文）",
       "riskLevel": "low" | "medium" | "high",
       "writeScope": ["file/path/that/task/may/write"]
     }
   ],
-  "reasoning": "explanation of your task decomposition logic",
+  "reasoning": "任务分解逻辑说明（中文）",
   "estimatedRounds": number
 }
 
-Rules:
-- Each task must have a unique id.
-- Dependencies must reference existing task ids.
-- No circular dependencies.
-- Assign each task to the most capable agent from the available list.
-- For simple requests, use 1 task. For complex requests, use 2-5 tasks.
-- High risk tasks are those that modify files or run destructive commands.${errorSection}
+规则：
+- 每个任务必须有唯一的 id。
+- dependencies 必须引用已有的任务 id。
+- 不能有循环依赖。
+- 将每个任务分配给可用列表中最合适的 Agent。
+- 简单请求使用 1 个任务，复杂请求使用 2-5 个任务。
+- 高风险任务是指会修改文件或执行破坏性命令的任务。
+- title、description、expectedOutput、reasoning 必须使用中文。${errorSection}
 
-Output ONLY the JSON object, no other text.`;
+只输出 JSON 对象，不要其他文字。`;
   }
 
   private parsePlanResponse(raw: string): TaskPlan {

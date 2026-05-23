@@ -5,7 +5,7 @@
 import { Hono } from "hono";
 import { ChatService } from "../services/chat.service.js";
 import { getAgentRuntimeService } from "../services/agent-runtime.service.js";
-import { OrchestratorService } from "../services/orchestrator.service.js";
+import { getOrchestratorService } from "../services/orchestrator.service.js";
 import type { AgentConfig } from "@agenthub/shared";
 import { broadcastToConversation, agentEventToWsEvent } from "../ws/gateway.js";
 
@@ -158,7 +158,7 @@ conversationRoutes.post("/:id/messages", async (c) => {
       updatedAt: Date.now(),
     }));
 
-    const orchestrator = new OrchestratorService(chat);
+    const orchestrator = getOrchestratorService(chat);
     const { runId, plan } = await orchestrator.startOrchestratedRun({
       conversationId,
       triggerMessageId: userMsg.id,

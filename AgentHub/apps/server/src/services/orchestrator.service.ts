@@ -12,7 +12,8 @@ import { getAgentRuntimeService } from "./agent-runtime.service.js";
 import { getDb, schema } from "../db/index.js";
 import { eq } from "drizzle-orm";
 import { newId, nowISO } from "../lib/ids.js";
-import { broadcastToConversation } from "../ws/gateway.js";
+import { broadcastToConversation, agentEventToWsEvent } from "../ws/gateway.js";
+import type { AgentEvent } from "@agenthub/shared";
 
 interface OrchestrationState {
   runId: string;
@@ -110,12 +111,13 @@ export class OrchestratorService {
     };
     this.activeOrchestrations.set(runId, state);
 
-    // Create a system message with the plan summary
-    const planSummary = plan.tasks.map((t, i) => `${i + 1}. **${t.title}** → ${t.agentId}`).join("\n");
+    // Create a compact system message with the plan summary
+    const planSummary = plan.tasks.map((t, i) => `${i + 1}. ${t.title} → ${t.agentId}`).join("  ·  ");
+    const reasoningLine = plan.reasoning ? ` — ${plan.reasoning}` : "";
     await this.chatService.createMessage({
       conversationId,
       role: "system",
-      content: `任务已分解为 ${plan.tasks.length} 个子任务：\n${planSummary}\n\n${plan.reasoning}`,
+      content: `任务已分解为 ${plan.tasks.length} 个子任务：${planSummary}${reasoningLine}`,
       runId,
     });
 
@@ -211,6 +213,45 @@ export class OrchestratorService {
       agentId: task.agentId,
     });
 
+    const handleEvent = (event: AgentEvent, msgId: string) => {
+      if (event.type === "text_delta") {
+        if (!this.runtime.isRunAborted(event.runId)) {
+          this.chatService.appendContent(msgId, event.delta);
+        }
+      }
+      const wsEvent = agentEventToWsEvent(event);
+      if (wsEvent) {
+        if (wsEvent.type === "message:delta") {
+          (wsEvent as any).messageId = msgId;
+        }
+        broadcastToConversation(conversationId, wsEvent);
+      }
+      if (event.type === "run_completed") {
+        broadcastToConversation(conversationId, {
+          type: "message:completed",
+          messageId: msgId,
+        });
+        this.handleTaskCompleted({
+          runId,
+          taskId: task.id,
+          resultSummary: "Task completed",
+          success: true,
+        });
+      }
+      if (event.type === "run_failed") {
+        broadcastToConversation(conversationId, {
+          type: "message:completed",
+          messageId: msgId,
+        });
+        this.handleTaskCompleted({
+          runId,
+          taskId: task.id,
+          resultSummary: event.error ?? "Task failed",
+          success: false,
+        });
+      }
+    };
+
     try {
       const { runId: subRunId } = await this.runtime.startDirectRun({
         conversationId,
@@ -219,10 +260,7 @@ export class OrchestratorService {
         prompt: `${task.description}\n\nExpected output: ${task.expectedOutput}`,
         systemPrompt,
         chatService: this.chatService,
-        onEvent: (event, msgId) => {
-          // Delegate text deltas and other events to the existing streaming flow
-          // The conversations.ts route handler already handles the WS broadcast
-        },
+        onEvent: handleEvent,
       });
 
       state.activeTasks.set(task.id, subRunId);
@@ -246,7 +284,7 @@ export class OrchestratorService {
             prompt: `${task.description}\n\nExpected output: ${task.expectedOutput}\n\nPREVIOUS ATTEMPT FAILED: ${errorMsg}`,
             systemPrompt,
             chatService: this.chatService,
-            onEvent: () => {},
+            onEvent: handleEvent,
           });
           state.activeTasks.set(task.id, subRunId);
           return;
@@ -386,15 +424,15 @@ export class OrchestratorService {
       .where(eq(schema.runs.id, runId))
       .run();
 
-    // Create aggregate summary message
-    const summaryLines = state.plan.tasks.map((t) => {
+    // Create compact aggregate summary (single line)
+    const summaryItems = state.plan.tasks.map((t) => {
       const icon = state.completedTasks.has(t.id) ? "✅" : state.failedTasks.has(t.id) ? "❌" : "⏭️";
       return `${icon} ${t.title}`;
     });
     await this.chatService.createMessage({
       conversationId,
       role: "system",
-      content: `任务执行完成 (${completed}/${total} 成功${failed > 0 ? `, ${failed} 失败` : ""})\n\n${summaryLines.join("\n")}`,
+      content: `任务执行完成 (${completed}/${total} 成功${failed > 0 ? `, ${failed} 失败` : ""}) — ${summaryItems.join("  ")}`,
       runId,
     });
 
@@ -442,4 +480,13 @@ export class OrchestratorService {
     }
     return false;
   }
+}
+
+let orchestratorSingleton: OrchestratorService | null = null;
+
+export function getOrchestratorService(chatService: ChatService): OrchestratorService {
+  if (!orchestratorSingleton) {
+    orchestratorSingleton = new OrchestratorService(chatService);
+  }
+  return orchestratorSingleton;
 }

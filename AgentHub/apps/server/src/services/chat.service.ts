@@ -6,6 +6,7 @@ import { getDb, schema } from "../db/index.js";
 import { eq, desc, like, and } from "drizzle-orm";
 import { newId, nowISO } from "../lib/ids.js";
 import type { ConversationRow, MessageRow } from "@agenthub/shared";
+import { broadcastToConversation } from "../ws/gateway.js";
 
 export class ChatService {
   // --- Conversations ---
@@ -219,6 +220,7 @@ export class ChatService {
     agentId?: string;
     replyToId?: string;
     runId?: string;
+    status?: "sending" | "sent" | "streaming" | "error";
   }): Promise<MessageRow> {
     const db = getDb();
     const now = nowISO();
@@ -230,7 +232,7 @@ export class ChatService {
       agentId: input.agentId ?? null,
       replyToId: input.replyToId ?? null,
       runId: input.runId ?? null,
-      status: "sent",
+      status: input.status ?? "sent",
       createdAt: now,
       updatedAt: now,
     };
@@ -240,6 +242,15 @@ export class ChatService {
       .set({ updatedAt: now } as any)
       .where(eq(schema.conversations.id, input.conversationId))
       .run();
+
+    // Broadcast agent & system messages so they appear in real-time
+    if (input.role === "agent" || input.role === "system") {
+      broadcastToConversation(input.conversationId, {
+        type: "message:created",
+        message: row as unknown as MessageRow,
+      } as any);
+    }
+
     return row as unknown as MessageRow;
   }
 
