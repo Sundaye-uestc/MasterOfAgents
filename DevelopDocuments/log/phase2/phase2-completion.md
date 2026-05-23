@@ -1,7 +1,7 @@
 # Phase 2 完成日志
 
-**日期：** 2026-05-22
-**状态：** 核心功能已完成 + UX 全面优化 — 全部 6 个子任务实现完毕，TypeScript 编译通过，服务启动验证通过
+**日期：** 2026-05-22（更新于 2026-05-23）
+**状态：** 核心功能已完成 + 群聊端到端 Bug 修复 + UX 持续优化 — 全部 6 个子任务实现完毕，TypeScript 编译通过，服务启动验证通过
 
 ---
 
@@ -124,6 +124,24 @@ Phase 2（群聊协作）核心框架已交付。实现了从单聊到多 Agent 
 | Chinese intent detection 返回 null（正则过于严格） | 正则放宽，添加 "called" 关键词 |
 | hasOverlap 父子目录检测失败（"src/" + "/" = "src//"） | 尾部斜杠归一化后再比较 |
 | start_dev.py 过早退出（pnpm 子进程导致 poll() 非 None） | 监控循环改为无限等待 Ctrl+C |
+| 群聊发消息无响应 — executeTask 的 onEvent 回调为空，子任务完成无法回调编排器 | 实现完整 handleEvent：文本增量写 DB + WS 广播 + run_completed/failed 时调用 handleTaskCompleted |
+| 群聊无 WS 广播 — 子任务流式输出不推送到前端 | handleEvent 中调用 agentEventToWsEvent() + broadcastToConversation() |
+| OrchestratorService 每次请求新建实例，丢失编排状态 | 添加 getOrchestratorService() 单例函数 |
+| 系统消息不实时出现 — createMessage 不广播 WS 事件 | chat.service.ts 对 agent/system 角色广播 message:created |
+| 直聊 Agent 回复重复出现两次 | 前端不再手动添加 Agent 占位消息，完全由 WS message:created 驱动 |
+| 直聊"思考中🤔"不显示 — Agent 消息初始 status 为 "sent" | createMessage 支持 status 参数，Agent 消息直接以 "streaming" 创建 |
+| 消息顺序错误（系统/Agent 排在用户前面） | 乐观更新：API 调用前立即插入临时用户消息 |
+
+---
+
+## 2026-05-23 新增优化
+
+| 优化项 | 说明 |
+|---|---|
+| 系统消息紧凑化 | 计划摘要和汇总总结改为单行（`·` / `—` 分隔），前端 padding `px-3 py-1`、字号 `text-xs`、去除 italic |
+| Planner Prompt 中文化 | Prompt 全面中文化，明确要求 title/description/reasoning 使用中文输出 |
+| .env 模板推送 | 脱敏后的 .env 模板推送到远程，方便协作者配置 |
+| PDF 从 git 移除 | 设计 PDF 从仓库删除，`*.pdf` 加入 .gitignore |
 
 ---
 
@@ -131,7 +149,8 @@ Phase 2（群聊协作）核心框架已交付。实现了从单聊到多 Agent 
 
 | 项目 | 状态 | 说明 |
 |---|---|---|
-| Orchestrator 端到端测试 | 待测试 | 需创建群聊 + 发送消息触发完整编排流程（API Key 已配置） |
+| Orchestrator 端到端测试 | **已验证** | 群聊崩溃 Bug 已修复，onEvent → handleTaskCompleted 闭环 + WS 广播 + 单例 |
+| 直聊消息重复 & 思考中消失 | **已修复** | WS message:created 替代手动占位，Agent 消息以 streaming 状态创建 |
 | 权限审批端到端测试 | 待测试 | 交互模式下 Claude CLI 的具体 stdout/stderr 格式待验证 |
 | Codex Adapter 未实现 | 接口已预留 | AgentPlatformAdapter 接口支持，ClaudeCodeAdapter 为唯一实现 |
 | 群聊成员增删 UI | 基础实现 | 新增/移除成员的 UI 面板尚未加入 ConversationList |
