@@ -178,31 +178,41 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
 
   const handleSend = useCallback(
     async (content: string, replyToId?: string, mentionedAgentIds?: string[]) => {
+      const effectiveAgentId = mentionedAgentIds && mentionedAgentIds.length === 1 && !agentId
+        ? mentionedAgentIds[0]
+        : agentId;
+
+      // Optimistic user message so it appears before any WS-delivered system/agent messages
+      const tempUserMsg: MessageRow = {
+        id: `temp-${Date.now()}`,
+        conversationId,
+        role: "user",
+        content,
+        status: "sending",
+        runId: null,
+        taskId: null,
+        agentId: null,
+        replyToId: replyToId ?? null,
+        segmentsJson: null,
+        metadataJson: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, tempUserMsg]);
+      setTimeout(scrollToBottom, 50);
+
       try {
-        const effectiveAgentId = mentionedAgentIds && mentionedAgentIds.length === 1 && !agentId
-          ? mentionedAgentIds[0]
-          : agentId;
         const result = await sendMessage(conversationId, content, replyToId, effectiveAgentId);
-        const agentPlaceholder: MessageRow = {
-          id: result.agentMessageId,
-          conversationId,
-          role: "agent",
-          content: "",
-          status: "streaming",
-          runId: null,
-          taskId: null,
-          agentId: effectiveAgentId ?? null,
-          replyToId: null,
-          segmentsJson: null,
-          metadataJson: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        setMessages((prev) => [...prev, result.userMessage, agentPlaceholder]);
+
+        // Replace temp user message with real one from server
+        setMessages((prev) => prev.map((m) => m.id === tempUserMsg.id ? result.userMessage : m));
+
         setRunning(true);
         setCurrentRunId(result.runId);
         setTimeout(scrollToBottom, 100);
       } catch (err) {
+        // Remove the temp message on failure
+        setMessages((prev) => prev.filter((m) => m.id !== tempUserMsg.id));
         console.error("Failed to send message", err);
       }
     },
@@ -515,14 +525,14 @@ function MessageBubble({
 
   return (
     <div
-      className={`rounded-lg px-4 py-2.5 text-sm relative group ${borderClass} ${
-        isUser
-          ? "bg-blue-600 text-white"
-          : isAgent
-          ? "bg-gray-800 text-gray-100 border border-gray-700"
-          : isSystem
-          ? "bg-gray-800/50 text-gray-400 italic border border-gray-700/50"
-          : "bg-gray-800 text-gray-100 border border-gray-700"
+      className={`rounded-lg relative group ${borderClass} ${
+        isSystem
+          ? "px-3 py-1 text-xs bg-gray-800/50 text-gray-400 border border-gray-700/50"
+          : `px-4 py-2.5 text-sm ${
+              isUser
+                ? "bg-blue-600 text-white"
+                : "bg-gray-800 text-gray-100 border border-gray-700"
+            }`
       }`}
     >
         {/* System message: timestamp centered at top */}

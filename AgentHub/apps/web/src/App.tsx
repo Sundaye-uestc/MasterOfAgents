@@ -108,7 +108,7 @@ export function App() {
 
   const { avatar: userAvatar, uploadAvatar, clearAvatar } = useUserAvatar();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout>>();
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((message: string, type: "success" | "error") => {
     if (toastTimer.current) clearTimeout(toastTimer.current);

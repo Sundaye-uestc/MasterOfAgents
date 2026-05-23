@@ -91,7 +91,13 @@ export function listMessages(conversationId: string) {
 }
 
 export function sendMessage(conversationId: string, content: string, replyToId?: string, agentId?: string) {
-  return request<{ userMessage: MessageRow; runId: string; agentMessageId: string }>(
+  return request<{
+    userMessage: MessageRow;
+    runId: string;
+    agentMessageId: string;
+    mode?: "orchestrated";
+    plan?: unknown;
+  }>(
     `/conversations/${conversationId}/messages`,
     {
       method: "POST",
