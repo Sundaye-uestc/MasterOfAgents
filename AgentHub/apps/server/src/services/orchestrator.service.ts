@@ -59,17 +59,15 @@ export class OrchestratorService {
       createdAt: now,
     }).run();
 
-    // Plan the task decomposition
-    const availableAgents = agentConfigs.map((a) => ({
+    // Plan the task decomposition — try @mention-based first
+    const agentInfos = agentConfigs.map((a) => ({
       id: a.id,
       name: a.name,
       capabilities: a.capabilities?.map((c: any) => c.label ?? c) ?? [],
     }));
 
-    const plan = await this.planner.generateTaskPlan({
-      prompt,
-      availableAgents,
-    });
+    const plan = this.parseMentionedTasks(prompt, agentConfigs) ??
+      await this.planner.generateTaskPlan({ prompt, availableAgents: agentInfos });
 
     // Persist plan to run
     db.update(schema.runs)
@@ -112,7 +110,7 @@ export class OrchestratorService {
     this.activeOrchestrations.set(runId, state);
 
     // Create a compact system message with the plan summary
-    const planSummary = plan.tasks.map((t, i) => `${i + 1}. ${t.title} → ${t.agentId}`).join("  ·  ");
+    const planSummary = plan.tasks.map((t: TaskPlanItem, i: number) => `${i + 1}. ${t.title} → ${t.agentId}`).join("  ·  ");
     const reasoningLine = plan.reasoning ? ` — ${plan.reasoning}` : "";
     await this.chatService.createMessage({
       conversationId,
@@ -125,6 +123,90 @@ export class OrchestratorService {
     await this.scheduleReadyTasks(runId, conversationId, agentConfigs, params.systemPrompt);
 
     return { runId, plan };
+  }
+
+  /** Parse @agent mentions from prompt and create tasks directly (no LLM needed) */
+  private parseMentionedTasks(
+    prompt: string,
+    agentConfigs: AgentConfig[]
+  ): TaskPlan | null {
+    // Find all @agent occurrences by matching against known agent names
+    interface AgentMatch { agent: AgentConfig; position: number; endPos: number }
+    const found: AgentMatch[] = [];
+
+    for (const agent of agentConfigs) {
+      const nameParts = agent.name.split(/\s+/);
+      // Try matching the full name first, then first word
+      const patterns = [agent.name];
+      if (nameParts.length > 1 && nameParts[0]) {
+        patterns.push(nameParts[0]);
+      }
+      // Also match by id
+      patterns.push(agent.id);
+
+      for (const pattern of patterns) {
+        const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`@${escaped}\\b`, 'gi');
+        let m: RegExpExecArray | null;
+        while ((m = regex.exec(prompt)) !== null) {
+          // Avoid duplicates at same position
+          if (!found.some((f) => f.position === m!.index)) {
+            found.push({ agent, position: m!.index, endPos: m!.index + m![0].length });
+          }
+        }
+      }
+    }
+
+    if (found.length === 0) return null;
+
+    // Sort by position
+    found.sort((a, b) => a.position - b.position);
+
+    // Split prompt by @agent mentions to get per-agent tasks
+    const segments: Array<{ agent: AgentConfig; task: string }> = [];
+    for (let i = 0; i < found.length; i++) {
+      const current = found[i]!;
+      const next = found[i + 1];
+      const taskStart = current.endPos;
+      const taskEnd = next ? next.position : prompt.length;
+      let task = prompt.substring(taskStart, taskEnd).trim();
+      if (task.startsWith("@")) {
+        task = task.substring(task.indexOf(" ") + 1).trim();
+      }
+      if (task) {
+        segments.push({ agent: current.agent, task });
+      }
+    }
+
+    if (segments.length === 0) return null;
+
+    const tasks: TaskPlanItem[] = [];
+    const seenAgents = new Set<string>();
+
+    for (const seg of segments) {
+      if (seenAgents.has(seg.agent.id)) continue;
+      seenAgents.add(seg.agent.id);
+
+      tasks.push({
+        id: newId(),
+        title: seg.task.length > 40 ? seg.task.substring(0, 40) + "..." : seg.task,
+        description: seg.task,
+        agentId: seg.agent.id,
+        dependencies: [],
+        expectedOutput: `完成：${seg.task}`,
+        riskLevel: "low",
+        writeScope: [],
+      });
+    }
+
+    if (tasks.length === 0) return null;
+
+    return {
+      planId: newId(),
+      tasks,
+      reasoning: `从用户消息中解析了 ${tasks.length} 个 @Agent 指定任务`,
+      estimatedRounds: 1,
+    };
   }
 
   private async scheduleReadyTasks(
@@ -189,7 +271,8 @@ export class OrchestratorService {
     conversationId: string,
     task: TaskPlanItem,
     agentMap: Map<string, AgentConfig>,
-    systemPrompt?: string
+    systemPrompt?: string,
+    retryMsgId?: string
   ): Promise<void> {
     const state = this.activeOrchestrations.get(runId);
     if (!state) return;
@@ -213,7 +296,10 @@ export class OrchestratorService {
       agentId: task.agentId,
     });
 
+    let currentMsgId: string | null = retryMsgId ?? null;
+
     const handleEvent = (event: AgentEvent, msgId: string) => {
+      if (!currentMsgId) currentMsgId = msgId;
       if (event.type === "text_delta") {
         if (!this.runtime.isRunAborted(event.runId)) {
           this.chatService.appendContent(msgId, event.delta);
@@ -221,7 +307,7 @@ export class OrchestratorService {
       }
       const wsEvent = agentEventToWsEvent(event);
       if (wsEvent) {
-        if (wsEvent.type === "message:delta") {
+        if (wsEvent.type === "message:delta" || wsEvent.type === "tool:invocation") {
           (wsEvent as any).messageId = msgId;
         }
         broadcastToConversation(conversationId, wsEvent);
@@ -264,16 +350,11 @@ export class OrchestratorService {
       });
 
       state.activeTasks.set(task.id, subRunId);
-
-      // In a real implementation, we'd wait for the run to complete via the existing
-      // event stream. For now, we track the sub-run and the caller (
-      // conversations.ts onEvent callback) will call handleTaskCompleted
-      // when the run finishes.
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       console.error(`[orchestrator] task ${task.id} execution error: ${errorMsg}`);
 
-      // Retry once
+      // Retry once — reuse the same agent message ID to avoid duplicates
       if (this.shouldRetry(task)) {
         console.log(`[orchestrator] retrying task ${task.id}`);
         try {
@@ -288,14 +369,22 @@ export class OrchestratorService {
           });
           state.activeTasks.set(task.id, subRunId);
           return;
-        } catch {
-          // Retry also failed
+        } catch (retryErr) {
+          console.error(`[orchestrator] task ${task.id} retry also failed:`, retryErr);
         }
       }
 
       state.agentBusy.delete(task.agentId);
       state.failedTasks.add(task.id);
       await this.markTaskStatus(task.id, "failed");
+
+      // Send message:completed to close streaming on the agent message
+      if (currentMsgId) {
+        broadcastToConversation(conversationId, {
+          type: "message:completed",
+          messageId: currentMsgId,
+        });
+      }
 
       broadcastToConversation(conversationId, {
         type: "task:failed",

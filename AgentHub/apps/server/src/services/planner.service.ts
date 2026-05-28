@@ -29,6 +29,9 @@ export class PlannerService {
   async generateTaskPlan(input: PlannerInput): Promise<TaskPlan> {
     let lastError = "";
 
+    // Extract @agent assignments from user prompt
+    input = this.preprocessMentions(input);
+
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const prompt = this.buildPlannerPrompt(input, attempt > 0 ? lastError : "");
@@ -167,63 +170,117 @@ export class PlannerService {
     };
   }
 
+  /** Extract @agent mentions from prompt and inject assignment hints */
+  private preprocessMentions(input: PlannerInput): PlannerInput {
+    // Find @mentions: match "@Name Name" patterns like "@Claude Code", "@Codex"
+    const mentionRegex = /@(\S+(?:\s+\S+)?)/g;
+    const mentions: string[] = [];
+    let match;
+    while ((match = mentionRegex.exec(input.prompt)) !== null) {
+      if (match[1]) mentions.push(match[1].trim());
+    }
+
+    if (mentions.length === 0) {
+      return input;
+    }
+
+    // Match mentions to available agents (case-insensitive partial match)
+    const assignments: Array<{ agentId: string; agentName: string; mention: string }> = [];
+    for (const mention of mentions) {
+      const lower = mention.toLowerCase();
+      const agent = input.availableAgents.find(
+        (a) =>
+          a.name.toLowerCase().includes(lower) ||
+          a.id.toLowerCase().includes(lower) ||
+          lower.includes(a.name.toLowerCase())
+      );
+      if (agent && !assignments.some((x) => x.agentId === agent.id)) {
+        assignments.push({ agentId: agent.id, agentName: agent.name, mention });
+      }
+    }
+
+    if (assignments.length === 0) {
+      return input;
+    }
+
+    // Build assignment hints for the prompt
+    const hint = assignments
+      .map((a) => `"${a.mention}" → Agent ID: ${a.agentId}`)
+      .join(", ");
+
+    return {
+      ...input,
+      prompt: `${input.prompt}\n\n[用户通过 @ 指定：${hint}。请严格按此分配创建独立任务。]`,
+    };
+  }
+
   private buildPlannerPrompt(input: PlannerInput, errorContext: string): string {
-    const agentList = input.availableAgents
-      .map((a) => `- ${a.name} (id: ${a.id}): ${a.capabilities.join(", ") || "general purpose"}`)
+    const agentListSimple = input.availableAgents
+      .map((a) => `- ${a.name}（ID: ${a.id}）`)
       .join("\n");
 
     const historySection = input.conversationHistory
-      ? `\n\nConversation history:\n${input.conversationHistory}`
+      ? `\n\n对话历史：\n${input.conversationHistory}`
       : "";
 
     const errorSection = errorContext
-      ? `\n\nIMPORTANT: Your previous response was invalid. Error: ${errorContext}\nPlease fix the issues and output valid JSON.`
+      ? `\n\n【重要】上轮输出无效：${errorContext}\n修正后重新输出。`
       : "";
 
-    return `你是一个任务规划助手。根据用户请求和可用的 Agent 列表，将请求分解为结构化的任务计划。
+    return `你的唯一任务是：将以下用户请求拆分为子任务。
 
-可用 Agent：
-${agentList}
+可用 Agent：${agentListSimple}
 
-用户请求：
-${input.prompt}${historySection}
+用户请求：${input.prompt}${historySection}
 
-请严格按照以下 JSON schema 输出：
+请输出 JSON（不要其他文字）：
 {
   "tasks": [
     {
-      "id": "unique-task-id",
-      "title": "简短的任务标题（中文）",
-      "description": "给 Agent 的详细任务描述（中文）",
-      "agentId": "从上方列表中选择的 Agent ID",
-      "dependencies": ["依赖的前置任务 id", "..."],
-      "expectedOutput": "该任务应产出的内容（中文）",
-      "riskLevel": "low" | "medium" | "high",
-      "writeScope": ["file/path/that/task/may/write"]
+      "id": "task-1",
+      "title": "任务标题（中文）",
+      "description": "详细描述（中文，原样传达用户需求给 Agent）",
+      "agentId": "上述 Agent ID",
+      "dependencies": [],
+      "expectedOutput": "期望产出（中文）",
+      "riskLevel": "low",
+      "writeScope": []
     }
   ],
-  "reasoning": "任务分解逻辑说明（中文）",
-  "estimatedRounds": number
+  "reasoning": "拆分理由（中文）",
+  "estimatedRounds": 1
 }
 
-规则：
-- 每个任务必须有唯一的 id。
-- dependencies 必须引用已有的任务 id。
-- 不能有循环依赖。
-- 将每个任务分配给可用列表中最合适的 Agent。
-- 简单请求使用 1 个任务，复杂请求使用 2-5 个任务。
-- 高风险任务是指会修改文件或执行破坏性命令的任务。
-- title、description、expectedOutput、reasoning 必须使用中文。${errorSection}
+关键规则：
+- 直接执行用户请求。不要分析 Agent 本身，不要讨论 Agent 能力。
+- 用户 @N 个 Agent → 至少 N 个任务，严格对应。
+- 无依赖间用空数组 []。
+- riskLevel 只填 "low"/"medium"/"high"。${errorSection}
 
-只输出 JSON 对象，不要其他文字。`;
+只输出 JSON。`;
   }
 
   private parsePlanResponse(raw: string): TaskPlan {
+    console.log(`[Planner] raw LLM response (length=${raw.length}):`);
+    console.log(raw.substring(0, 2000));
+
     const trimmed = raw.trim();
-    // Try to extract JSON from markdown code blocks
+    // Try to extract JSON from markdown code blocks first
     const codeBlockMatch = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-    const jsonStr = codeBlockMatch ? codeBlockMatch[1]!.trim() : trimmed;
-    return JSON.parse(jsonStr) as TaskPlan;
+    let jsonStr = codeBlockMatch ? codeBlockMatch[1]!.trim() : trimmed;
+
+    // Try to extract JSON object from surrounding text (find first { to last })
+    const firstBrace = jsonStr.indexOf("{");
+    const lastBrace = jsonStr.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+    }
+
+    try {
+      return JSON.parse(jsonStr) as TaskPlan;
+    } catch (e) {
+      throw new Error(`Failed to parse JSON from response: ${(e as Error).message}`);
+    }
   }
 
   private async callLLM(prompt: string): Promise<string> {
