@@ -6,6 +6,8 @@ import {
   deleteConversation,
   renameConversation,
   pinConversation,
+  archiveConversation,
+  unarchiveConversation,
   listAgents,
   listMembers,
   addMember,
@@ -29,6 +31,7 @@ interface Props {
   onDelete: (id: string) => void;
   onRename: (id: string, title: string) => void;
   onPin: (id: string, pinned: boolean) => void;
+  onArchive: (id: string, archived: boolean) => void;
   agentMap: Record<string, AgentInfo>;
   onAgentMapLoaded: (map: Record<string, AgentInfo>) => void;
   refreshKey: number;
@@ -43,11 +46,15 @@ export function ConversationList({
   onDelete,
   onRename,
   onPin,
+  onArchive,
   agentMap,
   onAgentMapLoaded,
   refreshKey,
 }: Props) {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -67,10 +74,20 @@ export function ConversationList({
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    listConversations()
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [search]);
+
+  useEffect(() => {
+    listConversations(debouncedSearch || undefined)
       .then(onLoaded)
       .catch(() => {});
-  }, [refreshKey]);
+  }, [refreshKey, debouncedSearch]);
 
   // Close menu on outside click
   useEffect(() => {
@@ -92,17 +109,15 @@ export function ConversationList({
     }
   }, [editingId]);
 
-  const filtered = (search
-    ? conversations.filter((c) =>
-        c.title.toLowerCase().includes(search.toLowerCase())
-      )
-    : conversations
-  ).sort((a, b) => {
-    // Pinned first, then by updatedAt desc
-    if (a.pinnedAt && !b.pinnedAt) return -1;
-    if (!a.pinnedAt && b.pinnedAt) return 1;
-    return b.updatedAt.localeCompare(a.updatedAt);
-  });
+  const filtered = conversations
+    .filter((c) => showArchived || c.status !== "archived")
+    .sort((a, b) => {
+      if (a.status === "archived" && b.status !== "archived") return 1;
+      if (a.status !== "archived" && b.status === "archived") return -1;
+      if (a.pinnedAt && !b.pinnedAt) return -1;
+      if (!a.pinnedAt && b.pinnedAt) return 1;
+      return b.updatedAt.localeCompare(a.updatedAt);
+    });
 
   const handleNewClick = async () => {
     try {
@@ -179,6 +194,20 @@ export function ConversationList({
     }
   };
 
+  const handleArchiveClick = async (convId: string, archive: boolean) => {
+    setMenuOpenId(null);
+    try {
+      if (archive) {
+        await archiveConversation(convId);
+      } else {
+        await unarchiveConversation(convId);
+      }
+      onArchive(convId, archive);
+    } catch (err) {
+      console.error("Failed to archive/unarchive conversation", err);
+    }
+  };
+
   const handleManageMembers = async (convId: string) => {
     setMenuOpenId(null);
     try {
@@ -230,6 +259,15 @@ export function ConversationList({
           onChange={(e) => setSearch(e.target.value)}
           className="w-full mt-2 px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-gray-600"
         />
+        <label className="flex items-center gap-2 px-1 py-1 text-xs text-gray-500 cursor-pointer mt-1">
+          <input
+            type="checkbox"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+            className="rounded bg-gray-700 border-gray-600"
+          />
+          显示已归档
+        </label>
       </div>
       <div className="flex-1 overflow-y-auto">
         {filtered.map((conv) => {
@@ -321,6 +359,22 @@ export function ConversationList({
                           👥 管理成员
                         </button>
                       </>
+                    )}
+                    <div className="border-t border-gray-700" />
+                    {conv.status === "archived" ? (
+                      <button
+                        onClick={() => handleArchiveClick(conv.id, false)}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                      >
+                        📂 取消归档
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleArchiveClick(conv.id, true)}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                      >
+                        📦 归档
+                      </button>
                     )}
                     <div className="border-t border-gray-700" />
                     <button

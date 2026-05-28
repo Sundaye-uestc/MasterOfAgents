@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { MessageRow } from "@agenthub/shared";
-import { listMessages, sendMessage, stopRun, deleteMessage, listMembers, listAgents } from "../../lib/api.js";
+import { listMessages, sendMessage, stopRun, deleteMessage, pinMessage, getPinnedMessages, retryMessage, listMembers, listAgents } from "../../lib/api.js";
 import { useWebSocket } from "../../hooks/useWebSocket.js";
 import type { WsServerEvent } from "../../hooks/useWebSocket.js";
 import { useOrchestrationState } from "../../hooks/useOrchestrationState.js";
@@ -10,6 +10,8 @@ import { OrchestratorStatusBar } from "./OrchestratorStatusBar.js";
 import { AgentBadge } from "./AgentBadge.js";
 import { ToolInvocationCard } from "./ToolInvocationCard.js";
 import { MarkdownContent } from "./MarkdownContent.js";
+import { ReplyPreviewCard } from "./ReplyPreviewCard.js";
+import { PinnedMessageBar } from "./PinnedMessageBar.js";
 
 interface ToolInvocation {
   id: string;
@@ -53,6 +55,13 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
   const [orchBarExpanded, setOrchBarExpanded] = useState(false);
   const [agentCapabilities, setAgentCapabilities] = useState<string[]>([]);
   const [toolInvocations, setToolInvocations] = useState<Record<string, ToolInvocation[]>>({});
+  const [replyTo, setReplyTo] = useState<{
+    messageId: string;
+    content: string;
+    role: string;
+  } | null>(null);
+  const [pinnedMessages, setPinnedMessages] = useState<MessageRow[]>([]);
+  const [showPinnedBar, setShowPinnedBar] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { state: orch, handleWsEvent: handleOrchEvent, reset: resetOrch } = useOrchestrationState();
@@ -97,6 +106,8 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
     resetOrch();
     setPermRequest(null);
     setToolInvocations({});
+    setPinnedMessages([]);
+    setShowPinnedBar(true);
     listMessages(conversationId)
       .then((msgs) => {
         setMessages(msgs);
@@ -104,6 +115,9 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
         setTimeout(scrollToBottom, 100);
       })
       .catch(() => setLoading(false));
+    getPinnedMessages(conversationId)
+      .then(setPinnedMessages)
+      .catch(() => {});
   }, [conversationId]);
 
   // WebSocket for real-time events
@@ -250,6 +264,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
         // Replace temp user message with real one from server
         setMessages((prev) => prev.map((m) => m.id === tempUserMsg.id ? result.userMessage : m));
 
+        setReplyTo(null);
         setRunning(true);
         setCurrentRunId(result.runId);
         setTimeout(scrollToBottom, 100);
@@ -288,6 +303,47 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
       setMessages((prev) => prev.filter((m) => m.id !== msgId));
     } catch (err) {
       console.error("Failed to delete message", err);
+    }
+  }, []);
+
+  const handleReply = useCallback((msgId: string, content: string, role: string) => {
+    setReplyTo({ messageId: msgId, content: content ?? "", role });
+  }, []);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyTo(null);
+  }, []);
+
+  const handlePinMessage = useCallback(async (msgId: string, pinned: boolean) => {
+    try {
+      await pinMessage(msgId, pinned);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId
+            ? { ...m, metadataJson: pinned ? JSON.stringify({ pinned: true }) : null }
+            : m
+        )
+      );
+      getPinnedMessages(conversationId)
+        .then(setPinnedMessages)
+        .catch(() => {});
+    } catch (err) {
+      console.error("Failed to pin/unpin message", err);
+    }
+  }, [conversationId]);
+
+  const handleScrollToMessage = useCallback((messageId: string) => {
+    const el = document.getElementById(`message-${messageId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
+
+  const handleRegenerate = useCallback(async (msgId: string) => {
+    try {
+      const result = await retryMessage(msgId);
+      setRunning(true);
+      setCurrentRunId(result.runId);
+    } catch (err) {
+      console.error("Failed to retry message", err);
     }
   }, []);
 
@@ -417,6 +473,24 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
         </div>
       </div>
 
+      {/* Pinned messages bar */}
+      {pinnedMessages.length > 0 && showPinnedBar && (
+        <PinnedMessageBar
+          messages={pinnedMessages}
+          onScrollTo={handleScrollToMessage}
+          onUnpin={(msgId) => handlePinMessage(msgId, false)}
+          onClose={() => setShowPinnedBar(false)}
+        />
+      )}
+      {pinnedMessages.length > 0 && !showPinnedBar && (
+        <button
+          onClick={() => setShowPinnedBar(true)}
+          className="text-xs text-yellow-500 hover:text-yellow-400 px-4 py-1 border-b border-gray-700 bg-gray-800/50"
+        >
+          📌 {pinnedMessages.length} 条固定消息
+        </button>
+      )}
+
       {/* Orchestrator status bar */}
       {isOrchestrating && (
         <OrchestratorStatusBar
@@ -453,11 +527,14 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           // System messages: centered, no avatar
           if (isSystem) {
             return (
-              <div key={msg.id} className="flex justify-center mb-4">
+              <div key={msg.id} id={`message-${msg.id}`} className="flex justify-center mb-4">
                 <MessageBubble
                   message={msg}
                   isStreaming={msg.id === streamingMsgId}
                   onDelete={handleDeleteMessage}
+                  onReply={handleReply}
+                  onPin={handlePinMessage}
+                  onRegenerate={handleRegenerate}
                 />
               </div>
             );
@@ -466,6 +543,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           return (
             <div
               key={msg.id}
+              id={`message-${msg.id}`}
               className={`flex items-start gap-2 mb-4 ${isUser ? "justify-end" : "justify-start"}`}
             >
               {/* Agent avatar on the LEFT */}
@@ -487,6 +565,9 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
                   isStreaming={msg.id === streamingMsgId}
                   onDelete={handleDeleteMessage}
                   agentColor={isAgent ? agentColor(agentAdapterKind) : undefined}
+                  onReply={handleReply}
+                  onPin={handlePinMessage}
+                  onRegenerate={handleRegenerate}
                 />
                 {/* Tool invocations for this agent message */}
                 {isAgent && (() => {
@@ -522,7 +603,21 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
         <div ref={bottomRef} />
       </div>
 
-      <MessageInput onSend={handleSend} disabled={running} onStop={handleStop} members={members} />
+      {replyTo && (
+        <ReplyPreviewCard
+          content={replyTo.content}
+          role={replyTo.role}
+          onCancel={handleCancelReply}
+        />
+      )}
+      <MessageInput
+        onSend={handleSend}
+        disabled={running}
+        onStop={handleStop}
+        members={members}
+        replyToId={replyTo?.messageId}
+        onCancelReply={handleCancelReply}
+      />
 
       {/* Permission modal */}
       <PermissionModal
@@ -537,16 +632,31 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
 
 // --- Message Bubble ---
 
+function isMessagePinned(msg: MessageRow): boolean {
+  if (!msg.metadataJson) return false;
+  try {
+    return JSON.parse(msg.metadataJson).pinned === true;
+  } catch {
+    return false;
+  }
+}
+
 function MessageBubble({
   message,
   isStreaming,
   onDelete,
   agentColor,
+  onReply,
+  onPin,
+  onRegenerate,
 }: {
   message: MessageRow;
   isStreaming: boolean;
   onDelete: (msgId: string) => void;
   agentColor?: string;
+  onReply?: (msgId: string, content: string, role: string) => void;
+  onPin?: (msgId: string, pinned: boolean) => void;
+  onRegenerate?: (msgId: string) => void;
 }) {
   const isUser = message.role === "user";
   const isAgent = message.role === "agent";
@@ -598,7 +708,7 @@ function MessageBubble({
         )}
 
         {/* Dropdown menu trigger */}
-        {message.content && message.status !== "streaming" && (
+        {message.content && (message.status as string) !== "streaming" && (
           <div className={`absolute bottom-1 ${isUser ? "left-1" : "right-1"}`} ref={menuOpen ? menuRef : null}>
             <button
               onClick={(e) => {
@@ -617,6 +727,39 @@ function MessageBubble({
                 >
                   📋复制
                 </button>
+                {onReply && (
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onReply(message.id, message.content ?? "", message.role);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                  >
+                    💬 回复
+                  </button>
+                )}
+                {onPin && message.content && (message.status as string) !== "streaming" && (
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onPin(message.id, !isMessagePinned(message));
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                  >
+                    {isMessagePinned(message) ? "📌 取消固定" : "📌 固定"}
+                  </button>
+                )}
+                {isAgent && onRegenerate && (message.status as string) !== "streaming" && (
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onRegenerate(message.id);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                  >
+                    🔄 重新生成
+                  </button>
+                )}
                 <button
                   onClick={handleDelete}
                   className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-700 rounded-b-md"
@@ -632,6 +775,13 @@ function MessageBubble({
         {message.replyToId && (
           <div className="text-xs text-gray-500 mb-1 border-l-2 border-gray-600 pl-2">
             回复消息
+          </div>
+        )}
+
+        {/* Pin indicator */}
+        {isMessagePinned(message) && (
+          <div className="text-xs text-yellow-500 mb-1">
+            📌 已固定
           </div>
         )}
 

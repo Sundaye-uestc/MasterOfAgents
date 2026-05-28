@@ -65,6 +65,16 @@ export function App() {
     );
   }, []);
 
+  const handleArchiveConversation = useCallback((id: string, archived: boolean) => {
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === id
+          ? { ...c, status: archived ? ("archived" as const) : ("active" as const) }
+          : c
+      )
+    );
+  }, []);
+
   const triggerRefresh = useCallback(() => {
     setRefreshKey((k) => k + 1);
     refreshAgentMap();
@@ -158,6 +168,7 @@ export function App() {
             onDelete={handleDeleteConversation}
             onRename={handleRenameConversation}
             onPin={handlePinConversation}
+            onArchive={handleArchiveConversation}
             agentMap={agentMap}
             onAgentMapLoaded={setAgentMap}
             refreshKey={refreshKey}

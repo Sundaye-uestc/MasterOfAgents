@@ -12,9 +12,11 @@ interface Props {
   disabled?: boolean;
   onStop?: () => void;
   members?: MemberInfo[];
+  replyToId?: string;
+  onCancelReply?: () => void;
 }
 
-export function MessageInput({ onSend, disabled, onStop, members }: Props) {
+export function MessageInput({ onSend, disabled, onStop, members, replyToId, onCancelReply }: Props) {
   const [text, setText] = useState("");
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState("");
@@ -46,7 +48,7 @@ export function MessageInput({ onSend, disabled, onStop, members }: Props) {
     const content = text.trim();
     if (!content || disabled) return;
     const mentionedIds = getMentionedIds(content);
-    onSend(content, undefined, mentionedIds.length > 0 ? mentionedIds : undefined);
+    onSend(content, replyToId, mentionedIds.length > 0 ? mentionedIds : undefined);
     setText("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";

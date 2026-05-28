@@ -368,6 +368,23 @@ export class ChatService {
       .reverse() as any;
   }
 
+  /** Find the user message that preceded a given agent message */
+  async getPreviousUserMessage(agentMessageId: string): Promise<MessageRow | null> {
+    const agentMsg = await this.getMessage(agentMessageId);
+    if (!agentMsg || agentMsg.role !== "agent") return null;
+
+    const allMessages = await this.listMessages(agentMsg.conversationId);
+    const agentIdx = allMessages.findIndex((m) => m.id === agentMessageId);
+    if (agentIdx === -1) return null;
+
+    for (let i = agentIdx - 1; i >= 0; i--) {
+      if (allMessages[i]!.role === "user") {
+        return allMessages[i]!;
+      }
+    }
+    return null;
+  }
+
   // --- Intent Detection ---
 
   /** Detect "create agent" intent from user message */

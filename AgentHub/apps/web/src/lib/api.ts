@@ -113,8 +113,19 @@ export function pinMessage(messageId: string, pinned: boolean) {
   });
 }
 
+export function getPinnedMessages(conversationId: string) {
+  return request<MessageRow[]>(`/conversations/${conversationId}/pinned-messages`);
+}
+
 export function deleteMessage(messageId: string) {
   return request<{ ok: boolean }>(`/conversations/messages/${messageId}`, { method: "DELETE" });
+}
+
+export function retryMessage(messageId: string) {
+  return request<{ runId: string; agentMessageId: string }>(
+    `/conversations/messages/${messageId}/retry`,
+    { method: "POST" }
+  );
 }
 
 // --- Runs ---

@@ -1,101 +1,103 @@
 # AgentHub 待办事项
 
-**更新日期：** 2026-05-28（第二轮修复 + Markdown 渲染交付）
-
----
-
-## Phase 2：群聊协作 — 核心已完成
-
-### 2.1 Planner Service（任务规划）
-
-- [x] 实现 `PlannerService.generateTaskPlan(input)` — 调用 LLM 生成结构化 `TaskPlan` JSON
-- [x] 实现 `validateTaskPlan(plan)` — JSON Schema 校验
-- [x] 降级逻辑：解析/Schema 校验各重试 1 次 → 降级为单 Agent 直接执行
-- [x] 多 AI 厂商支持（anthropic / deepseek / openai / dashscope / moonshot / openrouter / glm / dobrain）
-
-### 2.2 Orchestrator Service（任务调度）
-
-- [x] 实现 `startOrchestratedRun(input)` — 创建 orchestrated run，调用 Planner，持久化 tasks
-- [x] 实现 DAG 调度器 `scheduleReadyTasks(runId)` — 依赖完成后触发后续任务
-- [x] 实现 `handleTaskCompleted(taskId)` + `aggregateRun(runId)`
-- [x] 调度规则：写入范围重叠串行、高风险任务等确认、子任务失败重试 1 次
-
-### 2.3 完整权限审批流程
-
-- [x] 解析 Claude Code 的 permission request 流式事件 → `AgentEventPermissionRequest`
-- [x] 前端弹窗展示审批内容（工具名、描述、命令）
-- [x] 后端接收审批结果并写入 Agent stdin
-- [x] 替换当前临时 `bypassPermissions` 方案
-
-### 2.4 群聊会话管理
-
-- [x] 扩展 `conversation_members`：支持添加/移除多个 Agent 成员
-- [x] 实现 @ Agent 功能：输入框中 @ 指定 Agent 分配任务
-- [x] 群聊创建 UI：新建时选择多个 Agent 参与
-- [x] AgentPicker 组件：多选、按能力标签筛选
-
-### 2.5 协作状态 UI
-
-- [x] OrchestratorStatusBar — 聊天区顶部展示当前 Run 状态和进度
-- [x] Task 进度展示：每个 task 的 status（queued/running/completed/failed）
-- [x] Tool Invocation 展示：Agent 调用的工具及结果（内联卡片）
-- [x] 多 Agent 消息区分：不同颜色/头像标识
-- [x] AgentStatusBadge + CapabilityTags
-
-### 2.6 自建 Agent（对话式创建）
-
-- [x] ChatService 识别 `create_agent` intent
-- [x] 生成 `AgentConfigDraft` → 用户确认 → 创建 Custom Agent
-- [x] AgentConfigDraftCard 确认卡片
-
----
-
-## UX 优化（已完成）
-
-- [x] 中文界面本地化（按钮、提示、状态文字）
-- [x] 停止输出按钮（Agent 运行中可中断）
-- [x] 消息右键菜单（复制 / 删除）
-- [x] 对话头部优化：单聊显示 Agent 名称 + 中文能力徽章（emoji 开头），群聊显示"名称 (人数)"
-- [x] 用户 & Agent 头像：消息旁显示头像，Agent 头像按 adapterKind 配色
-- [x] 用户头像上传：侧边栏底部上传区域，localStorage 持久化，带 Toast 成功/失败提示（限制 3MB）
-- [x] 时间戳位置优化：用户消息左下角，系统消息顶部居中
-- [x] 根目录 `start_dev.py` 一键启动脚本 + `.env` 多厂商配置 + `README.md`
-- [x] 系统消息紧凑化：计划/汇总改为单行，小字号小 padding，去除 italic
-- [x] Planner Prompt 中文化：LLM 输出中文标题/描述/推理
-- [x] .env 模板脱敏推送 + PDF 从 git 移除（`*.pdf` → .gitignore）
-- [x] Agent 输出 Markdown 渲染：react-markdown + remark-gfm，Tailwind 暗色主题（表格/代码块/标题/列表/引用）
-- [x] Planner @mention 绕过 LLM：parseMentionedTasks() 正则提取 @Agent 分派，解决 DeepSeek 任务拆分失败
-- [x] 重复"思考中"修复：currentMsgId 跟踪 + catch 块 message:completed 广播关闭流式状态
+**更新日期：** 2026-05-28（Phase 3 任务规划）
 
 ---
 
 ## Phase 2 待完善
 
-### 端到端验证
-- [x] Orchestrator + Planner 完整流程测试（群聊崩溃 Bug 已修复，onEvent → handleTaskCompleted 闭环 + WS 广播）
-- [ ] 权限审批交互模式端到端测试
-- [x] ToolInvocationCard 从 DB 记录实时渲染 & WS 推送
+- [ ] Codex CLI 安装与端到端验证（当前 `spawn codex ENOENT`，运行时自动降级为 ClaudeCodeAdapter；代码已完成）
 
-### 群聊管理增强
-- [x] 群聊成员增删 UI 面板（ConversationList 内嵌）
-
-### 适配器
-- [x] Codex Adapter 代码实现（`adapters/codex.adapter.ts` — 实现 AgentPlatformAdapter 接口，支持 permissionMode、respondToPermission）
-- [ ] Codex CLI 安装与端到端验证（当前 `spawn codex ENOENT`，CLI 未安装在运行机器上，运行时自动降级为 ClaudeCodeAdapter）
-
-### 工作区
-- [x] workspaces / workspace_snapshots 服务代码（schema 已有）
-
----
-
-## 当前阻塞与风险
+### 当前风险
 
 | 风险 | 状态 | 应对 |
 |---|---|---|
-| 权限审批临时绕过 | **已解决（默认旁路）** | 默认 `--permission-mode bypassPermissions` 自动执行所有工具；交互模式按需启用 |
-| Orchestrator 子任务回调缺失 | **已解决** | onEvent 完整实现 → handleTaskCompleted 闭环 |
-| Planner LLM 输出不稳定（DeepSeek 无法拆分任务） | **已解决** | parseMentionedTasks() 绕过 LLM，@mention 正则直接提取任务分配 |
+| Codex CLI 未跑通 | **代码已完成** | 安装 `codex` CLI + 配置 API Key 后即可启用 |
 | 多 Agent 文件写入冲突 | 已应对 | 写入范围检测、串行化 |
-| Codex Adapter | **代码已完成，CLI 未跑通** | CodexAdapter 实现完成；`codex` CLI 未安装（ENOENT），prepare() 失败时自动降级为 ClaudeCodeAdapter |
-| Planner API Key | **已配置** | 支持 8 家 AI 厂商，用户填写 .env 即可 |
-| Agent 输出 Markdown 渲染 | **已解决** | react-markdown + remark-gfm，Tailwind 暗色主题组件 |
+
+---
+
+## Phase 3：产物与部署（Artifacts & Deployment）
+
+> 参考设计：`AgentHub-web端系统设计.md` §16、`AgentHub-web端模块设计.md` §2.10–2.12 & §3.3–3.5
+
+### 3.1 File Changes 闭环
+
+- [ ] before/after snapshot 自动化 — run 启动前 `createSnapshot(before)`，完成后 `createSnapshot(after)`
+- [ ] `WorkspaceService.diffSnapshots()` — 比对 manifest 生成 `file_changes` 记录
+- [ ] DiffCard 组件 — 展示代码差异（参考 AgentVerse markdown/diff 组件）
+- [ ] `POST /api/file-changes/:id/apply` — 应用文件变更
+- [ ] `POST /api/file-changes/:id/revert` — 回滚文件变更
+- [ ] FileChangeList 组件 — 变更列表 + apply/revert 操作按钮
+
+### 3.2 Artifact 系统（产物）
+
+- [ ] `ArtifactService` — 从 file_changes 或输出目录创建 artifact；提供预览 URL / 下载
+- [ ] `artifacts` 表 + Zod schema（已在设计中定义）
+- [ ] `routes/artifacts.ts` — `GET /api/artifacts/:id`、`POST /api/artifacts/:id/deploy`
+- [ ] ArtifactCard 组件 — 产物卡片基类
+- [ ] WebPreviewCard 组件 — iframe 网页预览（`preview_url` → `<iframe>`）
+- [ ] DownloadCard 组件 — 下载卡片（文件大小、类型、下载按钮）
+
+### 3.3 部署（Deploy）
+
+- [ ] `DeployService` — 本地静态预览、workspace zip 打包下载、部署状态推送
+- [ ] `deployments` 表 + Zod schema（已在设计中定义）
+- [ ] `routes/deployments.ts` — 部署相关 REST 端点
+- [ ] DeployStatusCard 组件 — 部署状态卡片（pending → building → deployed/failed）
+- [ ] 本地静态预览（`local-static` 模式 — 启动本地 server 提供 iframe 预览）
+- [ ] workspace zip 下载（打包 workspace 根目录 → 下载链接）
+
+### 3.4 安全服务
+
+- [ ] `SecurityService` — secrets 加密存储、命令风险分级、审计日志
+- [ ] `secrets` 表 + `routes/secrets.ts` — CRUD（已在设计中定义）
+- [ ] `audit_logs` 落库 — 记录 stderr、高风险命令、权限决策
+- [ ] secret 不入消息、日志、tool result（在设计约束中已定义）
+
+### 3.5 Workspace 前端面板
+
+- [ ] FileTree 组件 — 工作区文件树（VSCode 风格）
+- [ ] SnapshotList 组件 — 快照时间线列表
+- [ ] WorkspacePanel 组件 — 右侧/底部面板容器，整合 FileTree + SnapshotList + FileChangeList
+
+### 3.6 前端架构升级
+
+- [ ] Zustand stores 迁移（当前用本地 `useState`）
+  - `conversation.store` — 会话列表、搜索、归档筛选
+  - `message.store` — 消息缓存、流式更新、replyTarget
+  - `agent.store` — Agent 列表、可用性、能力过滤
+  - `run.store` — active runs、tasks、tool invocations
+  - `artifact.store` — artifacts、deployments 状态
+  - `workspace.store` — files、snapshots、fileChanges
+  - `ui.store` — panels、dialogs、selection
+- [ ] Zod schemas 校验 — REST body + WS event（`packages/shared/src/schemas/`）
+- [ ] WS 连接注册表（`connection-registry.ts`）— 管理多连接、断线清理
+- [ ] 乐观更新封装（`optimistic-updates.ts`）— 统一的乐观写入 + 失败回滚
+- [ ] Event dispatcher（`event-dispatcher.ts`）— ServerEvent 自动分发到对应 store
+
+### 3.7 组件拆分与重构
+
+- [ ] `MessageList.tsx` — 从 ChatArea 中拆出消息列表渲染
+- [ ] `MessageBubble.tsx` — 独立的消息气泡组件（含 Markdown、回复指示器、操作菜单）
+- [ ] `ConversationSearchBar.tsx` — 独立的搜索栏组件（当前搜索逻辑内联在 ConversationList 中）
+
+### 3.8 Shared 类型扩展
+
+- [ ] `types/artifact.ts` — Artifact、ArtifactType、DeployStatus
+- [ ] `types/workspace.ts` — WorkspaceRef、Snapshot、FileChange、Manifest
+- [ ] `schemas/artifact.schema.ts`、`schemas/workspace.schema.ts` — Zod 校验
+- [ ] `constants.ts` — 事件名、状态枚举、sandbox 模式常量
+
+---
+
+## 实现顺序建议
+
+1. **3.8 Shared 类型** — 先行定义 artifact/workspace 类型和 schema
+2. **3.1 File Changes** — before/after snapshot + diff → 基础数据链路
+3. **3.2 Artifact** — ArtifactService + ArtifactCard → 从 file_changes 到可见卡片
+4. **3.3 Deploy** — DeployService + DeployStatusCard → 预览和下载
+5. **3.4 Security** — secrets + audit_logs 落库
+6. **3.5 Workspace 面板** — FileTree + WorkspacePanel 前端 UI
+7. **3.6 前端架构升级** — Zustand + Zod + 事件分发（贯穿前几项，最后统一）
+8. **3.7 组件重构** — 拆分 MessageList/MessageBubble 等

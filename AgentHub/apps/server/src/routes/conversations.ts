@@ -116,11 +116,67 @@ conversationRoutes.patch("/messages/:id/pin", async (c) => {
   return c.json({ ok: true });
 });
 
+// --- Get pinned messages for a conversation ---
+conversationRoutes.get("/:id/pinned-messages", async (c) => {
+  const pinned = await chat.getPinnedMessages(c.req.param("id")!);
+  return c.json(pinned);
+});
+
 // --- Delete message ---
 conversationRoutes.delete("/messages/:id", async (c) => {
   const ok = await chat.deleteMessage(c.req.param("id")!);
   if (!ok) return c.json({ error: "Not found" }, 404);
   return c.json({ ok: true });
+});
+
+// --- Retry agent message (regenerate) ---
+conversationRoutes.post("/messages/:id/retry", async (c) => {
+  const messageId = c.req.param("id")!;
+  const prevUserMsg = await chat.getPreviousUserMessage(messageId);
+  if (!prevUserMsg) return c.json({ error: "No previous user message found" }, 400);
+
+  const conversationId = prevUserMsg.conversationId;
+
+  const agentConfig: AgentConfig = {
+    id: prevUserMsg.agentId ?? "default-claude",
+    name: "Claude",
+    platform: "claude-code",
+    status: "online",
+    capabilities: [{ label: "code-generation" }],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+
+  const { runId, agentMessageId } = await runtime.startDirectRun({
+    conversationId,
+    agentId: agentConfig.id,
+    agentConfig,
+    prompt: prevUserMsg.content ?? "",
+    triggerMessageId: prevUserMsg.id,
+    chatService: chat,
+    onEvent: (event, msgId) => {
+      if (event.type === "text_delta") {
+        if (!runtime.isRunAborted(event.runId)) {
+          chat.appendContent(msgId, event.delta);
+        }
+      }
+      const wsEvent = agentEventToWsEvent(event);
+      if (wsEvent) {
+        if (wsEvent.type === "message:delta" || wsEvent.type === "tool:invocation") {
+          (wsEvent as any).messageId = msgId;
+        }
+        broadcastToConversation(conversationId, wsEvent);
+      }
+      if (event.type === "run_completed" || event.type === "run_failed") {
+        broadcastToConversation(conversationId, {
+          type: "message:completed",
+          messageId: msgId,
+        });
+      }
+    },
+  });
+
+  return c.json({ runId, agentMessageId }, 201);
 });
 
 // --- Send message (trigger agent) ---
