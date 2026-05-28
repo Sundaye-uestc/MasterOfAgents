@@ -146,3 +146,35 @@ export function respondToPermission(runId: string, permissionId: string, approve
     body: JSON.stringify({ permissionId, approved }),
   });
 }
+
+// --- Workspaces ---
+
+export function getWorkspace(conversationId: string) {
+  return request<import("@agenthub/shared").WorkspaceRow | null>(`/workspaces?conversationId=${encodeURIComponent(conversationId)}`);
+}
+
+export function createWorkspace(conversationId: string, rootPath: string) {
+  return request<import("@agenthub/shared").WorkspaceRow>("/workspaces", {
+    method: "POST",
+    body: JSON.stringify({ conversationId, rootPath }),
+  });
+}
+
+export function deleteWorkspace(id: string) {
+  return request<{ ok: boolean }>(`/workspaces/${id}`, { method: "DELETE" });
+}
+
+export function listSnapshots(workspaceId: string) {
+  return request<import("@agenthub/shared").WorkspaceSnapshotRow[]>(`/workspaces/${workspaceId}/snapshots`);
+}
+
+export function createSnapshot(workspaceId: string, runId: string, label: string, manifest: Record<string, unknown>) {
+  return request<import("@agenthub/shared").WorkspaceSnapshotRow>(`/workspaces/${workspaceId}/snapshots`, {
+    method: "POST",
+    body: JSON.stringify({ runId, label, manifest }),
+  });
+}
+
+export function deleteSnapshot(workspaceId: string, snapshotId: string) {
+  return request<{ ok: boolean }>(`/workspaces/${workspaceId}/snapshots/${snapshotId}`, { method: "DELETE" });
+}

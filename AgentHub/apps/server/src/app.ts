@@ -7,6 +7,7 @@ import { serve } from "@hono/node-server";
 import { conversationRoutes } from "./routes/conversations.js";
 import { agentRoutes } from "./routes/agents.js";
 import { runRoutes } from "./routes/runs.js";
+import { workspaceRoutes } from "./routes/workspaces.js";
 import { initWsGateway } from "./ws/gateway.js";
 import { initDb, saveDb } from "./db/index.js";
 import { seedAgents } from "./db/seed.js";
@@ -26,6 +27,7 @@ app.get("/health", (c) => c.json({ status: "ok", uptime: process.uptime() }));
 app.route("/api/conversations", conversationRoutes);
 app.route("/api/agents", agentRoutes);
 app.route("/api/runs", runRoutes);
+app.route("/api/workspaces", workspaceRoutes);
 
 export { app };
 

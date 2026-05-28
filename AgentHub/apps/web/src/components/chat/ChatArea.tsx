@@ -8,6 +8,16 @@ import { MessageInput } from "./MessageInput.js";
 import { PermissionModal } from "./PermissionModal.js";
 import { OrchestratorStatusBar } from "./OrchestratorStatusBar.js";
 import { AgentBadge } from "./AgentBadge.js";
+import { ToolInvocationCard } from "./ToolInvocationCard.js";
+import { MarkdownContent } from "./MarkdownContent.js";
+
+interface ToolInvocation {
+  id: string;
+  toolName: string;
+  inputJson?: string;
+  outputJson?: string;
+  status: string;
+}
 
 interface MemberInfo {
   agentId: string;
@@ -42,6 +52,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
   } | null>(null);
   const [orchBarExpanded, setOrchBarExpanded] = useState(false);
   const [agentCapabilities, setAgentCapabilities] = useState<string[]>([]);
+  const [toolInvocations, setToolInvocations] = useState<Record<string, ToolInvocation[]>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { state: orch, handleWsEvent: handleOrchEvent, reset: resetOrch } = useOrchestrationState();
@@ -85,6 +96,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
     setStreamingMsgId(null);
     resetOrch();
     setPermRequest(null);
+    setToolInvocations({});
     listMessages(conversationId)
       .then((msgs) => {
         setMessages(msgs);
@@ -158,8 +170,39 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           });
           break;
         }
-        case "tool:invocation": {
-          // Tool invocation will be displayed via tool_invocations DB records
+                case "tool:invocation": {
+          const inv = (event as any).invocation;
+          const msgId = (event as any).messageId as string;
+          if (!inv || !msgId) break;
+          if (inv.type === "tool_call") {
+            setToolInvocations((prev) => {
+              const list = prev[msgId] ?? [];
+              const exists = list.some((t) => t.id === inv.toolCallId);
+              if (exists) return prev;
+              return {
+                ...prev,
+                [msgId]: [...list, {
+                  id: inv.toolCallId,
+                  toolName: inv.toolName,
+                  inputJson: JSON.stringify(inv.input),
+                  status: "running",
+                }],
+              };
+            });
+          } else if (inv.type === "tool_result") {
+            setToolInvocations((prev) => {
+              const list = prev[msgId];
+              if (!list) return prev;
+              return {
+                ...prev,
+                [msgId]: list.map((t) =>
+                  t.id === inv.toolCallId
+                    ? { ...t, outputJson: inv.output, status: inv.isError ? "error" : "success" }
+                    : t
+                ),
+              };
+            });
+          }
           break;
         }
         case "orchestrator:plan_created":
@@ -445,6 +488,18 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
                   onDelete={handleDeleteMessage}
                   agentColor={isAgent ? agentColor(agentAdapterKind) : undefined}
                 />
+                {/* Tool invocations for this agent message */}
+                {isAgent && (() => {
+                  const tools = toolInvocations[msg.id];
+                  if (!tools || tools.length === 0) return null;
+                  return (
+                    <div className="mt-1 space-y-1">
+                      {tools.map((tool) => (
+                        <ToolInvocationCard key={tool.id} tool={tool} />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* User avatar on the RIGHT */}
@@ -581,9 +636,13 @@ function MessageBubble({
         )}
 
         {/* Content */}
-        <div className="whitespace-pre-wrap break-words">
-          {message.content || (isStreaming ? "..." : "")}
-        </div>
+        {isAgent && message.content ? (
+          <MarkdownContent content={message.content} />
+        ) : (
+          <div className="whitespace-pre-wrap break-words">
+            {message.content || (isStreaming ? "..." : "")}
+          </div>
+        )}
 
         {/* Status */}
         <div className="flex items-center gap-2 mt-1">

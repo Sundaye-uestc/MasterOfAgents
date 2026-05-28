@@ -8,6 +8,7 @@ import { getAgentRuntimeService } from "../services/agent-runtime.service.js";
 import { getOrchestratorService } from "../services/orchestrator.service.js";
 import type { AgentConfig } from "@agenthub/shared";
 import { broadcastToConversation, agentEventToWsEvent } from "../ws/gateway.js";
+import { getDb, schema } from "../db/index.js";
 
 const chat = new ChatService();
 const runtime = getAgentRuntimeService();
@@ -148,12 +149,25 @@ conversationRoutes.post("/:id/messages", async (c) => {
 
   if (isGroupChat) {
     // --- Orchestrated run ---
+    // Load agent capabilities from DB
+    const db = getDb();
+    const agentRows = db.select().from(schema.agents).all() as any[];
+    const agentCapMap = new Map<string, string[]>();
+    for (const row of agentRows) {
+      try {
+        const caps = JSON.parse(row.capabilitiesJson ?? row.capabilities_json ?? "[]");
+        agentCapMap.set(row.id, Array.isArray(caps) ? caps : caps.map?.((c: any) => c.label ?? c) ?? []);
+      } catch {
+        agentCapMap.set(row.id, []);
+      }
+    }
+
     const agentConfigs: AgentConfig[] = members.map((m) => ({
       id: m.agentId,
       name: m.agentName,
-      platform: "claude-code" as const,
+      platform: m.adapterKind as any ?? "claude-code",
       status: "online" as const,
-      capabilities: [],
+      capabilities: (agentCapMap.get(m.agentId) ?? []).map((c) => ({ label: c }) as any),
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }));
@@ -203,8 +217,8 @@ conversationRoutes.post("/:id/messages", async (c) => {
       // Broadcast via WS
       const wsEvent = agentEventToWsEvent(event);
       if (wsEvent) {
-        // Attach the agent message ID so client can associate deltas
-        if (wsEvent.type === "message:delta") {
+        // Attach the agent message ID so client can associate deltas & tool invocations
+        if (wsEvent.type === "message:delta" || wsEvent.type === "tool:invocation") {
           (wsEvent as any).messageId = msgId;
         }
         broadcastToConversation(conversationId, wsEvent);

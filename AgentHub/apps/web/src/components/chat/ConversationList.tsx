@@ -7,6 +7,9 @@ import {
   renameConversation,
   pinConversation,
   listAgents,
+  listMembers,
+  addMember,
+  removeMember,
 } from "../../lib/api.js";
 import { AgentPicker } from "./AgentPicker.js";
 import { AgentBadge } from "./AgentBadge.js";
@@ -55,6 +58,10 @@ export function ConversationList({
   const [agents, setAgents] = useState<AgentRow[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [manageMembersConvId, setManageMembersConvId] = useState<string | null>(null);
+  const [manageMembersList, setManageMembersList] = useState<Array<{ agentId: string; agentName: string; role: string; adapterKind: string }>>([]);
+  const [manageMembersAgents, setManageMembersAgents] = useState<AgentRow[]>([]);
+  const [addMemberAgentId, setAddMemberAgentId] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -172,6 +179,41 @@ export function ConversationList({
     }
   };
 
+  const handleManageMembers = async (convId: string) => {
+    setMenuOpenId(null);
+    try {
+      const [members, agents] = await Promise.all([listMembers(convId), listAgents()]);
+      setManageMembersConvId(convId);
+      setManageMembersList(members);
+      setManageMembersAgents(agents);
+      setAddMemberAgentId("");
+    } catch (err) {
+      console.error("Failed to load members", err);
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!manageMembersConvId || !addMemberAgentId) return;
+    try {
+      await addMember(manageMembersConvId, addMemberAgentId);
+      const members = await listMembers(manageMembersConvId);
+      setManageMembersList(members);
+      setAddMemberAgentId("");
+    } catch (err) {
+      console.error("Failed to add member", err);
+    }
+  };
+
+  const handleRemoveMember = async (agentId: string) => {
+    if (!manageMembersConvId) return;
+    try {
+      await removeMember(manageMembersConvId, agentId);
+      setManageMembersList((prev) => prev.filter((m) => m.agentId !== agentId));
+    } catch (err) {
+      console.error("Failed to remove member", err);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-3">
@@ -269,6 +311,17 @@ export function ConversationList({
                     >
                       ✍️ 重命名
                     </button>
+                    {conv.type === "group" && (
+                      <>
+                        <div className="border-t border-gray-700" />
+                        <button
+                          onClick={() => handleManageMembers(conv.id)}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                        >
+                          👥 管理成员
+                        </button>
+                      </>
+                    )}
                     <div className="border-t border-gray-700" />
                     <button
                       onClick={() => handleDeleteClick(conv.id)}
@@ -390,6 +443,84 @@ export function ConversationList({
                 className="px-4 py-1.5 text-sm text-white bg-red-600 hover:bg-red-700 rounded"
               >
                 确认
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage members modal */}
+      {manageMembersConvId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-96 shadow-xl max-h-[80vh] overflow-y-auto">
+            <p className="text-sm text-gray-200 text-center mb-4">管理群成员</p>
+
+            {/* Current members */}
+            <div className="mb-4">
+              <p className="text-xs text-gray-400 mb-2">当前成员 ({manageMembersList.length})</p>
+              {manageMembersList.length === 0 ? (
+                <p className="text-xs text-gray-600">暂无成员</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {manageMembersList.map((m) => (
+                    <div
+                      key={m.agentId}
+                      className="flex items-center justify-between px-3 py-2 bg-gray-900 rounded-lg border border-gray-700"
+                    >
+                      <div className="flex items-center gap-2">
+                        <AgentBadge
+                          agentName={m.agentName}
+                          adapterKind={m.adapterKind}
+                          size="sm"
+                        />
+                        <span className="text-xs text-gray-400 capitalize">{m.role}</span>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveMember(m.agentId)}
+                        className="text-xs text-red-400 hover:text-red-300 hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                      >
+                        移除
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Add member */}
+            <div className="border-t border-gray-700 pt-4">
+              <p className="text-xs text-gray-400 mb-2">添加成员</p>
+              <div className="flex gap-2">
+                <select
+                  value={addMemberAgentId}
+                  onChange={(e) => setAddMemberAgentId(e.target.value)}
+                  className="flex-1 px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">选择 Agent...</option>
+                  {manageMembersAgents
+                    .filter((a) => !manageMembersList.some((m) => m.agentId === a.id))
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} ({a.adapterKind})
+                      </option>
+                    ))}
+                </select>
+                <button
+                  onClick={handleAddMember}
+                  disabled={!addMemberAgentId}
+                  className="px-3 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  添加
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={() => setManageMembersConvId(null)}
+                className="px-4 py-1.5 text-sm text-gray-300 bg-gray-700 hover:bg-gray-600 rounded"
+              >
+                关闭
               </button>
             </div>
           </div>

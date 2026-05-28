@@ -3,6 +3,7 @@
 // ============================================================
 
 import { ClaudeCodeAdapter } from "../adapters/claude-code.adapter.js";
+import { CodexAdapter } from "../adapters/codex.adapter.js";
 import type { AgentPlatformAdapter } from "../adapters/base.js";
 import type { AgentEvent, AgentConfig } from "@agenthub/shared";
 import { getDb, schema } from "../db/index.js";
@@ -29,9 +30,21 @@ export class AgentRuntimeService {
     const key = agentConfig.id;
     let adapter = this.adapters.get(key);
     if (!adapter) {
-      // For now, only Claude Code is supported
-      adapter = new ClaudeCodeAdapter();
-      await adapter.prepare(agentConfig);
+      const kind = agentConfig.platform ?? "claude-code";
+      // Try CodexAdapter only if codex/opencode CLI is available; fallback to ClaudeCodeAdapter
+      if (kind === "codex" || kind === "opencode") {
+        adapter = new CodexAdapter({ platform: kind });
+        try {
+          await adapter.prepare(agentConfig);
+        } catch (err) {
+          console.warn(`[runtime] CodexAdapter prepare failed (${(err as Error).message}), falling back to ClaudeCodeAdapter`);
+          adapter = new ClaudeCodeAdapter();
+          await adapter.prepare(agentConfig);
+        }
+      } else {
+        adapter = new ClaudeCodeAdapter();
+        await adapter.prepare(agentConfig);
+      }
       this.adapters.set(key, adapter);
     }
     return adapter;
@@ -99,7 +112,7 @@ export class AgentRuntimeService {
           // Persist tool invocations
           if (event.type === "tool_call") {
             db.insert(schema.toolInvocations).values({
-              id: newId(),
+              id: event.toolCallId || newId(),
               runId,
               agentId,
               toolName: event.toolName,
@@ -107,6 +120,18 @@ export class AgentRuntimeService {
               status: "running",
               startedAt: nowISO(),
             }).run();
+          }
+
+          // Persist tool results
+          if (event.type === "tool_result") {
+            db.update(schema.toolInvocations)
+              .set({
+                outputJson: event.output,
+                status: event.isError ? "error" : "success",
+                completedAt: nowISO(),
+              } as any)
+              .where(eq(schema.toolInvocations.id, event.toolCallId))
+              .run();
           }
 
           // Persist file changes

@@ -107,9 +107,9 @@ export function agentEventToWsEvent(event: AgentEvent): ServerWsEvent | null {
     case "run_failed":
       return { type: "run:failed", runId: event.runId, error: event.error };
     case "tool_call":
-      return { type: "tool:invocation", tool: event };
+      return { type: "tool:invocation", messageId: "", invocation: event };
     case "tool_result":
-      return { type: "tool:invocation", tool: event };
+      return { type: "tool:invocation", messageId: "", invocation: event };
     case "file_change":
       return { type: "file:changed", change: event };
     case "artifact_created":
