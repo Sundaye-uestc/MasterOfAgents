@@ -19,7 +19,7 @@ Phase 2（群聊协作）核心框架已交付。实现了从单聊到多 Agent 
 | Planner API 格式 | 双格式兼容（Anthropic Messages + OpenAI Chat Completions） | 各厂商接口不同，根据 provider 自动选择调用格式 |
 | 降级策略 | 解析/Schema 校验各重试 1 次 → 单 Agent 直接执行 | Planner 输出不稳定时保证可用性 |
 | DAG 调度 | 基于完成事件触发式调度 | 任务完成后自动查找"所有依赖已满足"的后续任务 |
-| 权限模式 | 默认交互式（`interactive`），可选旁路（`bypass`） | 替换 Phase 1 临时 `bypassPermissions` 方案 |
+| 权限模式 | 默认旁路（`bypass`），可选交互式（`interactive`） | 默认 `--permission-mode bypassPermissions` 自动执行所有工具；需要审批时可显式传入 `permissionMode: "interactive"` |
 | stdin 交互 | ProcessSupervisor stdio 从 `["ignore","pipe","pipe"]` 改为 `["pipe","pipe","pipe"]` | 允许向子进程写入权限审批结果 |
 | 群聊判定 | `conversation.type === "group"` + 成员数 > 1 | 自动切换为 Orchestrator 流程 |
 | 写入范围冲突 | 路径前缀匹配检测（已修复尾部斜杠归一化） | 相同或父子目录路径视为重叠，需串行化 |
@@ -227,6 +227,18 @@ Phase 2（群聊协作）核心框架已交付。实现了从单聊到多 Agent 
 **涉及文件：**
 - 新建 `components/chat/MarkdownContent.tsx`
 - 修改 `ChatArea.tsx` — MessageBubble 中 agent 消息渲染 MarkdownContent
+
+### 权限审批默认旁路
+
+**变更：** 将 `ClaudeCodeAdapter` 和 `CodexAdapter` 的默认 `permissionMode` 从 `"interactive"` 改为 `"bypass"`。
+
+**效果：** Claude CLI 启动时传递 `--permission-mode bypassPermissions`，所有工具（文件写入、Shell 命令等）自动执行，不再弹出前端 PermissionModal。
+
+**涉及文件：**
+- `adapters/claude-code.adapter.ts` — line 26: `"interactive"` → `"bypass"`
+- `adapters/codex.adapter.ts` — line 25: 同上
+
+**恢复方式：** 需要交互审批时，创建适配器时显式传入 `new ClaudeCodeAdapter({ permissionMode: "interactive" })`。
 
 ---
 

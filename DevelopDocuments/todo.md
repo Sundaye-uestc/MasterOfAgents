@@ -92,7 +92,7 @@
 
 | 风险 | 状态 | 应对 |
 |---|---|---|
-| 权限审批临时绕过 | **已解决** | 实现交互模式 + stdin 响应 |
+| 权限审批临时绕过 | **已解决（默认旁路）** | 默认 `--permission-mode bypassPermissions` 自动执行所有工具；交互模式按需启用 |
 | Orchestrator 子任务回调缺失 | **已解决** | onEvent 完整实现 → handleTaskCompleted 闭环 |
 | Planner LLM 输出不稳定（DeepSeek 无法拆分任务） | **已解决** | parseMentionedTasks() 绕过 LLM，@mention 正则直接提取任务分配 |
 | 多 Agent 文件写入冲突 | 已应对 | 写入范围检测、串行化 |
