@@ -22,7 +22,7 @@ export class CodexAdapter implements AgentPlatformAdapter {
 
   constructor(options?: { permissionMode?: "bypass" | "interactive"; platform?: string }) {
     this.platform = options?.platform ?? "codex";
-    this.permissionMode = options?.permissionMode ?? "interactive";
+    this.permissionMode = options?.permissionMode ?? "bypass";
     this.cliCommand = this.platform === "opencode" ? "opencode" : "codex";
   }
 

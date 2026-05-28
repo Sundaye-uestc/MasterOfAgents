@@ -23,7 +23,7 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
   private permissionMode: "bypass" | "interactive";
 
   constructor(options?: { permissionMode?: "bypass" | "interactive" }) {
-    this.permissionMode = options?.permissionMode ?? "interactive";
+    this.permissionMode = options?.permissionMode ?? "bypass";
   }
 
   async prepare(agent: AgentConfig): Promise<void> {
