@@ -1,7 +1,7 @@
 # Phase 2 完成日志
 
-**日期：** 2026-05-22（更新于 2026-05-23）
-**状态：** 核心功能已完成 + 群聊端到端 Bug 修复 + UX 持续优化 — 全部 6 个子任务实现完毕，TypeScript 编译通过，服务启动验证通过
+**日期：** 2026-05-22（更新于 2026-05-28）
+**状态：** 核心功能已完成 + Phase 2 待完善项全部交付 — 全部 6 个子任务实现完毕，TypeScript 编译通过，服务启动验证通过，API 端点测试通过。Planner @mention 任务解析与 Markdown 渲染优化已交付。
 
 ---
 
@@ -131,6 +131,9 @@ Phase 2（群聊协作）核心框架已交付。实现了从单聊到多 Agent 
 | 直聊 Agent 回复重复出现两次 | 前端不再手动添加 Agent 占位消息，完全由 WS message:created 驱动 |
 | 直聊"思考中🤔"不显示 — Agent 消息初始 status 为 "sent" | createMessage 支持 status 参数，Agent 消息直接以 "streaming" 创建 |
 | 消息顺序错误（系统/Agent 排在用户前面） | 乐观更新：API 调用前立即插入临时用户消息 |
+| Planner @mention 任务拆分为 1（只用一个 Agent） | 实现 parseMentionedTasks() 绕过 LLM，正则提取 @Agent 分配 |
+| 群聊"思考中"重复出现且不消失 | currentMsgId 跟踪防止重复消息 + catch 块 broadcast message:completed |
+| Agent Markdown 输出不美观（显示原始 ** / 表格语法） | 集成 react-markdown + remark-gfm，Tailwind 暗色主题渲染 |
 
 ---
 
@@ -152,9 +155,95 @@ Phase 2（群聊协作）核心框架已交付。实现了从单聊到多 Agent 
 | Orchestrator 端到端测试 | **已验证** | 群聊崩溃 Bug 已修复，onEvent → handleTaskCompleted 闭环 + WS 广播 + 单例 |
 | 直聊消息重复 & 思考中消失 | **已修复** | WS message:created 替代手动占位，Agent 消息以 streaming 状态创建 |
 | 权限审批端到端测试 | 待测试 | 交互模式下 Claude CLI 的具体 stdout/stderr 格式待验证 |
-| Codex Adapter 未实现 | 接口已预留 | AgentPlatformAdapter 接口支持，ClaudeCodeAdapter 为唯一实现 |
-| 群聊成员增删 UI | 基础实现 | 新增/移除成员的 UI 面板尚未加入 ConversationList |
-| ToolInvocationCard 实时渲染 | 待完善 | 目前依赖 DB 记录，WS 推送实时更新待实现 |
+| Codex Adapter | **代码已实现，CLI 未跑通** | CodexAdapter 实现完成，支持 codex/opencode CLI；但 `codex` CLI 未安装（`spawn codex ENOENT`），prepare() 失败时自动降级为 ClaudeCodeAdapter |
+| 群聊成员增删 UI | **已实现** | ConversationList 右键菜单 "👥 管理成员" + 添加/移除 Agent 弹窗 |
+| ToolInvocationCard 实时渲染 | **已实现** | WS `tool:invocation` 事件 → ChatArea 实时收集 → 内联卡片渲染，tool_result 更新 outputJson/status |
+| Workspaces 服务 | **已实现** | workspace.service.ts + 路由（CRUD + 快照）+ 前端 API 客户端 |
+
+---
+
+## 2026-05-28 新增交付物
+
+### 服务端
+- `services/workspace.service.ts` — Workspace CRUD + Snapshot CRUD
+- `routes/workspaces.ts` — REST API（GET/POST/DELETE workspaces + snapshots）
+- `adapters/codex.adapter.ts` — Codex/OpenCode CLI 适配器
+
+### 前端
+- `ChatArea.tsx` — ToolInvocationCard 集成：WS 事件实时收集 → 内联卡片渲染
+- `ConversationList.tsx` — 群聊成员管理 UI：右键菜单 + 添加/移除弹窗
+- `lib/api.ts` — Workspace API 客户端函数（6 个）
+
+### 修改
+- `agent-runtime.service.ts` — tool_result 持久化（outputJson + completedAt 更新）；CodexAdapter 注册分发
+- `orchestrator.service.ts` — tool:invocation WS 事件携带 messageId
+- `ws/gateway.ts` — tool:invocation 事件改为 `{ messageId, invocation }` 结构
+- `routes/conversations.ts` — tool:invocation WS 事件携带 messageId
+- `types/ws.ts` — tool:invocation 类型更新
+
+---
+
+## 2026-05-28 Bug 修复（第二轮）
+
+### Planner @mention 任务解析修复
+
+**问题：** DeepSeek LLM 无法可靠分解用户任务 — 输入 `@Claude Code 查重庆天气 @Codex 查成都天气` 时，Planner 总是退化为单任务执行，只有 Claude Code 响应。
+
+**根因：** DeepSeek (`deepseek-chat`) 对中文 task-decomposition prompt 理解不稳定，经常生成"分析 Agent 能力"等无关任务。
+
+**修复方案：** 在 OrchestratorService 中实现 `parseMentionedTasks()` 方法 — 绕过 LLM，直接通过正则匹配 `@Agent名称` 从用户消息中提取任务分派：
+
+```
+用户输入: @Claude Code 你帮我查重庆天气 @Codex 你帮我查成都天气
+
+解析结果 → 2 个 TaskPlanItem:
+  1. "你帮我查重庆天气" → agentId: default-claude
+  2. "你帮我查成都天气" → agentId: default-codex
+```
+
+执行流程：`parseMentionedTasks()` → 优先于 `planner.generateTaskPlan()`；仅在没有 @mention 时才调用 LLM Planner。
+
+### 重复"思考中"消息修复
+
+**问题：** 群聊中 Codex 的"思考中"出现了 2 次（共 3 条思考提示），且 Codex 一直显示思考中状态不消失。
+
+**修复：**
+- `executeTask()` 中引入 `currentMsgId` 跟踪 — 重试时复用同一个 agent 消息 ID，避免创建重复消息
+- `catch` 块中添加 `message:completed` WS 广播 — 执行失败时关闭前端流式状态，防止永久显示"思考中"
+
+### Agent 输出 Markdown 渲染
+
+**问题：** Agent 输出为 Markdown 格式（`**bold**`、表格、代码块等），浏览器直接显示原始语法，用户体验不佳。
+
+**修复：** 新增 `MarkdownContent` 组件，集成 `react-markdown` + `remark-gfm`（GitHub Flavored Markdown），用 Tailwind 暗色主题样式渲染所有 Markdown 元素：
+- 标题 h1-h6 / 粗体 / 斜体 / 删除线
+- 表格（带横向滚动、边框、暗色表头）
+- 代码块（`bg-gray-900` 深色 pre）与内联代码（`bg-gray-700` 药丸）
+- 有序/无序列表、引用块、链接（`target="_blank"`）
+- 分割线、图片
+
+**依赖新增：** `react-markdown@^10.1.0`, `remark-gfm@^4.0.1`
+
+**涉及文件：**
+- 新建 `components/chat/MarkdownContent.tsx`
+- 修改 `ChatArea.tsx` — MessageBubble 中 agent 消息渲染 MarkdownContent
+
+---
+
+## Codex CLI 接入状态 — 重要
+
+**当前状态：代码已实现，但 CLI 环境未就绪，实际运行时降级为 Claude Code。**
+
+| 层级 | 状态 | 说明 |
+|---|---|---|
+| CodexAdapter 代码 | 已完成 | `adapters/codex.adapter.ts` — 实现了 AgentPlatformAdapter 接口，支持 permissionMode、respondToPermission（stdin） |
+| agent-runtime.service.ts 分发 | 已完成 | `kind === "codex"` 时创建 CodexAdapter 实例，调用 prepare() |
+| 降级策略 | 已实现 | `prepare()` 失败时自动降级为 ClaudeCodeAdapter，保证任务不中断 |
+| Codex CLI 安装 | **未完成** | `spawn codex ENOENT` — codex CLI 未安装在运行机器上 |
+
+**验证：** 服务日志显示 `[runtime] CodexAdapter prepare failed (codex CLI check failed: spawn codex ENOENT), falling back to ClaudeCodeAdapter`。
+
+**原因：** Codex (OpenAI) CLI 需要单独安装和配置 API key，当前开发环境未安装。代码层面已准备就绪，安装 CLI 后即可自动启用。
 
 ---
 
@@ -162,22 +251,21 @@ Phase 2（群聊协作）核心框架已交付。实现了从单聊到多 Agent 
 
 | 操作 | 数量 | 关键文件 |
 |---|---|---|
-| 新建（server） | 4 | planner.service.ts, orchestrator.service.ts, config.ts, verify-phase2.ts |
+| 新建（server） | 6 | planner.service.ts, orchestrator.service.ts, workspace.service.ts, config.ts, verify-phase2.ts, codex.adapter.ts |
 | 新建（web） | 9 | AgentBadge, AgentPicker, AgentStatusBadge, CapabilityTags, OrchestratorStatusBar, TaskProgressCard, ToolInvocationCard, PermissionModal, AgentConfigDraftCard |
+| 新建（routes） | 1 | workspaces.ts |
 | 新建（shared） | 1 | types/plan.ts |
 | 新建（hooks） | 2 | useOrchestrationState.ts, useUserAvatar.ts |
 | 新建（根目录） | 3 | start_dev.py, .env, README.md |
-| 修改（server） | 7 | chat.service.ts, agent-runtime.service.ts, conversations.ts, agents.ts, gateway.ts, claude-code.adapter.ts, process-supervisor.ts |
+| 修改（server） | 9 | chat.service.ts, agent-runtime.service.ts, conversations.ts, agents.ts, gateway.ts, claude-code.adapter.ts, orchestrator.service.ts, process-supervisor.ts, app.ts |
 | 修改（web） | 6 | App.tsx, ChatArea.tsx, ConversationList.tsx, MessageInput.tsx, api.ts, MessageInput.tsx |
 | 修改（shared） | 2 | ws.ts, index.ts |
-| **总计** | **34** | |
+| **总计** | **39** | |
 
 ---
 
-## 下一步：Phase 2 完善
+## 下一步
 
-1. 端到端验证 Orchestrator + Planner 完整流程（API Key 已配置，可随时测试）
-2. 群聊成员增删 UI 面板
-3. ToolInvocationCard 从 DB 记录实时渲染 + WS 推送
-4. Codex Adapter 实现
-5. 工作区管理（workspaces / workspace_snapshots 表已有 schema，无服务代码）
+1. **Codex CLI 安装与端到端验证** — 在目标环境中安装 `codex` CLI 并配置 API key，验证 CodexAdapter 完整流程
+2. **权限审批端到端测试** — 交互模式下 Claude CLI 的具体 stdout/stderr 格式待验证
+3. **工作区扩展** — 前端工作区管理 UI（当前仅有后端 API）

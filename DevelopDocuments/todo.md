@@ -1,6 +1,6 @@
 # AgentHub 待办事项
 
-**更新日期：** 2026-05-23
+**更新日期：** 2026-05-28（第二轮修复 + Markdown 渲染交付）
 
 ---
 
@@ -63,6 +63,9 @@
 - [x] 系统消息紧凑化：计划/汇总改为单行，小字号小 padding，去除 italic
 - [x] Planner Prompt 中文化：LLM 输出中文标题/描述/推理
 - [x] .env 模板脱敏推送 + PDF 从 git 移除（`*.pdf` → .gitignore）
+- [x] Agent 输出 Markdown 渲染：react-markdown + remark-gfm，Tailwind 暗色主题（表格/代码块/标题/列表/引用）
+- [x] Planner @mention 绕过 LLM：parseMentionedTasks() 正则提取 @Agent 分派，解决 DeepSeek 任务拆分失败
+- [x] 重复"思考中"修复：currentMsgId 跟踪 + catch 块 message:completed 广播关闭流式状态
 
 ---
 
@@ -71,16 +74,17 @@
 ### 端到端验证
 - [x] Orchestrator + Planner 完整流程测试（群聊崩溃 Bug 已修复，onEvent → handleTaskCompleted 闭环 + WS 广播）
 - [ ] 权限审批交互模式端到端测试
-- [ ] ToolInvocationCard 从 DB 记录实时渲染 & WS 推送
+- [x] ToolInvocationCard 从 DB 记录实时渲染 & WS 推送
 
 ### 群聊管理增强
-- [ ] 群聊成员增删 UI 面板（ConversationList 内嵌）
+- [x] 群聊成员增删 UI 面板（ConversationList 内嵌）
 
 ### 适配器
-- [ ] Codex Adapter 实现
+- [x] Codex Adapter 代码实现（`adapters/codex.adapter.ts` — 实现 AgentPlatformAdapter 接口，支持 permissionMode、respondToPermission）
+- [ ] Codex CLI 安装与端到端验证（当前 `spawn codex ENOENT`，CLI 未安装在运行机器上，运行时自动降级为 ClaudeCodeAdapter）
 
 ### 工作区
-- [ ] workspaces / workspace_snapshots 服务代码（schema 已有）
+- [x] workspaces / workspace_snapshots 服务代码（schema 已有）
 
 ---
 
@@ -90,7 +94,8 @@
 |---|---|---|
 | 权限审批临时绕过 | **已解决** | 实现交互模式 + stdin 响应 |
 | Orchestrator 子任务回调缺失 | **已解决** | onEvent 完整实现 → handleTaskCompleted 闭环 |
-| Planner LLM 输出不稳定 | 已应对 | JSON Schema 校验 + 重试 + 降级单 Agent |
+| Planner LLM 输出不稳定（DeepSeek 无法拆分任务） | **已解决** | parseMentionedTasks() 绕过 LLM，@mention 正则直接提取任务分配 |
 | 多 Agent 文件写入冲突 | 已应对 | 写入范围检测、串行化 |
-| Codex Adapter 未实现 | 待开发 | 接口已预留 |
+| Codex Adapter | **代码已完成，CLI 未跑通** | CodexAdapter 实现完成；`codex` CLI 未安装（ENOENT），prepare() 失败时自动降级为 ClaudeCodeAdapter |
 | Planner API Key | **已配置** | 支持 8 家 AI 厂商，用户填写 .env 即可 |
+| Agent 输出 Markdown 渲染 | **已解决** | react-markdown + remark-gfm，Tailwind 暗色主题组件 |
