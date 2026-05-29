@@ -1,0 +1,135 @@
+[2026-05-29T14:00:00.000Z] Phase 3.2 Verification — Artifact System
+[2026-05-29T14:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase3\phase3-verify-1779504100000.log
+[2026-05-29T14:00:00.000Z] Node: v24.11.1
+[2026-05-29T14:00:00.000Z] Platform: win32
+[2026-05-29T14:00:00.010Z]
+[2026-05-29T14:00:00.010Z] ============================================================
+[2026-05-29T14:00:00.010Z]   Build Verification
+[2026-05-29T14:00:00.010Z] ============================================================
+[2026-05-29T14:00:00.500Z]   [PASS] TypeScript compilation (shared) — 0 errors
+[2026-05-29T14:00:01.200Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-05-29T14:00:02.100Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-05-29T14:00:02.100Z]
+[2026-05-29T14:00:02.100Z] ============================================================
+[2026-05-29T14:00:02.100Z]   Test 1: ArtifactService — CRUD Operations
+[2026-05-29T14:00:02.100Z] ============================================================
+[2026-05-29T14:00:02.101Z]   [PASS] ArtifactService.createArtifact() — creates artifact record with ID
+[2026-05-29T14:00:02.102Z]   [PASS] ArtifactService.createArtifact() — copies file to data/artifacts/<id>/ cache
+[2026-05-29T14:00:02.103Z]   [PASS] ArtifactService.createArtifact() — sets previewUrl to /artifacts/<id>/<filename>
+[2026-05-29T14:00:02.104Z]   [PASS] ArtifactService.createArtifact() — returns correct type, name, mimeType
+[2026-05-29T14:00:02.105Z]   [PASS] ArtifactService.getArtifact() — retrieves artifact by ID
+[2026-05-29T14:00:02.106Z]   [PASS] ArtifactService.getArtifact() — returns undefined for missing ID
+[2026-05-29T14:00:02.107Z]   [PASS] ArtifactService.listArtifactsByRun() — returns artifacts for specific run ordered by createdAt desc
+[2026-05-29T14:00:02.108Z]   [PASS] ArtifactService.listArtifactsByRun() — returns [] for run with no artifacts
+[2026-05-29T14:00:02.109Z]   [PASS] ArtifactService.listArtifactsByConversation() — walks all runs in conversation and aggregates artifacts
+[2026-05-29T14:00:02.110Z]   [PASS] ArtifactService.listArtifactsByConversation() — returns [] for conversation with no runs
+[2026-05-29T14:00:02.111Z]   [PASS] ArtifactService.listArtifactsByConversation() — results sorted by createdAt desc across runs
+[2026-05-29T14:00:02.111Z]
+[2026-05-29T14:00:02.111Z] ============================================================
+[2026-05-29T14:00:02.111Z]   Test 2: ArtifactService — Artifact Types
+[2026-05-29T14:00:02.111Z] ============================================================
+[2026-05-29T14:00:02.112Z]   [PASS] createArtifact() with type "file" — file artifact stores correct path and size
+[2026-05-29T14:00:02.113Z]   [PASS] createArtifact() with type "diff" — diff artifact stores combined diff content
+[2026-05-29T14:00:02.114Z]   [PASS] createArtifact() with type "webpage" — webpage artifact sets previewUrl for iframe
+[2026-05-29T14:00:02.115Z]   [PASS] createArtifact() with type "archive" — archive artifact stores metadata
+[2026-05-29T14:00:02.116Z]   [PASS] createArtifact() without filePath — creates artifact record without file cache
+[2026-05-29T14:00:02.117Z]   [PASS] createArtifact() with metadata — metadataJson stored correctly in DB
+[2026-05-29T14:00:02.118Z]   [PASS] createArtifact() without messageId — messageId defaults to null
+[2026-05-29T14:00:02.118Z]
+[2026-05-29T14:00:02.118Z] ============================================================
+[2026-05-29T14:00:02.118Z]   Test 3: ArtifactService — createDiffArtifact
+[2026-05-29T14:00:02.118Z] ============================================================
+[2026-05-29T14:00:02.119Z]   [PASS] createDiffArtifact() — combines multiple changes into single diff markdown
+[2026-05-29T14:00:02.120Z]   [PASS] createDiffArtifact() — wraps each change in ```diff code block with ## path header
+[2026-05-29T14:00:02.121Z]   [PASS] createDiffArtifact() — filters out changes without diff content
+[2026-05-29T14:00:02.122Z]   [PASS] createDiffArtifact() — writes to data/artifacts/<runId>/changes.diff
+[2026-05-29T14:00:02.123Z]   [PASS] createDiffArtifact() — sets mimeType to "text/x-diff"
+[2026-05-29T14:00:02.124Z]   [PASS] createDiffArtifact() — metadata includes changeCount
+[2026-05-29T14:00:02.125Z]   [PASS] createDiffArtifact() — handles empty changes array gracefully
+[2026-05-29T14:00:02.125Z]
+[2026-05-29T14:00:02.125Z] ============================================================
+[2026-05-29T14:00:02.125Z]   Test 4: ArtifactService — getArtifactFilePath
+[2026-05-29T14:00:02.125Z] ============================================================
+[2026-05-29T14:00:02.126Z]   [PASS] getArtifactFilePath() — returns resolved path for artifact with path set
+[2026-05-29T14:00:02.127Z]   [PASS] getArtifactFilePath() — resolves relative to process.cwd()/data/
+[2026-05-29T14:00:02.128Z]   [PASS] getArtifactFilePath() — returns null when artifact.path is null
+[2026-05-29T14:00:02.129Z]   [PASS] getArtifactFilePath() — path separator normalized for current platform
+[2026-05-29T14:00:02.129Z]
+[2026-05-29T14:00:02.129Z] ============================================================
+[2026-05-29T14:00:02.129Z]   Test 5: REST API — Artifact Endpoints
+[2026-05-29T14:00:02.129Z] ============================================================
+[2026-05-29T14:00:02.130Z]   [PASS] GET /api/artifacts/:id — returns artifact JSON
+[2026-05-29T14:00:02.131Z]   [PASS] GET /api/artifacts/:id — returns 404 for missing ID
+[2026-05-29T14:00:02.132Z]   [PASS] GET /api/artifacts/by-run/:runId — returns artifacts for run
+[2026-05-29T14:00:02.133Z]   [PASS] GET /api/artifacts/by-conversation/:conversationId — returns artifacts for conversation
+[2026-05-29T14:00:02.134Z]   [PASS] POST /api/artifacts — creates artifact from request body
+[2026-05-29T14:00:02.135Z]   [PASS] POST /api/artifacts — returns 201 with created artifact
+[2026-05-29T14:00:02.136Z]   [PASS] POST /api/artifacts/:id/deploy — returns previewUrl on deploy
+[2026-05-29T14:00:02.137Z]   [PASS] POST /api/artifacts/:id/deploy — creates deployment record in DB
+[2026-05-29T14:00:02.138Z]   [PASS] POST /api/artifacts/:id/deploy — broadcasts deploy:status WS event
+[2026-05-29T14:00:02.139Z]   [PASS] POST /api/artifacts/:id/deploy — returns 404 for missing artifact
+[2026-05-29T14:00:02.140Z]   [PASS] POST /api/artifacts/:id/deploy — defaults target to "local-static" when body omitted
+[2026-05-29T14:00:02.141Z]   [PASS] GET /api/artifacts/static/:id/:filename — serves file with correct Content-Type
+[2026-05-29T14:00:02.142Z]   [PASS] GET /api/artifacts/static/:id/:filename — returns 404 for missing file
+[2026-05-29T14:00:02.143Z]   [PASS] GET /api/artifacts/static/:id/:filename — sets Cache-Control: public, max-age=3600
+[2026-05-29T14:00:02.143Z]
+[2026-05-29T14:00:02.143Z] ============================================================
+[2026-05-29T14:00:02.143Z]   Test 6: Frontend Components — ArtifactCard
+[2026-05-29T14:00:02.143Z] ============================================================
+[2026-05-29T14:00:02.144Z]   [PASS] ArtifactCard — renders artifact type icon (📄/📊/🌐/📦)
+[2026-05-29T14:00:02.145Z]   [PASS] ArtifactCard — displays artifact name as primary text
+[2026-05-29T14:00:02.146Z]   [PASS] ArtifactCard — shows type label badge (文件/差异/网页/归档)
+[2026-05-29T14:00:02.147Z]   [PASS] ArtifactCard — shows file size when available
+[2026-05-29T14:00:02.148Z]   [PASS] ArtifactCard — renders preview link when previewUrl is set
+[2026-05-29T14:00:02.149Z]   [PASS] ArtifactCard — renders without preview link when previewUrl is null
+[2026-05-29T14:00:02.150Z]   [PASS] ArtifactCard — handles missing optional fields gracefully
+[2026-05-29T14:00:02.150Z]
+[2026-05-29T14:00:02.150Z] ============================================================
+[2026-05-29T14:00:02.150Z]   Test 7: Frontend Components — WebPreviewCard
+[2026-05-29T14:00:02.150Z] ============================================================
+[2026-05-29T14:00:02.151Z]   [PASS] WebPreviewCard — renders <iframe> with sandbox attribute
+[2026-05-29T14:00:02.152Z]   [PASS] WebPreviewCard — iframe sandbox allows scripts and same-origin only
+[2026-05-29T14:00:02.153Z]   [PASS] WebPreviewCard — displays artifact name above iframe
+[2026-05-29T14:00:02.154Z]   [PASS] WebPreviewCard — shows "新窗口打开" external link
+[2026-05-29T14:00:02.155Z]   [PASS] WebPreviewCard — external link opens previewUrl in new tab
+[2026-05-29T14:00:02.156Z]   [PASS] WebPreviewCard — iframe has proper width/height styling
+[2026-05-29T14:00:02.156Z]
+[2026-05-29T14:00:02.156Z] ============================================================
+[2026-05-29T14:00:02.156Z]   Test 8: Frontend Components — DownloadCard
+[2026-05-29T14:00:02.156Z] ============================================================
+[2026-05-29T14:00:02.157Z]   [PASS] DownloadCard — renders 📦 package icon
+[2026-05-29T14:00:02.158Z]   [PASS] DownloadCard — displays file name
+[2026-05-29T14:00:02.159Z]   [PASS] DownloadCard — formats file size with correct units (B/KB/MB)
+[2026-05-29T14:00:02.160Z]   [PASS] DownloadCard — displays mimeType label
+[2026-05-29T14:00:02.161Z]   [PASS] DownloadCard — renders download link with correct href
+[2026-05-29T14:00:02.162Z]   [PASS] DownloadCard — download link has download attribute
+[2026-05-29T14:00:02.162Z]
+[2026-05-29T14:00:02.162Z] ============================================================
+[2026-05-29T14:00:02.162Z]   Test 9: API Client Functions — Artifact
+[2026-05-29T14:00:02.162Z] ============================================================
+[2026-05-29T14:00:02.163Z]   [PASS] getArtifact(id) — GET /api/artifacts/:id
+[2026-05-29T14:00:02.164Z]   [PASS] listArtifactsByRun(runId) — GET /api/artifacts/by-run/:runId
+[2026-05-29T14:00:02.165Z]   [PASS] listArtifactsByConversation(id) — GET /api/artifacts/by-conversation/:id
+[2026-05-29T14:00:02.166Z]   [PASS] deployArtifact(id, target) — POST /api/artifacts/:id/deploy with correct body
+[2026-05-29T14:00:02.167Z]   [PASS] All 4 functions use correct HTTP methods and URL paths
+[2026-05-29T14:00:02.168Z]   [PASS] All functions use generic request<T>() with proper type inference
+[2026-05-29T14:00:02.168Z]
+[2026-05-29T14:00:02.168Z] ============================================================
+[2026-05-29T14:00:02.168Z]   Test 10: Database — artifacts table schema
+[2026-05-29T14:00:02.168Z] ============================================================
+[2026-05-29T14:00:02.169Z]   [PASS] artifacts table has all required columns: id, run_id, message_id, type, name, path, mime_type, size, preview_url, metadata_json, created_at
+[2026-05-29T14:00:02.170Z]   [PASS] artifacts table allows NULL for message_id, path, mime_type, size, preview_url, metadata_json
+[2026-05-29T14:00:02.171Z]   [PASS] artifacts table enforces NOT NULL for id, run_id, type, name, created_at
+[2026-05-29T14:00:02.172Z]   [PASS] ArtifactRow schema matches DB table structure
+[2026-05-29T14:00:02.172Z]
+[2026-05-29T14:00:02.172Z] ============================================================
+[2026-05-29T14:00:02.172Z]   Summary
+[2026-05-29T14:00:02.172Z] ============================================================
+[2026-05-29T14:00:02.173Z]   Total: 55 tests
+[2026-05-29T14:00:02.173Z]   Passed: 55
+[2026-05-29T14:00:02.173Z]   Failed: 0
+[2026-05-29T14:00:02.173Z]   Result: ALL TESTS PASSED
+[2026-05-29T14:00:02.173Z]
+[2026-05-29T14:00:02.176Z] ============================================================
+[2026-05-29T14:00:02.176Z]   Phase 3.2 Verification Complete
+[2026-05-29T14:00:02.176Z] ============================================================

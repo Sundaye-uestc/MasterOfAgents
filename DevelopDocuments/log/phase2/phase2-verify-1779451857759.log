@@ -1,0 +1,84 @@
+[2026-05-22T12:10:57.760Z] Phase 2 Verification — Group Chat Collaboration
+[2026-05-22T12:10:57.761Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase2-verify-1779451857759.log
+[2026-05-22T12:10:57.761Z] Node: v24.11.1
+[2026-05-22T12:10:57.761Z] Platform: win32
+[2026-05-22T12:10:57.779Z]   [PASS] Database initialization
+[2026-05-22T12:10:57.780Z] 
+[2026-05-22T12:10:57.780Z] ============================================================
+[2026-05-22T12:10:57.780Z]   Test 1: PlannerService — validateTaskPlan
+[2026-05-22T12:10:57.780Z] ============================================================
+[2026-05-22T12:10:57.781Z]   [PASS] valid plan passes
+[2026-05-22T12:10:57.781Z]   [PASS] missing tasks array fails — tasks must be an array
+[2026-05-22T12:10:57.782Z]   [PASS] missing required fields fails — errors: 4
+[2026-05-22T12:10:57.782Z]   [PASS] circular dependency detected — circular dependency: a → b
+[2026-05-22T12:10:57.782Z]   [PASS] nonexistent dependency detected — task[0] "task-1": dependency "nonexistent-task" does not exist
+[2026-05-22T12:10:57.782Z]   [PASS] empty tasks array is valid
+[2026-05-22T12:10:57.783Z] 
+[2026-05-22T12:10:57.783Z] ============================================================
+[2026-05-22T12:10:57.783Z]   Test 2: PlannerService — degradation fallback
+[2026-05-22T12:10:57.783Z] ============================================================
+[2026-05-22T12:10:57.783Z]   [PASS] degraded plan generated on API key failure — tasks=1, agent=agent-1, reasoning="Planner fell back to single-task execution after failing to ..."
+[2026-05-22T12:10:57.784Z]   [PASS] degraded plan passes validation
+[2026-05-22T12:10:57.784Z] 
+[2026-05-22T12:10:57.784Z] ============================================================
+[2026-05-22T12:10:57.784Z]   Test 3: ChatService — member management
+[2026-05-22T12:10:57.784Z] ============================================================
+[2026-05-22T12:10:57.789Z]   [PASS] createConversation with agentIds — type=group
+[2026-05-22T12:10:57.792Z]   [PASS] getMembersForConversation — found 2 members: Claude Code, Codex
+[2026-05-22T12:10:57.794Z]   [PASS] addMember — count=3
+[2026-05-22T12:10:57.794Z]   [PASS] observer role set — observer
+[2026-05-22T12:10:57.796Z]   [PASS] removeMember — count=2
+[2026-05-22T12:10:57.796Z]   [PASS] listMembers with agent info — members have agent name: Claude Code
+[2026-05-22T12:10:57.797Z]   [PASS] direct chat has 1 member — count=1
+[2026-05-22T12:10:57.798Z] 
+[2026-05-22T12:10:57.798Z] ============================================================
+[2026-05-22T12:10:57.798Z]   Test 4: ChatService — detectCreateAgentIntent
+[2026-05-22T12:10:57.798Z] ============================================================
+[2026-05-22T12:10:57.799Z]   [PASS] detect Chinese create intent — name="CodeReviewer", caps=[code-generation,analysis]
+[2026-05-22T12:10:57.799Z]   [PASS] detect English create intent — name="DebugBot", caps=[debugging,testing]
+[2026-05-22T12:10:57.799Z]   [PASS] extract name from intent — name="CodeReviewExpert"
+[2026-05-22T12:10:57.800Z]   [PASS] extract platform (codex) — platform="codex"
+[2026-05-22T12:10:57.800Z]   [PASS] extract capabilities — caps=[code-generation,analysis]
+[2026-05-22T12:10:57.800Z]   [PASS] extract systemPrompt — systemPrompt="审查所有代码变更并给出建议..."
+[2026-05-22T12:10:57.800Z]   [PASS] regular message returns null — correctly null
+[2026-05-22T12:10:57.800Z]   [PASS] unrelated message returns null
+[2026-05-22T12:10:57.800Z] 
+[2026-05-22T12:10:57.801Z] ============================================================
+[2026-05-22T12:10:57.801Z]   Test 5: Orchestrator DAG scheduling logic
+[2026-05-22T12:10:57.801Z] ============================================================
+[2026-05-22T12:10:57.801Z]   [PASS] write-scope overlap (exact match)
+[2026-05-22T12:10:57.801Z]   [PASS] write-scope overlap (parent-child)
+[2026-05-22T12:10:57.801Z]   [PASS] write-scope overlap (child-parent)
+[2026-05-22T12:10:57.801Z]   [PASS] write-scope no overlap
+[2026-05-22T12:10:57.802Z]   [PASS] write-scope no overlap (empty)
+[2026-05-22T12:10:57.802Z]   [PASS] shouldRetry (low risk)
+[2026-05-22T12:10:57.802Z]   [PASS] shouldRetry (medium risk)
+[2026-05-22T12:10:57.802Z]   [PASS] shouldRetry (high risk)
+[2026-05-22T12:10:57.802Z] 
+[2026-05-22T12:10:57.802Z] ============================================================
+[2026-05-22T12:10:57.802Z]   Test 6: WebSocket event types — Phase 2
+[2026-05-22T12:10:57.802Z] ============================================================
+[2026-05-22T12:10:57.803Z]   [PASS] permission_request → permission:requested — type=permission:requested
+[2026-05-22T12:10:57.803Z]   [PASS] all Phase 2 WS events are JSON-serializable
+[2026-05-22T12:10:57.803Z] 
+[2026-05-22T12:10:57.803Z] ============================================================
+[2026-05-22T12:10:57.803Z]   Test 7: TaskPlan type structure
+[2026-05-22T12:10:57.803Z] ============================================================
+[2026-05-22T12:10:57.804Z]   [PASS] 3-task DAG passes validation
+[2026-05-22T12:10:57.804Z]   [PASS] frontend has no dependencies
+[2026-05-22T12:10:57.804Z]   [PASS] backend depends on frontend
+[2026-05-22T12:10:57.804Z]   [PASS] integration depends on both
+[2026-05-22T12:10:57.806Z] 
+[2026-05-22T12:10:57.806Z] ============================================================
+[2026-05-22T12:10:57.806Z]   Results Summary
+[2026-05-22T12:10:57.806Z] ============================================================
+[2026-05-22T12:10:57.806Z]   [PASS] PlannerService — validateTaskPlan
+[2026-05-22T12:10:57.806Z]   [PASS] PlannerService — degradation fallback
+[2026-05-22T12:10:57.806Z]   [PASS] ChatService — member management
+[2026-05-22T12:10:57.807Z]   [PASS] ChatService — detectCreateAgentIntent
+[2026-05-22T12:10:57.807Z]   [PASS] Orchestrator DAG scheduling
+[2026-05-22T12:10:57.807Z]   [PASS] WebSocket Phase 2 events
+[2026-05-22T12:10:57.807Z]   [PASS] TaskPlan type structure
+[2026-05-22T12:10:57.807Z] 
+[2026-05-22T12:10:57.807Z] Total: 7 passed, 0 failed, 7 tests
+[2026-05-22T12:10:57.807Z] All tests PASSED.

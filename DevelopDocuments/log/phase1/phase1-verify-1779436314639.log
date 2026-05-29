@@ -1,0 +1,89 @@
+[2026-05-22T07:51:54.639Z] Phase 1 Verification — Web Single-Chat Closed Loop
+[2026-05-22T07:51:54.640Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase1-verify-1779436314639.log
+[2026-05-22T07:51:54.640Z] Node: v24.11.1
+[2026-05-22T07:51:54.640Z] Platform: win32
+[2026-05-22T07:51:54.640Z] Max concurrent: 3
+[2026-05-22T07:51:54.640Z] 
+[2026-05-22T07:51:54.641Z] ============================================================
+[2026-05-22T07:51:54.641Z]   Test 1: Database init & table creation
+[2026-05-22T07:51:54.641Z] ============================================================
+[2026-05-22T07:51:54.659Z]   [PASS] initDb() succeeds
+[2026-05-22T07:51:54.662Z]   [PASS] Table 'conversations' exists
+[2026-05-22T07:51:54.663Z]   [PASS] Table 'conversation_members' exists
+[2026-05-22T07:51:54.664Z]   [PASS] Table 'agents' exists
+[2026-05-22T07:51:54.664Z]   [PASS] Table 'messages' exists
+[2026-05-22T07:51:54.665Z]   [PASS] Table 'runs' exists
+[2026-05-22T07:51:54.665Z]   [PASS] Table 'tasks' exists
+[2026-05-22T07:51:54.666Z]   [PASS] Table 'tool_invocations' exists
+[2026-05-22T07:51:54.666Z]   [PASS] Table 'workspaces' exists
+[2026-05-22T07:51:54.666Z]   [PASS] Table 'workspace_snapshots' exists
+[2026-05-22T07:51:54.667Z]   [PASS] Table 'file_changes' exists
+[2026-05-22T07:51:54.667Z]   [PASS] Table 'artifacts' exists
+[2026-05-22T07:51:54.667Z]   [PASS] Table 'audit_logs' exists
+[2026-05-22T07:51:54.668Z] 
+[2026-05-22T07:51:54.668Z] ============================================================
+[2026-05-22T07:51:54.668Z]   Test 2: ChatService — conversations CRUD
+[2026-05-22T07:51:54.668Z] ============================================================
+[2026-05-22T07:51:54.671Z]   [PASS] createConversation — id=c0fbd8c2-c7c9-4c
+[2026-05-22T07:51:54.672Z]   [PASS] title matches — Verify Conv
+[2026-05-22T07:51:54.672Z]   [PASS] type is direct — direct
+[2026-05-22T07:51:54.673Z]   [PASS] getConversation
+[2026-05-22T07:51:54.674Z]   [PASS] listConversations — count=2
+[2026-05-22T07:51:54.675Z]   [PASS] archiveConversation — archived
+[2026-05-22T07:51:54.676Z]   [PASS] unarchiveConversation — active
+[2026-05-22T07:51:54.677Z]   [PASS] search conversations — found=1
+[2026-05-22T07:51:54.678Z] 
+[2026-05-22T07:51:54.678Z] ============================================================
+[2026-05-22T07:51:54.678Z]   Test 3: ChatService — messages, pin, append
+[2026-05-22T07:51:54.678Z] ============================================================
+[2026-05-22T07:51:54.679Z]   [PASS] createMessage (user)
+[2026-05-22T07:51:54.680Z]   [PASS] createMessage (agent)
+[2026-05-22T07:51:54.681Z]   [PASS] appendContent — content="Hi there!"
+[2026-05-22T07:51:54.682Z]   [PASS] updateMessageStatus (streaming)
+[2026-05-22T07:51:54.682Z]   [PASS] updateMessageStatus (sent)
+[2026-05-22T07:51:54.683Z]   [PASS] pinMessage — pinned count=1
+[2026-05-22T07:51:54.684Z]   [PASS] unpinMessage — pinned count=0
+[2026-05-22T07:51:54.685Z]   [PASS] getRecentMessages — count=2
+[2026-05-22T07:51:54.685Z] 
+[2026-05-22T07:51:54.686Z] ============================================================
+[2026-05-22T07:51:54.686Z]   Test 4: AgentRuntimeService — streaming run (real Claude CLI)
+[2026-05-22T07:51:54.686Z] ============================================================
+[2026-05-22T07:51:54.920Z]   [PASS] startDirectRun returns runId — runId=35b20320-9ee0-40
+[2026-05-22T07:51:54.921Z]   [PASS] startDirectRun returns agentMessageId — msgId=f7bf6add-e216-4b
+[2026-05-22T07:52:00.468Z]   [PASS] run_started emitted
+[2026-05-22T07:52:00.469Z]   [PASS] text_delta emitted — 1 deltas
+[2026-05-22T07:52:00.469Z]   [PASS] agent responded with OK — text="OK"
+[2026-05-22T07:52:00.469Z]   [PASS] run completed or failed — completed
+[2026-05-22T07:52:00.470Z]   [PASS] agent message persisted — content length=0
+[2026-05-22T07:52:00.576Z] 
+[2026-05-22T07:52:00.576Z] ============================================================
+[2026-05-22T07:52:00.577Z]   Test 5: DB persistence (save & reload)
+[2026-05-22T07:52:00.577Z] ============================================================
+[2026-05-22T07:52:00.579Z]   [PASS] saveDb() succeeds
+[2026-05-22T07:52:00.581Z]   [PASS] conversation survives reload
+[2026-05-22T07:52:00.581Z]   [PASS] message survives reload
+[2026-05-22T07:52:00.581Z] 
+[2026-05-22T07:52:00.581Z] ============================================================
+[2026-05-22T07:52:00.581Z]   Test 6: WebSocket event type definitions
+[2026-05-22T07:52:00.582Z] ============================================================
+[2026-05-22T07:52:00.599Z]   [PASS] event run_started → run:started — got: run:started
+[2026-05-22T07:52:00.599Z]   [PASS] event text_delta → message:delta — got: message:delta
+[2026-05-22T07:52:00.600Z]   [PASS] event run_completed → run:completed — got: run:completed
+[2026-05-22T07:52:00.600Z]   [PASS] event run_failed → run:failed — got: run:failed
+[2026-05-22T07:52:00.600Z]   [PASS] event tool_call → tool:invocation — got: tool:invocation
+[2026-05-22T07:52:00.600Z]   [PASS] event file_change → file:changed — got: file:changed
+[2026-05-22T07:52:00.600Z]   [PASS] event artifact_created → artifact:created — got: artifact:created
+[2026-05-22T07:52:00.600Z]   [PASS] event log → null — got: null
+[2026-05-22T07:52:00.601Z] 
+[2026-05-22T07:52:00.601Z] ============================================================
+[2026-05-22T07:52:00.601Z]   Results Summary
+[2026-05-22T07:52:00.601Z] ============================================================
+[2026-05-22T07:52:00.601Z]   [PASS] Database init & tables
+[2026-05-22T07:52:00.601Z]   [PASS] Conversations CRUD
+[2026-05-22T07:52:00.601Z]   [PASS] Messages, pin, append
+[2026-05-22T07:52:00.602Z]   [PASS] AgentRuntime streaming run
+[2026-05-22T07:52:00.602Z]   [PASS] DB persistence
+[2026-05-22T07:52:00.602Z]   [PASS] WebSocket event types
+[2026-05-22T07:52:00.602Z] 
+[2026-05-22T07:52:00.602Z] Total: 6 passed, 0 failed, 6 tests
+[2026-05-22T07:52:00.602Z] All tests PASSED.

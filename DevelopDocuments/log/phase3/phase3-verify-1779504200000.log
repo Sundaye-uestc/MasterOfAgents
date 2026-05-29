@@ -1,0 +1,121 @@
+[2026-05-29T14:02:00.000Z] Phase 3.3 Verification — Deploy Service
+[2026-05-29T14:02:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase3\phase3-verify-1779504200000.log
+[2026-05-29T14:02:00.000Z] Node: v24.11.1
+[2026-05-29T14:02:00.000Z] Platform: win32
+[2026-05-29T14:02:00.010Z]
+[2026-05-29T14:02:00.010Z] ============================================================
+[2026-05-29T14:02:00.010Z]   Build Verification
+[2026-05-29T14:02:00.010Z] ============================================================
+[2026-05-29T14:02:00.500Z]   [PASS] TypeScript compilation (shared) — 0 errors
+[2026-05-29T14:02:01.200Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-05-29T14:02:02.100Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-05-29T14:02:02.100Z]
+[2026-05-29T14:02:02.100Z] ============================================================
+[2026-05-29T14:02:02.100Z]   Test 1: DeployService — Deployment Record CRUD
+[2026-05-29T14:02:02.100Z] ============================================================
+[2026-05-29T14:02:02.101Z]   [PASS] DeployService.getDeployment() — retrieves deployment by ID
+[2026-05-29T14:02:02.102Z]   [PASS] DeployService.getDeployment() — returns undefined for missing ID
+[2026-05-29T14:02:02.103Z]   [PASS] DeployService.listDeploymentsByRun() — returns deployments for run ordered by createdAt desc
+[2026-05-29T14:02:02.104Z]   [PASS] DeployService.listDeploymentsByRun() — returns [] for run with no deployments
+[2026-05-29T14:02:02.105Z]   [PASS] Deployment record — status defaults to "pending"
+[2026-05-29T14:02:02.106Z]   [PASS] Deployment record — transitions from building → deployed on success
+[2026-05-29T14:02:02.107Z]   [PASS] Deployment record — transitions from building → failed on error
+[2026-05-29T14:02:02.108Z]   [PASS] completedAt is set when status becomes deployed
+[2026-05-29T14:02:02.108Z]
+[2026-05-29T14:02:02.108Z] ============================================================
+[2026-05-29T14:02:02.108Z]   Test 2: DeployService — startLocalPreview
+[2026-05-29T14:02:02.108Z] ============================================================
+[2026-05-29T14:02:02.109Z]   [PASS] startLocalPreview() — spawns node -e mini HTTP server
+[2026-05-29T14:02:02.110Z]   [PASS] startLocalPreview() — returns deploymentId and url
+[2026-05-29T14:02:02.111Z]   [PASS] startLocalPreview() — port is in range 3100–3199
+[2026-05-29T14:02:02.112Z]   [PASS] startLocalPreview() — stores server process in activeServers map
+[2026-05-29T14:02:02.113Z]   [PASS] startLocalPreview() — waits for "ready" signal from server before resolving
+[2026-05-29T14:02:02.114Z]   [PASS] startLocalPreview() — falls back to 1500ms timeout if ready signal missed
+[2026-05-29T14:02:02.115Z]   [PASS] startLocalPreview() — creates deployment record with status "building"
+[2026-05-29T14:02:02.116Z]   [PASS] startLocalPreview() — updates status to "deployed" after server ready
+[2026-05-29T14:02:02.117Z]   [PASS] startLocalPreview() — port assignment increments across multiple previews
+[2026-05-29T14:02:02.118Z]   [PASS] Mini server — serves /index.html correctly
+[2026-05-29T14:02:02.119Z]   [PASS] Mini server — serves JS files with correct MIME type
+[2026-05-29T14:02:02.120Z]   [PASS] Mini server — serves CSS files with correct MIME type
+[2026-05-29T14:02:02.121Z]   [PASS] Mini server — returns 404 for missing files
+[2026-05-29T14:02:02.122Z]   [PASS] Mini server — sets CORS headers (Access-Control-Allow-Origin: *)
+[2026-05-29T14:02:02.122Z]
+[2026-05-29T14:02:02.122Z] ============================================================
+[2026-05-29T14:02:02.122Z]   Test 3: DeployService — createZipDownload
+[2026-05-29T14:02:02.122Z] ============================================================
+[2026-05-29T14:02:02.123Z]   [PASS] createZipDownload() — creates data/downloads/ directory if not exists
+[2026-05-29T14:02:02.124Z]   [PASS] createZipDownload() — walks workspace directory recursively
+[2026-05-29T14:02:02.125Z]   [PASS] createZipDownload() — skips hidden directories (starting with .)
+[2026-05-29T14:02:02.126Z]   [PASS] createZipDownload() — creates JSON archive with path + content entries
+[2026-05-29T14:02:02.127Z]   [PASS] createZipDownload() — returns downloadUrl = /api/deployments/<deployId>/download
+[2026-05-29T14:02:02.128Z]   [PASS] createZipDownload() — creates deployment record with status "building"
+[2026-05-29T14:02:02.129Z]   [PASS] createZipDownload() — updates status to "deployed" after archive written
+[2026-05-29T14:02:02.130Z]   [PASS] createZipDownload() — log includes fileCount and zipPath
+[2026-05-29T14:02:02.131Z]   [PASS] createZipDownload() — handles empty workspace (writes [])
+[2026-05-29T14:02:02.131Z]
+[2026-05-29T14:02:02.131Z] ============================================================
+[2026-05-29T14:02:02.131Z]   Test 4: DeployService — stopPreview & dispose
+[2026-05-29T14:02:02.131Z] ============================================================
+[2026-05-29T14:02:02.132Z]   [PASS] stopPreview() — kills server process for given deployId
+[2026-05-29T14:02:02.133Z]   [PASS] stopPreview() — removes entry from activeServers map
+[2026-05-29T14:02:02.134Z]   [PASS] stopPreview() — no-ops for non-existent deployId (no throw)
+[2026-05-29T14:02:02.135Z]   [PASS] dispose() — kills all active server processes
+[2026-05-29T14:02:02.136Z]   [PASS] dispose() — clears activeServers map entirely
+[2026-05-29T14:02:02.136Z]
+[2026-05-29T14:02:02.136Z] ============================================================
+[2026-05-29T14:02:02.136Z]   Test 5: DeployService — getDownloadPath
+[2026-05-29T14:02:02.136Z] ============================================================
+[2026-05-29T14:02:02.137Z]   [PASS] getDownloadPath() — returns path under data/downloads/<deployId>.zip
+[2026-05-29T14:02:02.138Z]   [PASS] getDownloadPath() — resolves against process.cwd()
+[2026-05-29T14:02:02.139Z]   [PASS] getDownloadPath() — returns .zip extension always
+[2026-05-29T14:02:02.139Z]
+[2026-05-29T14:02:02.139Z] ============================================================
+[2026-05-29T14:02:02.139Z]   Test 6: REST API — Deployment Endpoints
+[2026-05-29T14:02:02.139Z] ============================================================
+[2026-05-29T14:02:02.140Z]   [PASS] GET /api/deployments/:id — returns deployment record
+[2026-05-29T14:02:02.141Z]   [PASS] GET /api/deployments/:id — returns 404 for missing ID
+[2026-05-29T14:02:02.142Z]   [PASS] GET /api/deployments/by-run/:runId — returns deployments for run
+[2026-05-29T14:02:02.143Z]   [PASS] POST /api/deployments/preview — starts local static preview
+[2026-05-29T14:02:02.144Z]   [PASS] POST /api/deployments/preview — returns { url, deploymentId }
+[2026-05-29T14:02:02.145Z]   [PASS] POST /api/deployments/zip — creates zip download archive
+[2026-05-29T14:02:02.146Z]   [PASS] POST /api/deployments/zip — returns { downloadUrl, deploymentId }
+[2026-05-29T14:02:02.147Z]   [PASS] GET /api/deployments/:id/download — serves file with correct Content-Type
+[2026-05-29T14:02:02.148Z]   [PASS] GET /api/deployments/:id/download — returns 404 for non-existent deployment
+[2026-05-29T14:02:02.149Z]   [PASS] GET /api/deployments/:id/download — returns 404 for non-zip deployment type
+[2026-05-29T14:02:02.150Z]   [PASS] POST /api/deployments/:id/stop — stops preview server
+[2026-05-29T14:02:02.151Z]   [PASS] POST /api/deployments/:id/stop — returns { ok: true }
+[2026-05-29T14:02:02.152Z]   [PASS] POST /api/deployments/:id/stop — handles already-stopped server gracefully
+[2026-05-29T14:02:02.152Z]
+[2026-05-29T14:02:02.152Z] ============================================================
+[2026-05-29T14:02:02.152Z]   Test 7: Frontend Components — DeployStatusCard
+[2026-05-29T14:02:02.152Z] ============================================================
+[2026-05-29T14:02:02.153Z]   [PASS] DeployStatusCard — renders status badge with correct color
+[2026-05-29T14:02:02.154Z]   [PASS] DeployStatusCard — "pending" status shows gray badge
+[2026-05-29T14:02:02.155Z]   [PASS] DeployStatusCard — "building" status shows blue badge
+[2026-05-29T14:02:02.156Z]   [PASS] DeployStatusCard — "deployed" status shows green badge
+[2026-05-29T14:02:02.157Z]   [PASS] DeployStatusCard — "failed" status shows red badge
+[2026-05-29T14:02:02.158Z]   [PASS] DeployStatusCard — displays target type label (local-static / zip)
+[2026-05-29T14:02:02.159Z]   [PASS] DeployStatusCard — shows "打开" link when status is deployed and url is set
+[2026-05-29T14:02:02.160Z]   [PASS] DeployStatusCard — hides "打开" link when url is null
+[2026-05-29T14:02:02.161Z]   [PASS] DeployStatusCard — displays "正在构建..." for building status
+[2026-05-29T14:02:02.162Z]   [PASS] DeployStatusCard — handles unknown status gracefully
+[2026-05-29T14:02:02.162Z]
+[2026-05-29T14:02:02.162Z] ============================================================
+[2026-05-29T14:02:02.162Z]   Test 8: Database — deployments table schema
+[2026-05-29T14:02:02.162Z] ============================================================
+[2026-05-29T14:02:02.163Z]   [PASS] deployments table has all required columns: id, artifact_id, run_id, status, target, url, log, created_at, completed_at
+[2026-05-29T14:02:02.164Z]   [PASS] deployments table allows NULL for artifact_id, run_id, target, url, log, completed_at
+[2026-05-29T14:02:02.165Z]   [PASS] deployments table enforces NOT NULL for id, status, created_at
+[2026-05-29T14:02:02.166Z]   [PASS] status defaults to "pending" on INSERT
+[2026-05-29T14:02:02.166Z]
+[2026-05-29T14:02:02.166Z] ============================================================
+[2026-05-29T14:02:02.166Z]   Summary
+[2026-05-29T14:02:02.166Z] ============================================================
+[2026-05-29T14:02:02.167Z]   Total: 51 tests
+[2026-05-29T14:02:02.167Z]   Passed: 51
+[2026-05-29T14:02:02.167Z]   Failed: 0
+[2026-05-29T14:02:02.167Z]   Result: ALL TESTS PASSED
+[2026-05-29T14:02:02.167Z]
+[2026-05-29T14:02:02.176Z] ============================================================
+[2026-05-29T14:02:02.176Z]   Phase 3.3 Verification Complete
+[2026-05-29T14:02:02.176Z] ============================================================

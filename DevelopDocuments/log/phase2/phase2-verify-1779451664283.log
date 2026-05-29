@@ -1,0 +1,84 @@
+[2026-05-22T12:07:44.284Z] Phase 2 Verification — Group Chat Collaboration
+[2026-05-22T12:07:44.285Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase2-verify-1779451664283.log
+[2026-05-22T12:07:44.285Z] Node: v24.11.1
+[2026-05-22T12:07:44.285Z] Platform: win32
+[2026-05-22T12:07:44.305Z]   [PASS] Database initialization
+[2026-05-22T12:07:44.306Z] 
+[2026-05-22T12:07:44.306Z] ============================================================
+[2026-05-22T12:07:44.306Z]   Test 1: PlannerService — validateTaskPlan
+[2026-05-22T12:07:44.307Z] ============================================================
+[2026-05-22T12:07:44.307Z]   [PASS] valid plan passes
+[2026-05-22T12:07:44.307Z]   [PASS] missing tasks array fails — tasks must be an array
+[2026-05-22T12:07:44.308Z]   [PASS] missing required fields fails — errors: 4
+[2026-05-22T12:07:44.308Z]   [PASS] circular dependency detected — circular dependency: a → b
+[2026-05-22T12:07:44.308Z]   [PASS] nonexistent dependency detected — task[0] "task-1": dependency "nonexistent-task" does not exist
+[2026-05-22T12:07:44.308Z]   [PASS] empty tasks array is valid
+[2026-05-22T12:07:44.309Z] 
+[2026-05-22T12:07:44.309Z] ============================================================
+[2026-05-22T12:07:44.309Z]   Test 2: PlannerService — degradation fallback
+[2026-05-22T12:07:44.309Z] ============================================================
+[2026-05-22T12:07:44.310Z]   [PASS] degraded plan generated on API key failure — tasks=1, agent=agent-1, reasoning="Planner fell back to single-task execution after failing to ..."
+[2026-05-22T12:07:44.310Z]   [PASS] degraded plan passes validation
+[2026-05-22T12:07:44.310Z] 
+[2026-05-22T12:07:44.310Z] ============================================================
+[2026-05-22T12:07:44.310Z]   Test 3: ChatService — member management
+[2026-05-22T12:07:44.310Z] ============================================================
+[2026-05-22T12:07:44.315Z]   [PASS] createConversation with agentIds — type=group
+[2026-05-22T12:07:44.318Z]   [PASS] getMembersForConversation — found 2 members: Claude Code, Codex
+[2026-05-22T12:07:44.320Z]   [FAIL] addMember — count=2
+[2026-05-22T12:07:44.320Z]   [FAIL] observer role set — undefined
+[2026-05-22T12:07:44.322Z]   [PASS] removeMember — count=2
+[2026-05-22T12:07:44.322Z]   [PASS] listMembers with agent info — members have agent name: Claude Code
+[2026-05-22T12:07:44.324Z]   [PASS] direct chat has 1 member — count=1
+[2026-05-22T12:07:44.324Z] 
+[2026-05-22T12:07:44.324Z] ============================================================
+[2026-05-22T12:07:44.324Z]   Test 4: ChatService — detectCreateAgentIntent
+[2026-05-22T12:07:44.325Z] ============================================================
+[2026-05-22T12:07:44.325Z]   [FAIL] detect Chinese create intent — null
+[2026-05-22T12:07:44.325Z]   [PASS] detect English create intent — name="Custom Agent", caps=[debugging,testing]
+[2026-05-22T12:07:44.325Z]   [FAIL] extract name from intent — name="undefined"
+[2026-05-22T12:07:44.326Z]   [FAIL] extract platform (codex) — platform="undefined"
+[2026-05-22T12:07:44.326Z]   [FAIL] extract capabilities — caps=[undefined]
+[2026-05-22T12:07:44.326Z]   [FAIL] extract systemPrompt — systemPrompt="undefined..."
+[2026-05-22T12:07:44.326Z]   [PASS] regular message returns null — correctly null
+[2026-05-22T12:07:44.326Z]   [PASS] unrelated message returns null
+[2026-05-22T12:07:44.326Z] 
+[2026-05-22T12:07:44.326Z] ============================================================
+[2026-05-22T12:07:44.326Z]   Test 5: Orchestrator DAG scheduling logic
+[2026-05-22T12:07:44.326Z] ============================================================
+[2026-05-22T12:07:44.327Z]   [PASS] write-scope overlap (exact match)
+[2026-05-22T12:07:44.327Z]   [FAIL] write-scope overlap (parent-child)
+[2026-05-22T12:07:44.327Z]   [FAIL] write-scope overlap (child-parent)
+[2026-05-22T12:07:44.327Z]   [PASS] write-scope no overlap
+[2026-05-22T12:07:44.327Z]   [PASS] write-scope no overlap (empty)
+[2026-05-22T12:07:44.327Z]   [PASS] shouldRetry (low risk)
+[2026-05-22T12:07:44.327Z]   [PASS] shouldRetry (medium risk)
+[2026-05-22T12:07:44.327Z]   [PASS] shouldRetry (high risk)
+[2026-05-22T12:07:44.327Z] 
+[2026-05-22T12:07:44.328Z] ============================================================
+[2026-05-22T12:07:44.328Z]   Test 6: WebSocket event types — Phase 2
+[2026-05-22T12:07:44.328Z] ============================================================
+[2026-05-22T12:07:44.328Z]   [PASS] permission_request → permission:requested — type=permission:requested
+[2026-05-22T12:07:44.328Z]   [PASS] all Phase 2 WS events are JSON-serializable
+[2026-05-22T12:07:44.328Z] 
+[2026-05-22T12:07:44.329Z] ============================================================
+[2026-05-22T12:07:44.329Z]   Test 7: TaskPlan type structure
+[2026-05-22T12:07:44.329Z] ============================================================
+[2026-05-22T12:07:44.329Z]   [PASS] 3-task DAG passes validation
+[2026-05-22T12:07:44.329Z]   [PASS] frontend has no dependencies
+[2026-05-22T12:07:44.329Z]   [PASS] backend depends on frontend
+[2026-05-22T12:07:44.329Z]   [PASS] integration depends on both
+[2026-05-22T12:07:44.331Z] 
+[2026-05-22T12:07:44.331Z] ============================================================
+[2026-05-22T12:07:44.331Z]   Results Summary
+[2026-05-22T12:07:44.331Z] ============================================================
+[2026-05-22T12:07:44.332Z]   [PASS] PlannerService — validateTaskPlan
+[2026-05-22T12:07:44.332Z]   [PASS] PlannerService — degradation fallback
+[2026-05-22T12:07:44.332Z]   [FAIL] ChatService — member management
+[2026-05-22T12:07:44.332Z]   [FAIL] ChatService — detectCreateAgentIntent
+[2026-05-22T12:07:44.332Z]   [PASS] Orchestrator DAG scheduling
+[2026-05-22T12:07:44.332Z]   [PASS] WebSocket Phase 2 events
+[2026-05-22T12:07:44.332Z]   [PASS] TaskPlan type structure
+[2026-05-22T12:07:44.332Z] 
+[2026-05-22T12:07:44.333Z] Total: 5 passed, 2 failed, 7 tests
+[2026-05-22T12:07:44.333Z] Some tests FAILED — check the log for details.

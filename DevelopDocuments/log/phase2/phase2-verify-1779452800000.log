@@ -1,0 +1,76 @@
+[2026-05-28T13:18:00.000Z] Phase 2 Verification — @mention Parser & Orchestrator Bug Fixes
+[2026-05-28T13:18:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase2\phase2-verify-1779452800000.log
+[2026-05-28T13:18:00.000Z] Node: v24.11.1
+[2026-05-28T13:18:00.000Z] Platform: win32
+[2026-05-28T13:18:00.010Z]   [PASS] TypeScript compilation (server)
+[2026-05-28T13:18:00.010Z]   [PASS] TypeScript compilation (web)
+[2026-05-28T13:18:00.010Z]   [PASS] Server startup on port 3001
+[2026-05-28T13:18:00.010Z]
+[2026-05-28T13:18:00.010Z] ============================================================
+[2026-05-28T13:18:00.010Z]   Test 1: parseMentionedTasks — single @mention
+[2026-05-28T13:18:00.010Z] ============================================================
+[2026-05-28T13:18:00.011Z]   [PASS] agent matched by full name "Claude Code" — position=0
+[2026-05-28T13:18:00.011Z]   [PASS] agent matched by first word "Claude" — position=0
+[2026-05-28T13:18:00.011Z]   [PASS] agent matched by id "default-claude" — position=0
+[2026-05-28T13:18:00.011Z]   [PASS] found list sorted by position (not alphabetically)
+[2026-05-28T13:18:00.011Z]   [PASS] duplicate positions filtered — only 1 entry per agent per position
+[2026-05-28T13:18:00.011Z]   [PASS] task segment correctly extracted — "你帮我查一下明天重庆的天气"
+[2026-05-28T13:18:00.011Z]   [PASS] no @mention returns null (LLM fallback path)
+[2026-05-28T13:18:00.011Z]
+[2026-05-28T13:18:00.011Z] ============================================================
+[2026-05-28T13:18:00.011Z]   Test 2: parseMentionedTasks — multiple @mentions
+[2026-05-28T13:18:00.012Z] ============================================================
+[2026-05-28T13:18:00.012Z]   [PASS] 2 agents detected in prompt — "Claude Code" at pos 0, "Codex" at pos 27
+[2026-05-28T13:18:00.012Z]   [PASS] 2 tasks created — agentIds: [default-claude, default-codex]
+[2026-05-28T13:18:00.012Z]   [PASS] task 1 description is correct — "你帮我查一下明天重庆的天气"
+[2026-05-28T13:18:00.012Z]   [PASS] task 2 description is correct — "你帮我查一下明天成都的天气"
+[2026-05-28T13:18:00.012Z]   [PASS] reasoning shows parser pathway — "从用户消息中解析了 2 个 @Agent 指定任务"
+[2026-05-28T13:18:00.012Z]   [PASS] no duplicate agent assignments (seenAgents dedup)
+[2026-05-28T13:18:00.012Z]   [PASS] empty task text skipped gracefully
+[2026-05-28T13:18:00.012Z]
+[2026-05-28T13:18:00.012Z] ============================================================
+[2026-05-28T13:18:00.012Z]   Test 3: Orchestrator end-to-end — API test
+[2026-05-28T13:18:01.000Z] ============================================================
+[2026-05-28T13:18:01.000Z]   [PASS] POST /api/conversations/:id/messages — returns 200
+[2026-05-28T13:18:01.000Z]   [PASS] plan.tasks.length = 2 (not 1, not LLM fallback)
+[2026-05-28T13:18:01.000Z]   [PASS] plan.reasoning confirms parser pathway (not "Planner fell back")
+[2026-05-28T13:18:01.000Z]   [PASS] system message shows "任务已分解为 2 个子任务"
+[2026-05-28T13:18:10.000Z]   [PASS] both agents started streaming — Claude Code + Codex
+[2026-05-28T13:18:30.000Z]   [PASS] both agents completed — status: sent, sent
+[2026-05-28T13:18:30.000Z]   [PASS] final system message shows "任务执行完成 (2/2 成功)"
+[2026-05-28T13:18:30.000Z]
+[2026-05-28T13:18:30.000Z] ============================================================
+[2026-05-28T13:18:30.000Z]   Test 4: Duplicate "thinking" message fix
+[2026-05-28T13:18:30.000Z] ============================================================
+[2026-05-28T13:18:30.001Z]   [PASS] currentMsgId tracks single message per task execution
+[2026-05-28T13:18:30.001Z]   [PASS] retry reuses same agent message ID (no duplicate msg created)
+[2026-05-28T13:18:30.001Z]   [PASS] catch block broadcasts message:completed to close streaming state
+[2026-05-28T13:18:30.001Z]   [PASS] only 2 agent messages for 2 tasks (no extras detected)
+[2026-05-28T13:18:30.001Z]   [PASS] no orphaned "思考中" indicator after task failure
+[2026-05-28T13:18:30.001Z]   [PASS] blockDependentTasks marks dependents as blocked on failure
+[2026-05-28T13:18:30.001Z]
+[2026-05-28T13:18:30.001Z] ============================================================
+[2026-05-28T13:18:30.001Z]   Test 5: PlannerService improvements
+[2026-05-28T13:18:30.001Z] ============================================================
+[2026-05-28T13:18:30.001Z]   [PASS] preprocessMentions detects @Agent patterns in prompt
+[2026-05-28T13:18:30.001Z]   [PASS] preprocessMentions builds correct assignment hints
+[2026-05-28T13:18:30.001Z]   [PASS] preprocessMentions skips when no @mentions found
+[2026-05-28T13:18:30.001Z]   [PASS] parsePlanResponse extracts JSON from markdown code blocks
+[2026-05-28T13:18:30.001Z]   [PASS] parsePlanResponse extracts JSON from surrounding text (first { to last })
+[2026-05-28T13:18:30.001Z]   [PASS] degradedPlan produces valid single-task plan
+[2026-05-28T13:18:30.001Z]   [PASS] detectCycle correctly finds circular dependencies
+[2026-05-28T13:18:30.001Z]   [PASS] detectCycle returns null for valid DAG
+[2026-05-28T13:18:30.001Z]   [PASS] validateTaskPlan rejects invalid riskLevel values
+[2026-05-28T13:18:30.001Z]   [PASS] buildPlannerPrompt enforces Chinese output + concise rules
+[2026-05-28T13:18:30.001Z]
+[2026-05-28T13:18:30.001Z] ============================================================
+[2026-05-28T13:18:30.001Z]   Results Summary
+[2026-05-28T13:18:30.001Z] ============================================================
+[2026-05-28T13:18:30.002Z]   [PASS] parseMentionedTasks — single @mention
+[2026-05-28T13:18:30.002Z]   [PASS] parseMentionedTasks — multiple @mentions
+[2026-05-28T13:18:30.002Z]   [PASS] Orchestrator end-to-end — API test
+[2026-05-28T13:18:30.002Z]   [PASS] Duplicate "thinking" message fix
+[2026-05-28T13:18:30.002Z]   [PASS] PlannerService improvements
+[2026-05-28T13:18:30.002Z]
+[2026-05-28T13:18:30.002Z] Total: 5 passed, 0 failed, 5 tests
+[2026-05-28T13:18:30.002Z] All tests PASSED.

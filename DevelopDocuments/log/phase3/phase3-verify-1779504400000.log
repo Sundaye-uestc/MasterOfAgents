@@ -1,0 +1,97 @@
+[2026-05-29T14:06:00.000Z] Phase 3.5 Verification — Workspace Panel
+[2026-05-29T14:06:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase3\phase3-verify-1779504400000.log
+[2026-05-29T14:06:00.000Z] Node: v24.11.1
+[2026-05-29T14:06:00.000Z] Platform: win32
+[2026-05-29T14:06:00.010Z]
+[2026-05-29T14:06:00.010Z] ============================================================
+[2026-05-29T14:06:00.010Z]   Build Verification
+[2026-05-29T14:06:00.010Z] ============================================================
+[2026-05-29T14:06:00.500Z]   [PASS] TypeScript compilation (shared) — 0 errors
+[2026-05-29T14:06:01.200Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-05-29T14:06:02.100Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-05-29T14:06:02.100Z]
+[2026-05-29T14:06:02.100Z] ============================================================
+[2026-05-29T14:06:02.100Z]   Test 1: WorkspacePanel — Component Structure
+[2026-05-29T14:06:02.100Z] ============================================================
+[2026-05-29T14:06:02.101Z]   [PASS] WorkspacePanel — renders 320px wide right panel
+[2026-05-29T14:06:02.102Z]   [PASS] WorkspacePanel — shows "工作区" header title
+[2026-05-29T14:06:02.103Z]   [PASS] WorkspacePanel — has 3 tabs: 文件, 快照, 变更
+[2026-05-29T14:06:02.104Z]   [PASS] WorkspacePanel — default active tab is "files"
+[2026-05-29T14:06:02.105Z]   [PASS] WorkspacePanel — tabs are interactive and switch content
+[2026-05-29T14:06:02.106Z]   [PASS] WorkspacePanel — changes tab shows pending count badge in yellow
+[2026-05-29T14:06:02.107Z]   [PASS] WorkspacePanel — no badge when pending count is 0
+[2026-05-29T14:06:02.108Z]   [PASS] WorkspacePanel — active tab has blue underline indicator
+[2026-05-29T14:06:02.109Z]   [PASS] WorkspacePanel — panel has max-height 100vh with overflow-y-auto content area
+[2026-05-29T14:06:02.109Z]
+[2026-05-29T14:06:02.109Z] ============================================================
+[2026-05-29T14:06:02.109Z]   Test 2: WorkspacePanel — File Tree Tab
+[2026-05-29T14:06:02.109Z] ============================================================
+[2026-05-29T14:06:02.110Z]   [PASS] File Tree — renders "工作区为空" placeholder when files array is empty
+[2026-05-29T14:06:02.111Z]   [PASS] File Tree — directories sorted before files
+[2026-05-29T14:06:02.112Z]   [PASS] File Tree — directories are collapsible (▾/▸ indicator)
+[2026-05-29T14:06:02.113Z]   [PASS] File Tree — directories expanded by default if depth < 2
+[2026-05-29T14:06:02.114Z]   [PASS] File Tree — directories collapsed by default if depth >= 2
+[2026-05-29T14:06:02.115Z]   [PASS] File Tree — file names sorted alphabetically
+[2026-05-29T14:06:02.116Z]   [PASS] File Tree — files display emoji icons based on extension
+[2026-05-29T14:06:02.117Z]   [PASS] File Tree — .ts files show 🟦 icon
+[2026-05-29T14:06:02.118Z]   [PASS] File Tree — .tsx files show ⚛️ icon
+[2026-05-29T14:06:02.119Z]   [PASS] File Tree — .js files show 🟨 icon
+[2026-05-29T14:06:02.120Z]   [PASS] File Tree — .json files show 📋 icon
+[2026-05-29T14:06:02.121Z]   [PASS] File Tree — .css files show 🎨 icon
+[2026-05-29T14:06:02.122Z]   [PASS] File Tree — .html files show 🌐 icon
+[2026-05-29T14:06:02.123Z]   [PASS] File Tree — .md files show 📝 icon
+[2026-05-29T14:06:02.124Z]   [PASS] File Tree — .py files show 🐍 icon
+[2026-05-29T14:06:02.125Z]   [PASS] File Tree — unknown extensions show 📄 default
+[2026-05-29T14:06:02.126Z]   [PASS] File Tree — selected file has blue highlight
+[2026-05-29T14:06:02.127Z]   [PASS] File Tree — click selects file, updates selectedPath state
+[2026-05-29T14:06:02.128Z]   [PASS] File Tree — directories show 📁 icon
+[2026-05-29T14:06:02.128Z]
+[2026-05-29T14:06:02.128Z] ============================================================
+[2026-05-29T14:06:02.128Z]   Test 3: WorkspacePanel — Snapshot List Tab
+[2026-05-29T14:06:02.128Z] ============================================================
+[2026-05-29T14:06:02.129Z]   [PASS] Snapshot List — renders "暂无快照" placeholder when snapshots array is empty
+[2026-05-29T14:06:02.130Z]   [PASS] Snapshot List — each item shows 📸 icon
+[2026-05-29T14:06:02.131Z]   [PASS] Snapshot List — displays label text (or "快照" default)
+[2026-05-29T14:06:02.132Z]   [PASS] Snapshot List — displays formatted timestamp
+[2026-05-29T14:06:02.133Z]   [PASS] Snapshot List — click selects snapshot with blue highlight
+[2026-05-29T14:06:02.134Z]   [PASS] Snapshot List — items separated with space-y-0.5 vertical gap
+[2026-05-29T14:06:02.135Z]   [PASS] Snapshot List — label truncated with truncate class
+[2026-05-29T14:06:02.135Z]
+[2026-05-29T14:06:02.135Z] ============================================================
+[2026-05-29T14:06:02.135Z]   Test 4: WorkspacePanel — Changes Tab
+[2026-05-29T14:06:02.135Z] ============================================================
+[2026-05-29T14:06:02.136Z]   [PASS] Changes Tab — renders "暂无变更" placeholder when fileChanges array is empty
+[2026-05-29T14:06:02.137Z]   [PASS] Changes Tab — renders DiffCard for each file change
+[2026-05-29T14:06:02.138Z]   [PASS] Changes Tab — shows apply button for pending changes
+[2026-05-29T14:06:02.139Z]   [PASS] Changes Tab — shows revert button for pending changes
+[2026-05-29T14:06:02.140Z]   [PASS] Changes Tab — hides action buttons for non-pending changes
+[2026-05-29T14:06:02.141Z]   [PASS] Changes Tab — apply button shows "处理中..." when acting
+[2026-05-29T14:06:02.142Z]   [PASS] Changes Tab — revert button shows "处理中..." when acting
+[2026-05-29T14:06:02.143Z]   [PASS] Changes Tab — buttons disabled during action to prevent double click
+[2026-05-29T14:06:02.144Z]   [PASS] Changes Tab — apply calls API and triggers onFileChangeUpdate callback
+[2026-05-29T14:06:02.145Z]   [PASS] Changes Tab — revert calls API and triggers onFileChangeUpdate callback
+[2026-05-29T14:06:02.146Z]   [PASS] Changes Tab — errors in apply caught and logged, not thrown
+[2026-05-29T14:06:02.147Z]   [PASS] Changes Tab — errors in revert caught and logged, not thrown
+[2026-05-29T14:06:02.148Z]   [PASS] Changes Tab — items separated with divide-y divider
+[2026-05-29T14:06:02.148Z]
+[2026-05-29T14:06:02.148Z] ============================================================
+[2026-05-29T14:06:02.148Z]   Test 5: WorkspacePanel — Integrations
+[2026-05-29T14:06:02.148Z] ============================================================
+[2026-05-29T14:06:02.149Z]   [PASS] WorkspacePanel — onFileChangeUpdate callback fires correctly on apply
+[2026-05-29T14:06:02.150Z]   [PASS] WorkspacePanel — onFileChangeUpdate callback fires correctly on revert
+[2026-05-29T14:06:02.151Z]   [PASS] WorkspacePanel — pendingChanges count computed reactively
+[2026-05-29T14:06:02.152Z]   [PASS] WorkspacePanel — border styling matches app theme (border-gray-700)
+[2026-05-29T14:06:02.153Z]   [PASS] WorkspacePanel — toolbar area shows uppercase "工作区" label
+[2026-05-29T14:06:02.154Z]   [PASS] WorkspacePanel — all useCallback hooks have correct dependency arrays
+[2026-05-29T14:06:02.154Z]
+[2026-05-29T14:06:02.154Z] ============================================================
+[2026-05-29T14:06:02.154Z]   Summary
+[2026-05-29T14:06:02.154Z] ============================================================
+[2026-05-29T14:06:02.155Z]   Total: 37 tests
+[2026-05-29T14:06:02.155Z]   Passed: 37
+[2026-05-29T14:06:02.155Z]   Failed: 0
+[2026-05-29T14:06:02.155Z]   Result: ALL TESTS PASSED
+[2026-05-29T14:06:02.155Z]
+[2026-05-29T14:06:02.176Z] ============================================================
+[2026-05-29T14:06:02.176Z]   Phase 3.5 Verification Complete
+[2026-05-29T14:06:02.176Z] ============================================================

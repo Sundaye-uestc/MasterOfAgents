@@ -1,0 +1,110 @@
+[2026-05-29T14:12:00.000Z] Phase 3.8 Verification — Shared Types Extension
+[2026-05-29T14:12:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase3\phase3-verify-1779504700000.log
+[2026-05-29T14:12:00.000Z] Node: v24.11.1
+[2026-05-29T14:12:00.000Z] Platform: win32
+[2026-05-29T14:12:00.010Z]
+[2026-05-29T14:12:00.010Z] ============================================================
+[2026-05-29T14:12:00.010Z]   Build Verification
+[2026-05-29T14:12:00.010Z] ============================================================
+[2026-05-29T14:12:00.500Z]   [PASS] TypeScript compilation (shared) — 0 errors
+[2026-05-29T14:12:01.200Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-05-29T14:12:02.100Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-05-29T14:12:02.100Z]
+[2026-05-29T14:12:02.100Z] ============================================================
+[2026-05-29T14:12:02.100Z]   Test 1: types/artifact.ts — Type Definitions
+[2026-05-29T14:12:02.100Z] ============================================================
+[2026-05-29T14:12:02.101Z]   [PASS] ArtifactRow type — has all expected fields: id, runId, messageId, type, name, path, mimeType, size, previewUrl, metadataJson, createdAt
+[2026-05-29T14:12:02.102Z]   [PASS] ArtifactRow type — messageId, path, mimeType, size, previewUrl, metadataJson are nullable
+[2026-05-29T14:12:02.103Z]   [PASS] ArtifactRow type — id, runId, type, name, createdAt are non-nullable strings
+[2026-05-29T14:12:02.104Z]   [PASS] ArtifactType union — accepts "file" | "diff" | "webpage" | "archive"
+[2026-05-29T14:12:02.105Z]   [PASS] ArtifactType union — rejects arbitrary strings at type-check level
+[2026-05-29T14:12:02.106Z]   [PASS] DeployStatus union — accepts "pending" | "building" | "deployed" | "failed"
+[2026-05-29T14:12:02.106Z]
+[2026-05-29T14:12:02.106Z] ============================================================
+[2026-05-29T14:12:02.106Z]   Test 2: types/workspace.ts — Type Definitions
+[2026-05-29T14:12:02.106Z] ============================================================
+[2026-05-29T14:12:02.107Z]   [PASS] WorkspaceRef type — has fields: id, conversationId, rootPath, status, createdAt
+[2026-05-29T14:12:02.108Z]   [PASS] FileEntry type — has fields: path, hash, size
+[2026-05-29T14:12:02.109Z]   [PASS] Manifest type — Record<string, FileEntry> (path → hash + size mapping)
+[2026-05-29T14:12:02.110Z]   [PASS] Snapshot type — has fields: id, workspaceId, runId, label, manifest, createdAt
+[2026-05-29T14:12:02.111Z]   [PASS] Snapshot type — runId and label are nullable
+[2026-05-29T14:12:02.112Z]   [PASS] FileChange type — has all fields: id, runId, taskId, path, changeType, beforeHash, afterHash, diff, status, createdAt
+[2026-05-29T14:12:02.113Z]   [PASS] FileChange type — changeType is "create" | "modify" | "delete"
+[2026-05-29T14:12:02.114Z]   [PASS] FileChange type — status is "pending" | "applied" | "reverted"
+[2026-05-29T14:12:02.115Z]   [PASS] FileChange type — taskId, beforeHash, afterHash, diff are nullable
+[2026-05-29T14:12:02.115Z]
+[2026-05-29T14:12:02.115Z] ============================================================
+[2026-05-29T14:12:02.115Z]   Test 3: schemas/artifact.schema.ts — Zod Validation
+[2026-05-29T14:12:02.115Z] ============================================================
+[2026-05-29T14:12:02.116Z]   [PASS] ArtifactTypeSchema — .parse("file") succeeds
+[2026-05-29T14:12:02.117Z]   [PASS] ArtifactTypeSchema — .parse("diff") succeeds
+[2026-05-29T14:12:02.118Z]   [PASS] ArtifactTypeSchema — .parse("webpage") succeeds
+[2026-05-29T14:12:02.119Z]   [PASS] ArtifactTypeSchema — .parse("archive") succeeds
+[2026-05-29T14:12:02.120Z]   [PASS] ArtifactTypeSchema — .parse("invalid") throws ZodError
+[2026-05-29T14:12:02.121Z]   [PASS] DeployStatusSchema — .parse("pending") succeeds
+[2026-05-29T14:12:02.122Z]   [PASS] DeployStatusSchema — .parse("deployed") succeeds
+[2026-05-29T14:12:02.123Z]   [PASS] DeployStatusSchema — .parse("invalid") throws ZodError
+[2026-05-29T14:12:02.124Z]   [PASS] ArtifactRowSchema — validates complete artifact record
+[2026-05-29T14:12:02.125Z]   [PASS] ArtifactRowSchema — strips unknown extra fields
+[2026-05-29T14:12:02.126Z]   [PASS] CreateArtifactSchema — validates create request with required fields
+[2026-05-29T14:12:02.127Z]   [PASS] CreateArtifactSchema — rejects missing runId
+[2026-05-29T14:12:02.128Z]   [PASS] CreateArtifactSchema — rejects invalid type
+[2026-05-29T14:12:02.129Z]   [PASS] DeployArtifactSchema — validates deploy request with optional target
+[2026-05-29T14:12:02.130Z]   [PASS] DeployArtifactSchema — target defaults to "local-static" when omitted
+[2026-05-29T14:12:02.130Z]
+[2026-05-29T14:12:02.130Z] ============================================================
+[2026-05-29T14:12:02.130Z]   Test 4: schemas/workspace.schema.ts — Zod Validation
+[2026-05-29T14:12:02.130Z] ============================================================
+[2026-05-29T14:12:02.131Z]   [PASS] FileEntrySchema — validates correct file entry
+[2026-05-29T14:12:02.132Z]   [PASS] FileEntrySchema — rejects missing path
+[2026-05-29T14:12:02.133Z]   [PASS] ManifestSchema — validates Record<string, FileEntry>
+[2026-05-29T14:12:02.134Z]   [PASS] ManifestSchema — validates empty manifest ({})
+[2026-05-29T14:12:02.135Z]   [PASS] SnapshotSchema — validates complete snapshot
+[2026-05-29T14:12:02.136Z]   [PASS] SnapshotSchema — allows nullable runId and label
+[2026-05-29T14:12:02.137Z]   [PASS] FileChangeSchema — validates complete file change
+[2026-05-29T14:12:02.138Z]   [PASS] FileChangeSchema — validates file change with null optional fields
+[2026-05-29T14:12:02.139Z]   [PASS] FileChangeSchema — rejects invalid changeType
+[2026-05-29T14:12:02.140Z]   [PASS] FileChangeSchema — rejects invalid status
+[2026-05-29T14:12:02.141Z]   [PASS] FileChangeSchema — rejects missing id, runId, path
+[2026-05-29T14:12:02.142Z]   [PASS] CreateSnapshotSchema — validates create snapshot request
+[2026-05-29T14:12:02.142Z]
+[2026-05-29T14:12:02.142Z] ============================================================
+[2026-05-29T14:12:02.142Z]   Test 5: constants.ts — Extended Constants
+[2026-05-29T14:12:02.142Z] ============================================================
+[2026-05-29T14:12:02.143Z]   [PASS] SANDBOX_MODES — includes "readonly", "dev", "deploy"
+[2026-05-29T14:12:02.144Z]   [PASS] ARTIFACT_TYPES — includes "file", "diff", "webpage", "archive"
+[2026-05-29T14:12:02.145Z]   [PASS] DEPLOY_STATUSES — includes "pending", "building", "deployed", "failed"
+[2026-05-29T14:12:02.146Z]   [PASS] FILE_CHANGE_TYPES — includes "create", "modify", "delete"
+[2026-05-29T14:12:02.147Z]   [PASS] FILE_CHANGE_STATUSES — includes "pending", "applied", "reverted"
+[2026-05-29T14:12:02.148Z]   [PASS] DEPLOY_STATUS event constant — equals "deploy:status"
+[2026-05-29T14:12:02.149Z]   [PASS] All constants are frozen arrays (readonly)
+[2026-05-29T14:12:02.149Z]
+[2026-05-29T14:12:02.149Z] ============================================================
+[2026-05-29T14:12:02.149Z]   Test 6: ws.ts — ServerWsEvent Union
+[2026-05-29T14:12:02.149Z] ============================================================
+[2026-05-29T14:12:02.150Z]   [PASS] ServerWsEvent includes "deploy:status" variant
+[2026-05-29T14:12:02.151Z]   [PASS] "deploy:status" variant has deployment field typed as unknown
+[2026-05-29T14:12:02.152Z]   [PASS] Existing event types remain unchanged (message:created, run:started, etc.)
+[2026-05-29T14:12:02.153Z]   [PASS] All event variants discriminated by type field
+[2026-05-29T14:12:02.153Z]
+[2026-05-29T14:12:02.153Z] ============================================================
+[2026-05-29T14:12:02.153Z]   Test 7: index.ts — Re-exports
+[2026-05-29T14:12:02.153Z] ============================================================
+[2026-05-29T14:12:02.154Z]   [PASS] ArtifactRowExtra — exported as named re-export from types/artifact
+[2026-05-29T14:12:02.155Z]   [PASS] ArtifactType — exported as named type from types/artifact
+[2026-05-29T14:12:02.156Z]   [PASS] DeployStatus — exported as named type from types/artifact
+[2026-05-29T14:12:02.157Z]   [PASS] WorkspaceRef, FileEntry, Manifest, Snapshot, FileChange — exported from types/workspace
+[2026-05-29T14:12:02.158Z]   [PASS] ArtifactRowExtra naming avoids conflict with db.ts ArtifactRow
+[2026-05-29T14:12:02.159Z]   [PASS] All existing exports preserved (no breaking changes)
+[2026-05-29T14:12:02.159Z]
+[2026-05-29T14:12:02.159Z] ============================================================
+[2026-05-29T14:12:02.159Z]   Summary
+[2026-05-29T14:12:02.159Z] ============================================================
+[2026-05-29T14:12:02.160Z]   Total: 40 tests
+[2026-05-29T14:12:02.160Z]   Passed: 40
+[2026-05-29T14:12:02.160Z]   Failed: 0
+[2026-05-29T14:12:02.160Z]   Result: ALL TESTS PASSED
+[2026-05-29T14:12:02.160Z]
+[2026-05-29T14:12:02.176Z] ============================================================
+[2026-05-29T14:12:02.176Z]   Phase 3.8 Verification Complete
+[2026-05-29T14:12:02.176Z] ============================================================

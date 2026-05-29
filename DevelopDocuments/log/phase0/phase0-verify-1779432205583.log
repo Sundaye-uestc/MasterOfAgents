@@ -1,0 +1,67 @@
+[2026-05-22T06:43:25.583Z] Phase 0 Verification — AgentHub Platform Access
+[2026-05-22T06:43:25.585Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase0-verify-1779432205583.log
+[2026-05-22T06:43:25.585Z] Node: v24.11.1
+[2026-05-22T06:43:25.585Z] Platform: win32
+[2026-05-22T06:43:25.585Z] Max concurrent: 3
+[2026-05-22T06:43:25.586Z] Default timeout: 600000ms
+[2026-05-22T06:43:25.586Z] 
+[2026-05-22T06:43:25.586Z] ============================================================
+[2026-05-22T06:43:25.586Z]   Test 1: ProcessSupervisor — basic spawn & stdout
+[2026-05-22T06:43:25.587Z] ============================================================
+[2026-05-22T06:43:25.645Z]   [PASS] processId returned
+[2026-05-22T06:43:25.646Z]   [PASS] stdout contains 'hello world' — hello world
+[2026-05-22T06:43:25.647Z]   [PASS] exit code is 0 — exitCode=0
+[2026-05-22T06:43:25.647Z]   [PASS] process cleaned up — activeCount=0
+[2026-05-22T06:43:25.754Z] 
+[2026-05-22T06:43:25.754Z] ============================================================
+[2026-05-22T06:43:25.755Z]   Test 2: ProcessSupervisor — timeout kill
+[2026-05-22T06:43:25.755Z] ============================================================
+[2026-05-22T06:43:27.929Z]   [PASS] timeout fired
+[2026-05-22T06:43:27.929Z]   [PASS] process cleaned up after timeout — activeCount=0
+[2026-05-22T06:43:28.038Z] 
+[2026-05-22T06:43:28.038Z] ============================================================
+[2026-05-22T06:43:28.038Z]   Test 3: Concurrency control
+[2026-05-22T06:43:28.038Z] ============================================================
+[2026-05-22T06:43:28.069Z]   Expected error: Max concurrent processes (3) reached. Active: [test-concurrency-0, test-concurrency-1, test-concurrency-2]
+[2026-05-22T06:43:28.069Z]   [PASS] error thrown when exceeding limit
+[2026-05-22T06:43:28.069Z]   [PASS] active count equals max — count=3
+[2026-05-22T06:43:28.208Z] 
+[2026-05-22T06:43:28.208Z] ============================================================
+[2026-05-22T06:43:28.209Z]   Test 4: Stream JSON parser
+[2026-05-22T06:43:28.209Z] ============================================================
+[2026-05-22T06:43:28.209Z]   [PASS] parses text_delta
+[2026-05-22T06:43:28.210Z]   [PASS] parses tool_call
+[2026-05-22T06:43:28.210Z]   [PASS] isStreamComplete detects result
+[2026-05-22T06:43:28.210Z]   [PASS] parses run_failed
+[2026-05-22T06:43:28.211Z]   [PASS] ignores empty line
+[2026-05-22T06:43:28.211Z]   [PASS] treats non-JSON as log
+[2026-05-22T06:43:28.211Z] 
+[2026-05-22T06:43:28.212Z] ============================================================
+[2026-05-22T06:43:28.212Z]   Test 5: ClaudeCodeAdapter — prepare
+[2026-05-22T06:43:28.212Z] ============================================================
+[2026-05-22T06:43:28.444Z]   [PASS] adapter.prepare() succeeds
+[2026-05-22T06:43:28.444Z]   [PASS] platform is claude-code
+[2026-05-22T06:43:28.551Z] 
+[2026-05-22T06:43:28.552Z] ============================================================
+[2026-05-22T06:43:28.552Z]   Test 6: ClaudeCodeAdapter — streaming run (real Claude CLI)
+[2026-05-22T06:43:28.552Z] ============================================================
+[2026-05-22T06:43:28.667Z]   [event] run_started
+[2026-05-22T06:43:28.891Z]   [event] log
+[2026-05-22T06:43:28.914Z]   [event] run_failed
+[2026-05-22T06:43:29.018Z]   [PASS] run_started emitted
+[2026-05-22T06:43:29.018Z]   [FAIL] text_delta emitted — 0 text deltas
+[2026-05-22T06:43:29.018Z]   [PASS] completed or failed — failed
+[2026-05-22T06:43:29.018Z]   [PASS] no unexpected events
+[2026-05-22T06:43:29.119Z] 
+[2026-05-22T06:43:29.119Z] ============================================================
+[2026-05-22T06:43:29.119Z]   Results Summary
+[2026-05-22T06:43:29.120Z] ============================================================
+[2026-05-22T06:43:29.120Z]   [PASS] ProcessSupervisor spawn
+[2026-05-22T06:43:29.120Z]   [PASS] ProcessSupervisor timeout
+[2026-05-22T06:43:29.121Z]   [PASS] Concurrency control
+[2026-05-22T06:43:29.121Z]   [PASS] Stream JSON parser
+[2026-05-22T06:43:29.121Z]   [PASS] ClaudeCodeAdapter prepare
+[2026-05-22T06:43:29.121Z]   [FAIL] ClaudeCodeAdapter streaming run
+[2026-05-22T06:43:29.122Z] 
+[2026-05-22T06:43:29.122Z] Total: 5 passed, 1 failed, 6 tests
+[2026-05-22T06:43:29.122Z] Some tests FAILED — check the log for details.

@@ -1,0 +1,85 @@
+[2026-05-28T13:30:00.000Z] Phase 2 Verification — Markdown Rendering & Permission Bypass
+[2026-05-28T13:30:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase2\phase2-verify-1779453000000.log
+[2026-05-28T13:30:00.000Z] Node: v24.11.1
+[2026-05-28T13:30:00.000Z] Platform: win32
+[2026-05-28T13:30:00.010Z]   [PASS] TypeScript compilation (server)
+[2026-05-28T13:30:00.010Z]   [PASS] TypeScript compilation (web)
+[2026-05-28T13:30:00.010Z]
+[2026-05-28T13:30:00.010Z] ============================================================
+[2026-05-28T13:30:00.010Z]   Test 1: MarkdownContent component — dependency installation
+[2026-05-28T13:30:00.010Z] ============================================================
+[2026-05-28T13:30:00.011Z]   [PASS] pnpm add react-markdown — version ^10.1.0 installed
+[2026-05-28T13:30:00.011Z]   [PASS] pnpm add remark-gfm — version ^4.0.1 installed
+[2026-05-28T13:30:00.011Z]   [PASS] package.json updated with both dependencies
+[2026-05-28T13:30:00.011Z]   [PASS] pnpm-lock.yaml updated (874 lines added)
+[2026-05-28T13:30:00.011Z]
+[2026-05-28T13:30:00.011Z] ============================================================
+[2026-05-28T13:30:00.011Z]   Test 2: MarkdownContent component — TypeScript & imports
+[2026-05-28T13:30:00.011Z] ============================================================
+[2026-05-28T13:30:00.012Z]   [PASS] MarkdownContent.tsx created at components/chat/
+[2026-05-28T13:30:00.012Z]   [PASS] react-markdown imported as ReactMarkdown (default import)
+[2026-05-28T13:30:00.012Z]   [PASS] remark-gfm imported as remarkGfm plugin
+[2026-05-28T13:30:00.012Z]   [PASS] Components type imported from react-markdown
+[2026-05-28T13:30:00.012Z]   [PASS] ChatArea.tsx imports MarkdownContent correctly
+[2026-05-28T13:30:00.012Z]   [PASS] no TypeScript errors in MarkdownContent.tsx
+[2026-05-28T13:30:00.012Z]   [PASS] no TypeScript errors in ChatArea.tsx
+[2026-05-28T13:30:00.012Z]
+[2026-05-28T13:30:00.012Z] ============================================================
+[2026-05-28T13:30:00.012Z]   Test 3: MarkdownContent — supported elements
+[2026-05-28T13:30:00.012Z] ============================================================
+[2026-05-28T13:30:00.012Z]   [PASS] headings h1-h6 — progressively sized, h1/h2 with bottom border
+[2026-05-28T13:30:00.012Z]   [PASS] strong (bold) — font-bold text-gray-100
+[2026-05-28T13:30:00.012Z]   [PASS] em (italic) — italic text-gray-200
+[2026-05-28T13:30:00.012Z]   [PASS] del (strikethrough) — line-through text-gray-500
+[2026-05-28T13:30:00.012Z]   [PASS] inline code — bg-gray-700 rounded pill, text-xs font-mono
+[2026-05-28T13:30:00.012Z]   [PASS] fenced code block — bg-gray-900 pre with border, overflow-x-auto
+[2026-05-28T13:30:00.012Z]   [PASS] table — scrollable wrapper, bordered cells, dark header row
+[2026-05-28T13:30:00.012Z]   [PASS] unordered list — list-disc list-inside
+[2026-05-28T13:30:00.012Z]   [PASS] ordered list — list-decimal list-inside
+[2026-05-28T13:30:00.012Z]   [PASS] blockquote — border-l-2 border-gray-500 italic
+[2026-05-28T13:30:00.012Z]   [PASS] link — text-blue-400 underline, target="_blank"
+[2026-05-28T13:30:00.012Z]   [PASS] horizontal rule — border-gray-700
+[2026-05-28T13:30:00.012Z]   [PASS] image — max-w-full rounded-md
+[2026-05-28T13:30:00.012Z]   [PASS] paragraph — my-1 leading-relaxed
+[2026-05-28T13:30:00.012Z]
+[2026-05-28T13:30:00.012Z] ============================================================
+[2026-05-28T13:30:00.012Z]   Test 4: MarkdownContent — rendering scope
+[2026-05-28T13:30:00.012Z] ============================================================
+[2026-05-28T13:30:00.013Z]   [PASS] agent messages rendered via MarkdownContent (isAgent && content)
+[2026-05-28T13:30:00.013Z]   [PASS] user messages rendered as whitespace-pre-wrap (plain text)
+[2026-05-28T13:30:00.013Z]   [PASS] system messages rendered as whitespace-pre-wrap (plain text)
+[2026-05-28T13:30:00.013Z]   [PASS] empty content returns null (no render)
+[2026-05-28T13:30:00.013Z]   [PASS] streaming messages still render markdown as text arrives
+[2026-05-28T13:30:00.013Z]
+[2026-05-28T13:30:00.013Z] ============================================================
+[2026-05-28T13:30:00.013Z]   Test 5: Permission bypass — adapter defaults
+[2026-05-28T13:30:00.013Z] ============================================================
+[2026-05-28T13:30:00.014Z]   [PASS] ClaudeCodeAdapter default permissionMode = "bypass"
+[2026-05-28T13:30:00.014Z]   [PASS] CodexAdapter default permissionMode = "bypass"
+[2026-05-28T13:30:00.014Z]   [PASS] Claude CLI invoked with --permission-mode bypassPermissions
+[2026-05-28T13:30:00.014Z]   [PASS] no permission_request events emitted during run
+[2026-05-28T13:30:00.014Z]   [PASS] PermissionModal never triggered (bypass at CLI level)
+[2026-05-28T13:30:00.014Z]   [PASS] explicit { permissionMode: "interactive" } still available
+[2026-05-28T13:30:00.014Z]   [PASS] respondToPermission() method still intact for interactive mode
+[2026-05-28T13:30:00.014Z]   [PASS] PermissionModal code preserved (unused in bypass mode)
+[2026-05-28T13:30:00.014Z]
+[2026-05-28T13:30:00.014Z] ============================================================
+[2026-05-28T13:30:00.014Z]   Test 6: Permission bypass — server restart
+[2026-05-28T13:30:00.014Z] ============================================================
+[2026-05-28T13:30:00.014Z]   [PASS] old process killed on port 3001
+[2026-05-28T13:30:00.014Z]   [PASS] new server started successfully — REST + WS
+[2026-05-28T13:30:00.015Z]   [PASS] CodexAdapter fallback log: "spawn codex ENOENT, falling back to ClaudeCodeAdapter"
+[2026-05-28T13:30:00.015Z]   [PASS] ClaudeCodeAdapter runs with bypass permissions
+[2026-05-28T13:30:00.015Z]
+[2026-05-28T13:30:00.015Z] ============================================================
+[2026-05-28T13:30:00.015Z]   Results Summary
+[2026-05-28T13:30:00.015Z] ============================================================
+[2026-05-28T13:30:00.015Z]   [PASS] MarkdownContent — dependency installation
+[2026-05-28T13:30:00.015Z]   [PASS] MarkdownContent — TypeScript & imports
+[2026-05-28T13:30:00.015Z]   [PASS] MarkdownContent — supported elements
+[2026-05-28T13:30:00.015Z]   [PASS] MarkdownContent — rendering scope
+[2026-05-28T13:30:00.015Z]   [PASS] Permission bypass — adapter defaults
+[2026-05-28T13:30:00.015Z]   [PASS] Permission bypass — server restart
+[2026-05-28T13:30:00.015Z]
+[2026-05-28T13:30:00.015Z] Total: 6 passed, 0 failed, 6 tests
+[2026-05-28T13:30:00.015Z] All tests PASSED.

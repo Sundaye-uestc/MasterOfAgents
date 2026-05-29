@@ -1,0 +1,19 @@
+[2026-05-22T06:41:09.072Z] Phase 0 Verification — AgentHub Platform Access
+[2026-05-22T06:41:09.073Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase0-verify-1779432069071.log
+[2026-05-22T06:41:09.073Z] Node: v24.11.1
+[2026-05-22T06:41:09.074Z] Platform: win32
+[2026-05-22T06:41:09.074Z] Max concurrent: 3
+[2026-05-22T06:41:09.074Z] Default timeout: 600000ms
+[2026-05-22T06:41:09.074Z] 
+[2026-05-22T06:41:09.075Z] ============================================================
+[2026-05-22T06:41:09.075Z]   Test 1: ProcessSupervisor — basic spawn & stdout
+[2026-05-22T06:41:09.075Z] ============================================================
+[2026-05-22T06:41:09.136Z]   [PASS] processId returned
+[2026-05-22T06:41:09.137Z]   [PASS] stdout contains 'hello world' — hello world
+[2026-05-22T06:41:09.137Z]   [PASS] exit code is 0 — exitCode=0
+[2026-05-22T06:41:09.137Z]   [PASS] process cleaned up — activeCount=0
+[2026-05-22T06:41:09.245Z] 
+[2026-05-22T06:41:09.245Z] ============================================================
+[2026-05-22T06:41:09.245Z]   Test 2: ProcessSupervisor — timeout kill
+[2026-05-22T06:41:09.246Z] ============================================================
+[2026-05-22T06:41:17.280Z] FATAL: Timeout waiting for condition
