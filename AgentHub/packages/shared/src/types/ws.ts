@@ -18,6 +18,7 @@ export type ServerWsEvent =
   | { type: "tool:invocation"; messageId: string; invocation: unknown }
   | { type: "file:changed"; change: unknown }
   | { type: "artifact:created"; artifact: unknown }
+  | { type: "deploy:status"; deployment: unknown }
   | { type: "permission:requested"; permission: unknown }
   | { type: "agent:config_draft"; draft: unknown }
   | { type: "typing"; conversationId: string }

@@ -4,4 +4,8 @@ export * from "./types/process.js";
 export * from "./types/db.js";
 export * from "./types/ws.js";
 export * from "./types/plan.js";
+export { type ArtifactType, type DeployStatus, type ArtifactRow as ArtifactRowExtra } from "./types/artifact.js";
+export { type WorkspaceRef, type FileEntry, type Manifest, type Snapshot, type FileChange } from "./types/workspace.js";
+export * from "./schemas/artifact.schema.js";
+export * from "./schemas/workspace.schema.js";
 export * from "./constants.js";

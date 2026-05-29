@@ -14,6 +14,43 @@ export const MAX_TOOL_ROUNDS = 100;
 /** Supported Agent platforms */
 export const AGENT_PLATFORMS = ["claude-code", "opencode", "codex", "custom"] as const;
 
+/** Sandbox modes */
+export const SANDBOX_MODES = {
+  READONLY: "readonly",
+  DEV: "dev",
+  DEPLOY: "deploy",
+} as const;
+
+/** Artifact types */
+export const ARTIFACT_TYPES = {
+  FILE: "file",
+  DIFF: "diff",
+  WEBPAGE: "webpage",
+  ARCHIVE: "archive",
+} as const;
+
+/** Deployment statuses */
+export const DEPLOY_STATUSES = {
+  PENDING: "pending",
+  BUILDING: "building",
+  DEPLOYED: "deployed",
+  FAILED: "failed",
+} as const;
+
+/** File change types */
+export const FILE_CHANGE_TYPES = {
+  CREATE: "create",
+  MODIFY: "modify",
+  DELETE: "delete",
+} as const;
+
+/** File change statuses */
+export const FILE_CHANGE_STATUSES = {
+  PENDING: "pending",
+  APPLIED: "applied",
+  REVERTED: "reverted",
+} as const;
+
 /** WebSocket event names (server → client) */
 export const WS_SERVER_EVENTS = {
   MESSAGE_CREATED: "message:created",
@@ -27,6 +64,7 @@ export const WS_SERVER_EVENTS = {
   TOOL_INVOCATION: "tool:invocation",
   FILE_CHANGED: "file:changed",
   ARTIFACT_CREATED: "artifact:created",
+  DEPLOY_STATUS: "deploy:status",
   AGENT_STATUS: "agent:status",
   ERROR: "error",
 } as const;
