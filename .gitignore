@@ -38,6 +38,5 @@ __pycache__/
 # Design documents (PDF)
 *.pdf
 
-# Logs — all phase verify logs and completion docs
+# Logs — phase verify logs only (completion .md files are tracked)
 *.log
-DevelopDocuments/log/
