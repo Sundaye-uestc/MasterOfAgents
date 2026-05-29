@@ -107,6 +107,19 @@ Agent 每次新对话都是"冷启动"，没有跨对话记忆。单次对话中
 
 ---
 
+### 4.2 对话中 Diff 展示完善
+
+- [ ] Agent 回复未携带 Diff — 确认 Agent（Claude Code / Codex）是否在 `text_delta` 中输出 diff 内容，以及前端是否正确解析和渲染
+- [ ] DiffCard 在对话流中的定位 — FileChangeList 已渲染 DiffCard，但 Agent 消息中的代码差异可能应当内联展示而非仅出现在右侧面板
+- [ ] 消息内 Diff 语法高亮 — 对话气泡中 Markdown 渲染的 ` ```diff ` 代码块应使用 DiffCard 组件替代纯文本
+- [ ] Diff 与 FileChange 联动 — 点击消息中的 diff 应高亮右侧面板中对应的 file_change 记录
+- [ ] 增量 Diff 渲染 — 长 diff 默认折叠，可展开查看完整上下文
+
+### 当前行为
+Agent 可能通过 markdown 代码块输出文件变更，但前端仅作为普通文本渲染，没有利用 file_changes 数据链路进行结构化展示。DiffCard 组件已存在但仅在 WorkspacePanel 中展示。
+
+---
+
 ## 实现顺序建议
 
 1. **3.8 Shared 类型** — 先行定义 artifact/workspace 类型和 schema
