@@ -1,6 +1,6 @@
 # AgentHub 待办事项
 
-**更新日期：** 2026-05-28（Phase 3 任务规划）
+**更新日期：** 2026-05-29（Phase 3 全部完成）
 
 ---
 
@@ -23,47 +23,47 @@
 
 ### 3.1 File Changes 闭环
 
-- [ ] before/after snapshot 自动化 — run 启动前 `createSnapshot(before)`，完成后 `createSnapshot(after)`
-- [ ] `WorkspaceService.diffSnapshots()` — 比对 manifest 生成 `file_changes` 记录
-- [ ] DiffCard 组件 — 展示代码差异（参考 AgentVerse markdown/diff 组件）
-- [ ] `POST /api/file-changes/:id/apply` — 应用文件变更
-- [ ] `POST /api/file-changes/:id/revert` — 回滚文件变更
-- [ ] FileChangeList 组件 — 变更列表 + apply/revert 操作按钮
+- [x] before/after snapshot 自动化 — run 启动前 `createSnapshot(before)`，完成后 `createSnapshot(after)`
+- [x] `WorkspaceService.diffSnapshots()` — 比对 manifest 生成 `file_changes` 记录
+- [x] DiffCard 组件 — 展示代码差异（参考 AgentVerse markdown/diff 组件）
+- [x] `POST /api/file-changes/:id/apply` — 应用文件变更
+- [x] `POST /api/file-changes/:id/revert` — 回滚文件变更
+- [x] FileChangeList 组件 — 变更列表 + apply/revert 操作按钮
 
 ### 3.2 Artifact 系统（产物）
 
-- [ ] `ArtifactService` — 从 file_changes 或输出目录创建 artifact；提供预览 URL / 下载
-- [ ] `artifacts` 表 + Zod schema（已在设计中定义）
-- [ ] `routes/artifacts.ts` — `GET /api/artifacts/:id`、`POST /api/artifacts/:id/deploy`
-- [ ] ArtifactCard 组件 — 产物卡片基类
-- [ ] WebPreviewCard 组件 — iframe 网页预览（`preview_url` → `<iframe>`）
-- [ ] DownloadCard 组件 — 下载卡片（文件大小、类型、下载按钮）
+- [x] `ArtifactService` — 从 file_changes 或输出目录创建 artifact；提供预览 URL / 下载
+- [x] `artifacts` 表 + Zod schema（已在设计中定义）
+- [x] `routes/artifacts.ts` — `GET /api/artifacts/:id`、`POST /api/artifacts/:id/deploy`
+- [x] ArtifactCard 组件 — 产物卡片基类
+- [x] WebPreviewCard 组件 — iframe 网页预览（`preview_url` → `<iframe>`）
+- [x] DownloadCard 组件 — 下载卡片（文件大小、类型、下载按钮）
 
 ### 3.3 部署（Deploy）
 
-- [ ] `DeployService` — 本地静态预览、workspace zip 打包下载、部署状态推送
-- [ ] `deployments` 表 + Zod schema（已在设计中定义）
-- [ ] `routes/deployments.ts` — 部署相关 REST 端点
-- [ ] DeployStatusCard 组件 — 部署状态卡片（pending → building → deployed/failed）
-- [ ] 本地静态预览（`local-static` 模式 — 启动本地 server 提供 iframe 预览）
-- [ ] workspace zip 下载（打包 workspace 根目录 → 下载链接）
+- [x] `DeployService` — 本地静态预览、workspace zip 打包下载、部署状态推送
+- [x] `deployments` 表 + Zod schema（已在设计中定义）
+- [x] `routes/deployments.ts` — 部署相关 REST 端点
+- [x] DeployStatusCard 组件 — 部署状态卡片（pending → building → deployed/failed）
+- [x] 本地静态预览（`local-static` 模式 — 启动本地 server 提供 iframe 预览）
+- [x] workspace zip 下载（打包 workspace 根目录 → 下载链接）
 
 ### 3.4 安全服务
 
-- [ ] `SecurityService` — secrets 加密存储、命令风险分级、审计日志
-- [ ] `secrets` 表 + `routes/secrets.ts` — CRUD（已在设计中定义）
-- [ ] `audit_logs` 落库 — 记录 stderr、高风险命令、权限决策
-- [ ] secret 不入消息、日志、tool result（在设计约束中已定义）
+- [x] `SecurityService` — secrets 加密存储、命令风险分级、审计日志
+- [x] `secrets` 表 + `routes/secrets.ts` — CRUD（已在设计中定义）
+- [x] `audit_logs` 落库 — 记录 stderr、高风险命令、权限决策
+- [x] secret 不入消息、日志、tool result（在设计约束中已定义）
 
 ### 3.5 Workspace 前端面板
 
-- [ ] FileTree 组件 — 工作区文件树（VSCode 风格）
-- [ ] SnapshotList 组件 — 快照时间线列表
-- [ ] WorkspacePanel 组件 — 右侧/底部面板容器，整合 FileTree + SnapshotList + FileChangeList
+- [x] FileTree 组件 — 工作区文件树（VSCode 风格）
+- [x] SnapshotList 组件 — 快照时间线列表
+- [x] WorkspacePanel 组件 — 右侧/底部面板容器，整合 FileTree + SnapshotList + FileChangeList
 
 ### 3.6 前端架构升级
 
-- [ ] Zustand stores 迁移（当前用本地 `useState`）
+- [x] Zustand stores 迁移（当前用本地 `useState`）
   - `conversation.store` — 会话列表、搜索、归档筛选
   - `message.store` — 消息缓存、流式更新、replyTarget
   - `agent.store` — Agent 列表、可用性、能力过滤
@@ -71,23 +71,23 @@
   - `artifact.store` — artifacts、deployments 状态
   - `workspace.store` — files、snapshots、fileChanges
   - `ui.store` — panels、dialogs、selection
-- [ ] Zod schemas 校验 — REST body + WS event（`packages/shared/src/schemas/`）
+- [x] Zod schemas 校验 — REST body + WS event（`packages/shared/src/schemas/`）
 - [ ] WS 连接注册表（`connection-registry.ts`）— 管理多连接、断线清理
 - [ ] 乐观更新封装（`optimistic-updates.ts`）— 统一的乐观写入 + 失败回滚
-- [ ] Event dispatcher（`event-dispatcher.ts`）— ServerEvent 自动分发到对应 store
+- [x] Event dispatcher（`event-dispatcher.ts`）— ServerEvent 自动分发到对应 store
 
 ### 3.7 组件拆分与重构
 
-- [ ] `MessageList.tsx` — 从 ChatArea 中拆出消息列表渲染
-- [ ] `MessageBubble.tsx` — 独立的消息气泡组件（含 Markdown、回复指示器、操作菜单）
-- [ ] `ConversationSearchBar.tsx` — 独立的搜索栏组件（当前搜索逻辑内联在 ConversationList 中）
+- [x] `MessageList.tsx` — 从 ChatArea 中拆出消息列表渲染
+- [x] `MessageBubble.tsx` — 独立的消息气泡组件（含 Markdown、回复指示器、操作菜单）
+- [x] `ConversationSearchBar.tsx` — 独立的搜索栏组件（当前搜索逻辑内联在 ConversationList 中）
 
 ### 3.8 Shared 类型扩展
 
-- [ ] `types/artifact.ts` — Artifact、ArtifactType、DeployStatus
-- [ ] `types/workspace.ts` — WorkspaceRef、Snapshot、FileChange、Manifest
-- [ ] `schemas/artifact.schema.ts`、`schemas/workspace.schema.ts` — Zod 校验
-- [ ] `constants.ts` — 事件名、状态枚举、sandbox 模式常量
+- [x] `types/artifact.ts` — Artifact、ArtifactType、DeployStatus
+- [x] `types/workspace.ts` — WorkspaceRef、Snapshot、FileChange、Manifest
+- [x] `schemas/artifact.schema.ts`、`schemas/workspace.schema.ts` — Zod 校验
+- [x] `constants.ts` — 事件名、状态枚举、sandbox 模式常量
 
 ---
 
