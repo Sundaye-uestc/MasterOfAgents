@@ -150,6 +150,27 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   detail_json TEXT,
   created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS secrets (
+  id TEXT PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  provider TEXT,
+  encrypted_value TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS deployments (
+  id TEXT PRIMARY KEY,
+  artifact_id TEXT,
+  run_id TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  target TEXT,
+  url TEXT,
+  log TEXT,
+  created_at TEXT NOT NULL,
+  completed_at TEXT
+);
 `;
 
 export function runMigrations(sqlDb: SqlJsDb) {

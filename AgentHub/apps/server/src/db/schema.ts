@@ -160,3 +160,26 @@ export const auditLogs = sqliteTable("audit_logs", {
   detailJson: text("detail_json"),
   createdAt: text("created_at").notNull(),
 });
+
+// --- Secrets ---
+export const secrets = sqliteTable("secrets", {
+  id: text("id").primaryKey(),
+  name: text("name").unique().notNull(),
+  provider: text("provider"),
+  encryptedValue: text("encrypted_value").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+// --- Deployments ---
+export const deployments = sqliteTable("deployments", {
+  id: text("id").primaryKey(),
+  artifactId: text("artifact_id"),
+  runId: text("run_id"),
+  status: text("status").notNull().default("pending"),
+  target: text("target"),
+  url: text("url"),
+  log: text("log"),
+  createdAt: text("created_at").notNull(),
+  completedAt: text("completed_at"),
+});

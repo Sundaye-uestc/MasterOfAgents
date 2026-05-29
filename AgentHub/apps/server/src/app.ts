@@ -8,6 +8,10 @@ import { conversationRoutes } from "./routes/conversations.js";
 import { agentRoutes } from "./routes/agents.js";
 import { runRoutes } from "./routes/runs.js";
 import { workspaceRoutes } from "./routes/workspaces.js";
+import { fileChangeRoutes } from "./routes/file-changes.js";
+import { artifactRoutes } from "./routes/artifacts.js";
+import { deploymentRoutes } from "./routes/deployments.js";
+import { secretRoutes } from "./routes/secrets.js";
 import { initWsGateway } from "./ws/gateway.js";
 import { initDb, saveDb } from "./db/index.js";
 import { seedAgents } from "./db/seed.js";
@@ -28,6 +32,10 @@ app.route("/api/conversations", conversationRoutes);
 app.route("/api/agents", agentRoutes);
 app.route("/api/runs", runRoutes);
 app.route("/api/workspaces", workspaceRoutes);
+app.route("/api/file-changes", fileChangeRoutes);
+app.route("/api/artifacts", artifactRoutes);
+app.route("/api/deployments", deploymentRoutes);
+app.route("/api/secrets", secretRoutes);
 
 export { app };
 

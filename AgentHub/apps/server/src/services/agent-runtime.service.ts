@@ -10,6 +10,7 @@ import { getDb, schema } from "../db/index.js";
 import { eq } from "drizzle-orm";
 import { newId, nowISO } from "../lib/ids.js";
 import type { ChatService } from "./chat.service.js";
+import { WorkspaceService } from "./workspace.service.js";
 
 let singleton: AgentRuntimeService | null = null;
 
@@ -94,9 +95,23 @@ export class AgentRuntimeService {
     const adapter = await this.getAdapter(agentConfig);
     this.runAdapterMap.set(runId, agentConfig.id);
 
+    const workspaceSvc = new WorkspaceService();
+
     // Run async — stream events back through callback
     (async () => {
+      let beforeSnapshotId: string | null = null;
+
       try {
+        // --- Create before snapshot ---
+        try {
+          const ws = await workspaceSvc.ensureWorkspace(conversationId);
+          const beforeManifest = workspaceSvc.generateManifest(ws.rootPath);
+          const beforeSnap = await workspaceSvc.createSnapshot(ws.id, runId, "before", beforeManifest);
+          beforeSnapshotId = beforeSnap.id;
+        } catch (snapErr) {
+          console.warn(`[runtime] Failed to create before snapshot: ${(snapErr as Error).message}`);
+        }
+
         const stream = adapter.run({
           runId,
           agentId,
@@ -146,6 +161,18 @@ export class AgentRuntimeService {
               createdAt: nowISO(),
             }).run();
           }
+        }
+
+        // --- Create after snapshot + diff ---
+        try {
+          const ws = await workspaceSvc.ensureWorkspace(conversationId);
+          const afterManifest = workspaceSvc.generateManifest(ws.rootPath);
+          const afterSnap = await workspaceSvc.createSnapshot(ws.id, runId, "after", afterManifest);
+          if (beforeSnapshotId) {
+            await workspaceSvc.diffSnapshots(beforeSnapshotId, afterSnap.id);
+          }
+        } catch (snapErr) {
+          console.warn(`[runtime] Failed to create after snapshot: ${(snapErr as Error).message}`);
         }
 
         // Mark completed only if run was not aborted externally
