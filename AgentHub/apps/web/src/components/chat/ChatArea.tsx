@@ -37,9 +37,10 @@ interface Props {
   conversationTitle?: string;
   adapterKind?: string;
   userAvatar?: string | null;
+  onFileChangesSync?: (changes: FileChangeRow[]) => void;
 }
 
-export function ChatArea({ conversationId, onRefreshList, agentId, conversationType, conversationTitle, adapterKind, userAvatar }: Props) {
+export function ChatArea({ conversationId, onRefreshList, agentId, conversationType, conversationTitle, adapterKind, userAvatar, onFileChangesSync }: Props) {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -124,6 +125,11 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
       .then(setFileChanges)
       .catch(() => {});
   }, [conversationId]);
+
+  // Sync fileChanges to parent (e.g. WorkspacePanel in App)
+  useEffect(() => {
+    onFileChangesSync?.(fileChanges);
+  }, [fileChanges, onFileChangesSync]);
 
   // WebSocket for real-time events
   const onWsEvent = useCallback(

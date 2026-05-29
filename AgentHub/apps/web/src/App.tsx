@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ConversationList, type AgentInfo } from "./components/chat/ConversationList.js";
 import { ChatArea } from "./components/chat/ChatArea.js";
-import { getConversationAgentsMap } from "./lib/api.js";
+import { WorkspacePanel } from "./components/workspace/WorkspacePanel.js";
+import { getConversationAgentsMap, listFileChangesByConversation } from "./lib/api.js";
 import { useUserAvatar } from "./hooks/useUserAvatar.js";
-import type { ConversationRow } from "@agenthub/shared";
+import type { ConversationRow, FileChangeRow } from "@agenthub/shared";
 
 export function App() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -94,6 +95,24 @@ export function App() {
     },
     [activeConversationId]
   );
+
+  // Workspace panel state
+  const [fileChanges, setFileChanges] = useState<FileChangeRow[]>([]);
+
+  const handleFileChangesSync = useCallback((changes: FileChangeRow[]) => {
+    setFileChanges(changes);
+  }, []);
+
+  // Load file changes on conversation switch (before ChatArea syncs via callback)
+  useEffect(() => {
+    if (activeConversationId) {
+      listFileChangesByConversation(activeConversationId)
+        .then(setFileChanges)
+        .catch(() => {});
+    } else {
+      setFileChanges([]);
+    }
+  }, [activeConversationId]);
 
   const activeAgentId = activeConversationId
     ? agentMap[activeConversationId]?.agentId
@@ -223,6 +242,7 @@ export function App() {
             conversationTitle={chatTitle}
             adapterKind={activeAdapterKind}
             userAvatar={userAvatar}
+            onFileChangesSync={handleFileChangesSync}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -233,6 +253,20 @@ export function App() {
           </div>
         )}
       </div>
+
+      {/* Workspace Panel — files, snapshots, file changes */}
+      {activeConversationId && (
+        <WorkspacePanel
+          files={[]}
+          snapshots={[]}
+          fileChanges={fileChanges}
+          onFileChangeUpdate={(updated) =>
+            setFileChanges((prev) =>
+              prev.map((c) => (c.id === updated.id ? updated : c))
+            )
+          }
+        />
+      )}
 
       {/* Toast notification */}
       {toast && (
