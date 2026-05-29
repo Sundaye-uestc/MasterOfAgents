@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import type { MessageRow } from "@agenthub/shared";
-import { listMessages, sendMessage, stopRun, deleteMessage, pinMessage, getPinnedMessages, retryMessage, listMembers, listAgents } from "../../lib/api.js";
+import type { MessageRow, FileChangeRow } from "@agenthub/shared";
+import { listMessages, sendMessage, stopRun, deleteMessage, pinMessage, getPinnedMessages, retryMessage, listMembers, listAgents, listFileChangesByConversation } from "../../lib/api.js";
 import { useWebSocket } from "../../hooks/useWebSocket.js";
 import type { WsServerEvent } from "../../hooks/useWebSocket.js";
 import { useOrchestrationState } from "../../hooks/useOrchestrationState.js";
@@ -12,6 +12,7 @@ import { ToolInvocationCard } from "./ToolInvocationCard.js";
 import { MarkdownContent } from "./MarkdownContent.js";
 import { ReplyPreviewCard } from "./ReplyPreviewCard.js";
 import { PinnedMessageBar } from "./PinnedMessageBar.js";
+import { FileChangeList } from "../workspace/FileChangeList.js";
 
 interface ToolInvocation {
   id: string;
@@ -62,6 +63,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
   } | null>(null);
   const [pinnedMessages, setPinnedMessages] = useState<MessageRow[]>([]);
   const [showPinnedBar, setShowPinnedBar] = useState(true);
+  const [fileChanges, setFileChanges] = useState<FileChangeRow[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { state: orch, handleWsEvent: handleOrchEvent, reset: resetOrch } = useOrchestrationState();
@@ -117,6 +119,9 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
       .catch(() => setLoading(false));
     getPinnedMessages(conversationId)
       .then(setPinnedMessages)
+      .catch(() => {});
+    listFileChangesByConversation(conversationId)
+      .then(setFileChanges)
       .catch(() => {});
   }, [conversationId]);
 
@@ -217,6 +222,18 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
               };
             });
           }
+          break;
+        }
+        case "file:changed": {
+          const fc = (event as any).change as FileChangeRow;
+          if (!fc) break;
+          setFileChanges((prev) => {
+            const idx = prev.findIndex((c) => c.id === fc.id);
+            if (idx >= 0) {
+              return [...prev.slice(0, idx), fc, ...prev.slice(idx + 1)];
+            }
+            return [fc, ...prev];
+          });
           break;
         }
         case "orchestrator:plan_created":
@@ -369,6 +386,12 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
     setPermRequest(null);
   }, [permRequest, wsSend]);
 
+  const handleFileChangeUpdate = useCallback((updated: FileChangeRow) => {
+    setFileChanges((prev) =>
+      prev.map((c) => (c.id === updated.id ? updated : c))
+    );
+  }, []);
+
   // Multi-agent color mapping for messages
   const agentColor = (adapterKind: string) => {
     const colors: Record<string, string> = {
@@ -502,6 +525,9 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           onToggle={() => setOrchBarExpanded((v) => !v)}
         />
       )}
+
+      {/* File changes */}
+      <FileChangeList changes={fileChanges} onUpdate={handleFileChangeUpdate} />
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6">

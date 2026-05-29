@@ -189,3 +189,46 @@ export function createSnapshot(workspaceId: string, runId: string, label: string
 export function deleteSnapshot(workspaceId: string, snapshotId: string) {
   return request<{ ok: boolean }>(`/workspaces/${workspaceId}/snapshots/${snapshotId}`, { method: "DELETE" });
 }
+
+// --- File Changes ---
+
+export function getFileChange(id: string) {
+  return request<import("@agenthub/shared").FileChangeRow>(`/file-changes/${id}`);
+}
+
+export function listFileChangesByRun(runId: string) {
+  return request<import("@agenthub/shared").FileChangeRow[]>(`/file-changes/by-run/${runId}`);
+}
+
+export function listFileChangesByConversation(conversationId: string) {
+  return request<import("@agenthub/shared").FileChangeRow[]>(`/file-changes/by-conversation/${conversationId}`);
+}
+
+export function applyFileChange(id: string) {
+  return request<import("@agenthub/shared").FileChangeRow>(`/file-changes/${id}/apply`, { method: "POST" });
+}
+
+export function revertFileChange(id: string) {
+  return request<import("@agenthub/shared").FileChangeRow>(`/file-changes/${id}/revert`, { method: "POST" });
+}
+
+// --- Artifacts ---
+
+export function getArtifact(id: string) {
+  return request<import("@agenthub/shared").ArtifactRow>(`/artifacts/${id}`);
+}
+
+export function listArtifactsByRun(runId: string) {
+  return request<import("@agenthub/shared").ArtifactRow[]>(`/artifacts/by-run/${runId}`);
+}
+
+export function listArtifactsByConversation(conversationId: string) {
+  return request<import("@agenthub/shared").ArtifactRow[]>(`/artifacts/by-conversation/${conversationId}`);
+}
+
+export function deployArtifact(id: string, target?: "local-static" | "zip") {
+  return request<{ ok: boolean; previewUrl: string | null }>(`/artifacts/${id}/deploy`, {
+    method: "POST",
+    body: JSON.stringify({ target }),
+  });
+}
