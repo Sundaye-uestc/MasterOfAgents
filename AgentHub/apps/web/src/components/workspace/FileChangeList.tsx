@@ -7,9 +7,10 @@ interface Props {
   changes: FileChangeRow[];
   onUpdate?: (updated: FileChangeRow) => void;
   collapsible?: boolean;
+  workspaceId?: string;
 }
 
-export function FileChangeList({ changes, onUpdate, collapsible = true }: Props) {
+export function FileChangeList({ changes, onUpdate, collapsible = true, workspaceId }: Props) {
   const [expanded, setExpanded] = useState(!collapsible);
   const [acting, setActing] = useState<string | null>(null);
 
@@ -60,7 +61,7 @@ export function FileChangeList({ changes, onUpdate, collapsible = true }: Props)
         <div className="divide-y divide-gray-800">
           {changes.map((change) => (
             <div key={change.id} className="bg-gray-900/50">
-              <DiffCard change={change} />
+              <DiffCard change={change} workspaceId={workspaceId} />
               {change.status === "pending" && (
                 <div className="flex gap-2 px-3 py-1.5 border-t border-gray-800/50">
                   <button

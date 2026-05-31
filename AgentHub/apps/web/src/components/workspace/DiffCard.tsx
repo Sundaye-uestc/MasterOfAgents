@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { FileChangeRow } from "@agenthub/shared";
 import { DiffBlock } from "../chat/DiffBlock.js";
+import { readWorkspaceFile } from "../../lib/api.js";
 
 interface Props {
   change: FileChangeRow;
+  workspaceId?: string;
 }
 
 const changeColors: Record<string, string> = {
@@ -30,8 +32,46 @@ const statusLabels: Record<string, string> = {
   reverted: "已回滚",
 };
 
-export function DiffCard({ change }: Props) {
+function FileContentViewer({ workspaceId, filePath }: { workspaceId: string; filePath: string }) {
+  const [content, setContent] = useState<string | null>(null);
+  const [isBinary, setIsBinary] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    readWorkspaceFile(workspaceId, filePath)
+      .then((res) => {
+        setIsBinary(res.isBinary);
+        setContent(res.text);
+      })
+      .catch(() => setIsBinary(true))
+      .finally(() => setLoading(false));
+  }, [workspaceId, filePath]);
+
+  if (loading) {
+    return <div className="px-3 py-2 text-xs text-gray-600">加载文件内容...</div>;
+  }
+
+  if (isBinary || content === null) {
+    return (
+      <div className="px-3 py-2 text-xs text-gray-500">
+        ⚠ 该文件不可查看（二进制文件或不可读）
+      </div>
+    );
+  }
+
+  // Synthesize a unified diff so it renders consistently with DiffBlock
+  const syntheticDiff = `--- /dev/null\n+++ b/${filePath}\n@@ -0,0 +1,${content.split("\n").length} @@\n${content.split("\n").map((line) => "+" + line).join("\n")}`;
+
+  return (
+    <DiffBlock diff={syntheticDiff} filePath={filePath} defaultExpanded={true} />
+  );
+}
+
+export function DiffCard({ change, workspaceId }: Props) {
   const [expanded, setExpanded] = useState(false);
+
+  // For "create" changes without diff, try to show file content
+  const showContent = change.changeType === "create" && !change.diff && workspaceId;
 
   return (
     <div className={`border rounded-lg overflow-hidden ${changeColors[change.changeType] ?? "border-gray-700"}`}>
@@ -53,7 +93,12 @@ export function DiffCard({ change }: Props) {
           <DiffBlock diff={change.diff} filePath={change.path} defaultExpanded={true} />
         </div>
       )}
-      {expanded && !change.diff && (
+      {expanded && !change.diff && showContent && (
+        <div className="border-t border-gray-700">
+          <FileContentViewer workspaceId={workspaceId} filePath={change.path} />
+        </div>
+      )}
+      {expanded && !change.diff && !showContent && (
         <div className="border-t border-gray-700 bg-gray-950 px-3 py-2">
           <span className="text-xs text-gray-500">
             {change.changeType === "delete"

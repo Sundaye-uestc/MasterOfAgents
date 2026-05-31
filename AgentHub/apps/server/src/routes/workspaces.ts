@@ -72,6 +72,12 @@ workspaceRoutes.post("/:id/snapshots", async (c) => {
   return c.json(snap, 201);
 });
 
+workspaceRoutes.post("/:id/snapshots/:snapshotId/rollback", async (c) => {
+  const ok = await svc.rollbackToSnapshot(c.req.param("snapshotId")!);
+  if (!ok) return c.json({ error: "Cannot rollback" }, 400);
+  return c.json({ ok: true });
+});
+
 workspaceRoutes.delete("/:id/snapshots/:snapshotId", async (c) => {
   const ok = await svc.deleteSnapshot(c.req.param("snapshotId")!);
   if (!ok) return c.json({ error: "Not found" }, 404);
@@ -85,4 +91,13 @@ workspaceRoutes.get("/:id/files", async (c) => {
   if (!ws) return c.json({ error: "Workspace not found" }, 404);
   const tree = svc.buildFileTree(ws.rootPath);
   return c.json(tree);
+});
+
+workspaceRoutes.get("/:id/file-content", async (c) => {
+  const ws = await svc.getWorkspace(c.req.param("id")!);
+  if (!ws) return c.json({ error: "Workspace not found" }, 404);
+  const filePath = c.req.query("path");
+  if (!filePath) return c.json({ error: "path query parameter required" }, 400);
+  const result = svc.readFileContent(ws.rootPath, filePath);
+  return c.json(result);
 });

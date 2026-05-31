@@ -160,6 +160,25 @@ export class WorkspaceService {
     return true;
   }
 
+  /** Rollback workspace files to a snapshot state */
+  async rollbackToSnapshot(snapshotId: string): Promise<boolean> {
+    const snap = await this.getSnapshot(snapshotId);
+    if (!snap) return false;
+
+    const ws = await this.getWorkspace(snap.workspaceId);
+    if (!ws || !fs.existsSync(ws.rootPath)) return false;
+
+    const snapDir = this._snapshotDir(snapshotId);
+    if (!fs.existsSync(snapDir)) return false;
+
+    // Clear current workspace and copy snapshot files back
+    fs.rmSync(ws.rootPath, { recursive: true, force: true });
+    fs.mkdirSync(ws.rootPath, { recursive: true });
+    this._copyDir(snapDir, ws.rootPath);
+
+    return true;
+  }
+
   // --- Manifest generation ---
 
   /** Walk a directory and generate a file manifest with SHA-256 hashes */
@@ -190,6 +209,33 @@ export class WorkspaceService {
   private _fileHash(filePath: string): string {
     const content = fs.readFileSync(filePath);
     return crypto.createHash("sha256").update(content).digest("hex");
+  }
+
+  /** Try to read a text file from the workspace. Returns { text, isBinary } */
+  readFileContent(rootPath: string, filePath: string): { text: string | null; isBinary: boolean; size: number } {
+    const fullPath = path.resolve(rootPath, filePath);
+    // Security: ensure path stays within rootPath
+    if (!fullPath.startsWith(rootPath)) {
+      return { text: null, isBinary: true, size: 0 };
+    }
+    if (!fs.existsSync(fullPath)) {
+      return { text: null, isBinary: false, size: 0 };
+    }
+    const stat = fs.statSync(fullPath);
+    // Reject files larger than 1MB
+    if (stat.size > 1024 * 1024) {
+      return { text: null, isBinary: true, size: stat.size };
+    }
+    try {
+      const buf = fs.readFileSync(fullPath);
+      // Check for null bytes (binary indicator)
+      for (let i = 0; i < buf.length && i < 8192; i++) {
+        if (buf[i] === 0) return { text: null, isBinary: true, size: stat.size };
+      }
+      return { text: buf.toString("utf-8"), isBinary: false, size: stat.size };
+    } catch {
+      return { text: null, isBinary: true, size: stat.size };
+    }
   }
 
   /** Recursively build a FileNode tree from a directory on disk */

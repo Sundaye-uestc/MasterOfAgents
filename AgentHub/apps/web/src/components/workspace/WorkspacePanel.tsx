@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { FileChangeRow } from "@agenthub/shared";
-import { applyFileChange, revertFileChange } from "../../lib/api.js";
+import { applyFileChange, revertFileChange, rollbackSnapshot } from "../../lib/api.js";
 import { DiffCard } from "./DiffCard.js";
 import { FileTree } from "./FileTree.js";
 import { SnapshotList } from "./SnapshotList.js";
@@ -46,9 +46,31 @@ export function WorkspacePanel({
   const [dirInput, setDirInput] = useState("");
   const changesRef = useRef<HTMLDivElement>(null);
 
+  // Resize state
+  const [panelWidth, setPanelWidth] = useState(320);
+  const resizing = useRef(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!resizing.current) return;
+      const newWidth = window.innerWidth - e.clientX;
+      setPanelWidth(Math.max(240, Math.min(600, newWidth)));
+    };
+    const onMouseUp = () => { resizing.current = false; document.body.style.cursor = ""; document.body.style.userSelect = ""; };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
   // Workspace store for current directory
+  const workspaceId = useWorkspaceStore((s) => s.workspaceId);
   const workspaceRootPath = useWorkspaceStore((s) => s.rootPath);
   const workspaceUpdateRootPath = useWorkspaceStore((s) => s.updateRootPath);
+  const workspaceRefresh = useWorkspaceStore((s) => s.refresh);
 
   // Cross-component linking: respond to selectedChangePath from ui.store
   const selectedChangePath = useUIStore((s) => s.selectedChangePath);
@@ -94,6 +116,17 @@ export function WorkspacePanel({
 
   const pendingChanges = fileChanges.filter((c) => c.status === "pending");
 
+  const handleRollback = useCallback(async (snapshotId: string) => {
+    if (!workspaceId) return;
+    try {
+      await rollbackSnapshot(workspaceId, snapshotId);
+      // Refresh file tree and snapshots after rollback
+      await workspaceRefresh();
+    } catch (err) {
+      console.error("Failed to rollback snapshot", err);
+    }
+  }, [workspaceId, workspaceRefresh]);
+
   const handleChangeDir = useCallback(() => {
     setDirInput(workspaceRootPath ?? "");
     setShowDirInput(true);
@@ -108,7 +141,19 @@ export function WorkspacePanel({
   }, [dirInput, workspaceUpdateRootPath]);
 
   return (
-    <div className="border-l border-gray-700 bg-gray-900 flex flex-col" style={{ width: "320px", maxHeight: "100vh" }}>
+    <div ref={panelRef} className="border-l border-gray-700 bg-gray-900 flex flex-col relative" style={{ width: `${panelWidth}px`, maxHeight: "100vh", minWidth: "240px" }}>
+      {/* Resize handle — left edge */}
+      <div
+        onMouseDown={(e) => {
+          e.preventDefault();
+          resizing.current = true;
+          document.body.style.cursor = "col-resize";
+          document.body.style.userSelect = "none";
+        }}
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/50 z-10"
+        style={{ marginLeft: "-1px" }}
+      />
+
       {/* Header */}
       <div className="border-b border-gray-800 px-3 py-2">
         <div className="flex items-center justify-between">
@@ -202,6 +247,7 @@ export function WorkspacePanel({
             snapshots={snapshots}
             selectedId={selectedSnapshotId}
             onSelect={setSelectedSnapshotId}
+            onRollback={handleRollback}
           />
         )}
         {activeTab === "changes" && (
@@ -213,7 +259,7 @@ export function WorkspacePanel({
               const isHighlighted = selectedChangePath === change.path;
               return (
               <div key={change.id} className={`${isHighlighted ? "ring-1 ring-blue-500 bg-blue-900/10" : "bg-gray-900/50"}`}>
-                <DiffCard change={change} />
+                <DiffCard change={change} workspaceId={workspaceId ?? undefined} />
                 {change.status === "pending" && (
                   <div className="flex gap-2 px-3 py-1.5">
                     <button

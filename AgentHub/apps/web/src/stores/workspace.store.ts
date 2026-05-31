@@ -40,6 +40,7 @@ interface WorkspaceStoreState {
   addSnapshot: (label: string, runId: string, manifest: Record<string, unknown>) => Promise<void>;
   updateFileChange: (updated: FileChangeRow) => void;
   updateRootPath: (newPath: string) => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
@@ -113,6 +114,26 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
     try {
       const files = await listFiles(wsId);
       set({ files });
+    } catch {}
+  },
+
+  refresh: async () => {
+    const wsId = get().workspaceId;
+    if (!wsId) return;
+    try {
+      const [files, snaps] = await Promise.all([
+        listFiles(wsId),
+        listSnapshots(wsId),
+      ]);
+      set({
+        files,
+        snapshots: snaps.map((s: any) => ({
+          id: s.id,
+          label: s.label,
+          createdAt: s.createdAt,
+          runId: s.runId,
+        })),
+      });
     } catch {}
   },
 }));

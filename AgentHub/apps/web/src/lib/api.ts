@@ -214,6 +214,16 @@ export function deleteSnapshot(workspaceId: string, snapshotId: string) {
   return request<{ ok: boolean }>(`/workspaces/${workspaceId}/snapshots/${snapshotId}`, { method: "DELETE" });
 }
 
+export function rollbackSnapshot(workspaceId: string, snapshotId: string) {
+  return request<{ ok: boolean }>(`/workspaces/${workspaceId}/snapshots/${snapshotId}/rollback`, { method: "POST" });
+}
+
+export function readWorkspaceFile(workspaceId: string, filePath: string) {
+  return request<{ text: string | null; isBinary: boolean; size: number }>(
+    `/workspaces/${workspaceId}/file-content?path=${encodeURIComponent(filePath)}`
+  );
+}
+
 // --- File Changes ---
 
 export function getFileChange(id: string) {
