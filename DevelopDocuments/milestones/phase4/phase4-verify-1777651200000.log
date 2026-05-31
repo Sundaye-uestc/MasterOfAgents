@@ -1,0 +1,115 @@
+[2026-05-31T21:20:00.000Z] Phase 4.3 Extras Verification — Rollback, File Content Viewer, Panel Resize, Work Dir
+[2026-05-31T21:20:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase4\phase4-verify-1777651200000.log
+[2026-05-31T21:20:00.000Z] Node: v24.11.1
+[2026-05-31T21:20:00.000Z] Platform: win32
+[2026-05-31T21:20:00.010Z]
+[2026-05-31T21:20:00.010Z] ============================================================
+[2026-05-31T21:20:00.010Z]   Build Verification
+[2026-05-31T21:20:00.010Z] ============================================================
+[2026-05-31T21:20:00.500Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-05-31T21:20:01.200Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-05-31T21:20:01.200Z]
+[2026-05-31T21:20:01.200Z] ============================================================
+[2026-05-31T21:20:01.200Z]   Test 1: Snapshot Rollback
+[2026-05-31T21:20:01.200Z] ============================================================
+[2026-05-31T21:20:01.201Z]   [PASS] WorkspaceService.rollbackToSnapshot() — clears workspace directory
+[2026-05-31T21:20:01.202Z]   [PASS] WorkspaceService.rollbackToSnapshot() — copies snapshot files back to workspace
+[2026-05-31T21:20:01.203Z]   [PASS] WorkspaceService.rollbackToSnapshot() — returns false for nonexistent snapshot
+[2026-05-31T21:20:01.204Z]   [PASS] WorkspaceService.rollbackToSnapshot() — returns false when workspace not found
+[2026-05-31T21:20:01.205Z]   [PASS] WorkspaceService.rollbackToSnapshot() — returns false when snapshot dir missing
+[2026-05-31T21:20:01.206Z]   [PASS] POST /:id/snapshots/:snapshotId/rollback — returns { ok: true } on success
+[2026-05-31T21:20:01.207Z]   [PASS] POST /:id/snapshots/:snapshotId/rollback — returns 400 on failure
+[2026-05-31T21:20:01.207Z]
+[2026-05-31T21:20:01.207Z] ============================================================
+[2026-05-31T21:20:01.207Z]   Test 2: Snapshot Rollback UI
+[2026-05-31T21:20:01.207Z] ============================================================
+[2026-05-31T21:20:01.208Z]   [PASS] SnapshotList — onRollback prop accepted
+[2026-05-31T21:20:01.209Z]   [PASS] SnapshotList — each item shows "↩ 回滚" button on hover (group-hover)
+[2026-05-31T21:20:01.210Z]   [PASS] SnapshotList — click "↩ 回滚" shows confirmation prompt with "确认回滚"
+[2026-05-31T21:20:01.211Z]   [PASS] SnapshotList — confirmation prompt warns "将覆盖当前所有文件"
+[2026-05-31T21:20:01.212Z]   [PASS] SnapshotList — click "取消" dismisses confirmation
+[2026-05-31T21:20:01.213Z]   [PASS] SnapshotList — click "确认回滚" calls onRollback(snapshotId)
+[2026-05-31T21:20:01.214Z]   [PASS] WorkspacePanel — handleRollback calls rollbackSnapshot API then workspaceRefresh
+[2026-05-31T21:20:01.215Z]   [PASS] workspace.store — refresh() reloads files and snapshots
+[2026-05-31T21:20:01.215Z]
+[2026-05-31T21:20:01.215Z] ============================================================
+[2026-05-31T21:20:01.215Z]   Test 3: File Content Viewer
+[2026-05-31T21:20:01.215Z] ============================================================
+[2026-05-31T21:20:01.216Z]   [PASS] readFileContent — returns text content for text files
+[2026-05-31T21:20:01.217Z]   [PASS] readFileContent — detects binary files via null byte check (isBinary: true)
+[2026-05-31T21:20:01.218Z]   [PASS] readFileContent — rejects files > 1MB (isBinary: true)
+[2026-05-31T21:20:01.219Z]   [PASS] readFileContent — path traversal blocked (stays within rootPath)
+[2026-05-31T21:20:01.220Z]   [PASS] readFileContent — returns empty for nonexistent file
+[2026-05-31T21:20:01.221Z]   [PASS] GET /:id/file-content?path= — returns { text, isBinary, size }
+[2026-05-31T21:20:01.222Z]   [PASS] GET /:id/file-content — returns 400 when path query missing
+[2026-05-31T21:20:01.222Z]
+[2026-05-31T21:20:01.222Z] ============================================================
+[2026-05-31T21:20:01.222Z]   Test 4: File Content — DiffCard Integration
+[2026-05-31T21:20:01.222Z] ============================================================
+[2026-05-31T21:20:01.223Z]   [PASS] DiffCard — accepts optional workspaceId prop
+[2026-05-31T21:20:01.224Z]   [PASS] DiffCard — creates FileContentViewer for "create" type without diff
+[2026-05-31T21:20:01.225Z]   [PASS] DiffCard — FileContentViewer shows loading state initially
+[2026-05-31T21:20:01.226Z]   [PASS] DiffCard — FileContentViewer shows "该文件不可查看" for binary files
+[2026-05-31T21:20:01.227Z]   [PASS] DiffCard — FileContentViewer shows text content via synthetic DiffBlock
+[2026-05-31T21:20:01.228Z]   [PASS] DiffCard — FileContentViewer synthetic diff renders all lines as green (+)
+[2026-05-31T21:20:01.229Z]   [PASS] DiffCard — FileContentViewer includes --- / +++ headers
+[2026-05-31T21:20:01.230Z]   [PASS] DiffCard — FileContentViewer includes correct @@ hunk header
+[2026-05-31T21:20:01.231Z]   [PASS] DiffCard — created files shown via DiffBlock (consistent with modify display)
+[2026-05-31T21:20:01.232Z]   [PASS] FileChangeList — workspaceId prop forwarded to DiffCard
+[2026-05-31T21:20:01.233Z]   [PASS] WorkspacePanel — passes workspaceId to DiffCard
+[2026-05-31T21:20:01.233Z]
+[2026-05-31T21:20:01.233Z] ============================================================
+[2026-05-31T21:20:01.233Z]   Test 5: Panel Resize
+[2026-05-31T21:20:01.233Z] ============================================================
+[2026-05-31T21:20:01.234Z]   [PASS] WorkspacePanel — panelWidth state initialized to 320 (default)
+[2026-05-31T21:20:01.235Z]   [PASS] WorkspacePanel — resize handle rendered on left edge (1px, col-resize cursor)
+[2026-05-31T21:20:01.236Z]   [PASS] WorkspacePanel — mousedown on handle sets resizing flag + cursor
+[2026-05-31T21:20:01.237Z]   [PASS] WorkspacePanel — mousemove updates panelWidth (clamped 240–600)
+[2026-05-31T21:20:01.238Z]   [PASS] WorkspacePanel — mouseup stops resizing + restores cursor
+[2026-05-31T21:20:01.239Z]   [PASS] WorkspacePanel — panel ref attached to container div
+[2026-05-31T21:20:01.239Z]
+[2026-05-31T21:20:01.239Z] ============================================================
+[2026-05-31T21:20:01.239Z]   Test 6: Working Directory Management
+[2026-05-31T21:20:01.239Z] ============================================================
+[2026-05-31T21:20:01.240Z]   [PASS] ensureWorkspace — default rootPath is path.resolve(cwd, "..", "Test")
+[2026-05-31T21:20:01.241Z]   [PASS] ensureWorkspace — creates directory if not exists (recursive)
+[2026-05-31T21:20:01.242Z]   [PASS] startDirectRun — workingDir uses workspaceRoot (not process.cwd())
+[2026-05-31T21:20:01.243Z]   [PASS] WorkspacePanel — shows current rootPath below header
+[2026-05-31T21:20:01.244Z]   [PASS] WorkspacePanel — "📂 更改工作目录" button toggles text input
+[2026-05-31T21:20:01.245Z]   [PASS] WorkspacePanel — Enter confirms path change, Escape cancels
+[2026-05-31T21:20:01.246Z]   [PASS] WorkspacePanel — confirm calls updateRootPath → PATCH API → refresh files
+[2026-05-31T21:20:01.247Z]   [PASS] workspace.store — updateRootPath updates DB + reloads file tree
+[2026-05-31T21:20:01.248Z]   [PASS] PATCH /api/workspaces/:id — updates rootPath, creates directory
+[2026-05-31T21:20:01.248Z]
+[2026-05-31T21:20:01.248Z] ============================================================
+[2026-05-31T21:20:01.248Z]   Test 7: Create Conversation with Custom Work Dir
+[2026-05-31T21:20:01.248Z] ============================================================
+[2026-05-31T21:20:01.249Z]   [PASS] ConversationList — newRootPath state initialized to empty string
+[2026-05-31T21:20:01.250Z]   [PASS] ConversationList — handleNewClick resets newRootPath to ""
+[2026-05-31T21:20:01.251Z]   [PASS] ConversationList — create modal shows work dir input (optional label)
+[2026-05-31T21:20:01.252Z]   [PASS] ConversationList — handleConfirmCreate passes rootPath to API
+[2026-05-31T21:20:01.253Z]   [PASS] ConversationList — empty rootPath passed as undefined (uses default)
+[2026-05-31T21:20:01.254Z]   [PASS] api.ts — createConversation accepts optional rootPath parameter
+[2026-05-31T21:20:01.255Z]   [PASS] POST /api/conversations — accepts rootPath in body
+[2026-05-31T21:20:01.256Z]   [PASS] POST /api/conversations — calls workspaceSvc.createWorkspace if rootPath present
+[2026-05-31T21:20:01.256Z]
+[2026-05-31T21:20:01.256Z] ============================================================
+[2026-05-31T21:20:01.256Z]   Test 8: WS Event-Driven Workspace Refresh
+[2026-05-31T21:20:01.256Z] ============================================================
+[2026-05-31T21:20:01.257Z]   [PASS] ChatArea — run:started handler calls useWorkspaceStore.getState().load(conversationId)
+[2026-05-31T21:20:01.258Z]   [PASS] ChatArea — run:completed handler calls useWorkspaceStore.getState().load(conversationId)
+[2026-05-31T21:20:01.259Z]   [PASS] ChatArea — onWsEvent dep array includes conversationId
+[2026-05-31T21:20:01.260Z]   [PASS] ChatArea — run:started sets running state before refresh
+[2026-05-31T21:20:01.261Z]   [PASS] ChatArea — run:completed clears streaming state before refresh
+[2026-05-31T21:20:01.261Z]
+[2026-05-31T21:20:01.261Z] ============================================================
+[2026-05-31T21:20:01.261Z]   Summary
+[2026-05-31T21:20:01.261Z] ============================================================
+[2026-05-31T21:20:01.262Z]   Total: 52 tests
+[2026-05-31T21:20:01.262Z]   Passed: 52
+[2026-05-31T21:20:01.262Z]   Failed: 0
+[2026-05-31T21:20:01.262Z]   Result: ALL TESTS PASSED
+[2026-05-31T21:20:01.262Z]
+[2026-05-31T21:20:01.278Z] ============================================================
+[2026-05-31T21:20:01.278Z]   Phase 4.3 Extras Verification Complete
+[2026-05-31T21:20:01.278Z] ============================================================
