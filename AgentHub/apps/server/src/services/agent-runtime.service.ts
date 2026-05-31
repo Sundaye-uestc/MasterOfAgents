@@ -101,23 +101,26 @@ export class AgentRuntimeService {
     (async () => {
       let beforeSnapshotId: string | null = null;
 
+      // Ensure workspace exists BEFORE the run so we can use it as workingDir
+      let workspaceRoot: string | null = null;
       try {
-        // --- Create before snapshot ---
-        try {
-          const ws = await workspaceSvc.ensureWorkspace(conversationId);
-          const beforeManifest = workspaceSvc.generateManifest(ws.rootPath);
-          const beforeSnap = await workspaceSvc.createSnapshot(ws.id, runId, "before", beforeManifest);
-          beforeSnapshotId = beforeSnap.id;
-        } catch (snapErr) {
-          console.warn(`[runtime] Failed to create before snapshot: ${(snapErr as Error).message}`);
-        }
+        const ws = await workspaceSvc.ensureWorkspace(conversationId);
+        workspaceRoot = ws.rootPath;
+        const beforeManifest = workspaceSvc.generateManifest(ws.rootPath);
+        const beforeSnap = await workspaceSvc.createSnapshot(ws.id, runId, "before", beforeManifest);
+        beforeSnapshotId = beforeSnap.id;
+      } catch (snapErr) {
+        console.warn(`[runtime] Failed to create before snapshot: ${(snapErr as Error).message}`);
+      }
 
+      try {
         const stream = adapter.run({
           runId,
           agentId,
           prompt,
           systemPrompt,
-          workingDir: process.cwd(),
+          workingDir: workspaceRoot ?? process.cwd(),
+
           signal: abortController.signal,
         });
 

@@ -16,6 +16,7 @@ interface UIStoreState {
   dialog: DialogState;
   selectedMessageId: string | null;
   selectedArtifactId: string | null;
+  selectedChangePath: string | null;
 
   togglePanel: (panel: Panel) => void;
   openPanel: (panel: Panel) => void;
@@ -24,6 +25,7 @@ interface UIStoreState {
   closeDialog: () => void;
   selectMessage: (id: string | null) => void;
   selectArtifact: (id: string | null) => void;
+  selectChangePath: (path: string | null) => void;
 }
 
 export const useUIStore = create<UIStoreState>((set) => ({
@@ -31,6 +33,7 @@ export const useUIStore = create<UIStoreState>((set) => ({
   dialog: { type: null, data: null },
   selectedMessageId: null,
   selectedArtifactId: null,
+  selectedChangePath: null,
 
   togglePanel: (panel) => {
     set((s) => ({ activePanel: s.activePanel === panel ? null : panel }));
@@ -44,4 +47,5 @@ export const useUIStore = create<UIStoreState>((set) => ({
 
   selectMessage: (id) => set({ selectedMessageId: id }),
   selectArtifact: (id) => set({ selectedArtifactId: id }),
+  selectChangePath: (path) => set({ selectedChangePath: path }),
 }));

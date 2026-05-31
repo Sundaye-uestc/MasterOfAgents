@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { FileChangeRow } from "@agenthub/shared";
+import { DiffBlock } from "../chat/DiffBlock.js";
 
 interface Props {
   change: FileChangeRow;
@@ -49,9 +50,7 @@ export function DiffCard({ change }: Props) {
       </button>
       {expanded && change.diff && (
         <div className="border-t border-gray-700 bg-gray-950">
-          <pre className="text-xs text-gray-300 p-3 overflow-x-auto font-mono whitespace-pre-wrap">
-            {change.diff}
-          </pre>
+          <DiffBlock diff={change.diff} filePath={change.path} defaultExpanded={true} />
         </div>
       )}
       {expanded && !change.diff && (

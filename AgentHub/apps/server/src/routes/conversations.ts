@@ -9,9 +9,11 @@ import { getOrchestratorService } from "../services/orchestrator.service.js";
 import type { AgentConfig } from "@agenthub/shared";
 import { broadcastToConversation, agentEventToWsEvent } from "../ws/gateway.js";
 import { getDb, schema } from "../db/index.js";
+import { WorkspaceService } from "../services/workspace.service.js";
 
 const chat = new ChatService();
 const runtime = getAgentRuntimeService();
+const workspaceSvc = new WorkspaceService();
 
 export const conversationRoutes = new Hono();
 
@@ -30,8 +32,22 @@ conversationRoutes.get("/agents-map", async (c) => {
 
 // --- Create conversation ---
 conversationRoutes.post("/", async (c) => {
-  const body = await c.req.json<{ title: string; type?: "direct" | "group"; agentId?: string }>();
+  const body = await c.req.json<{
+    title: string;
+    type?: "direct" | "group";
+    agentId?: string;
+    agentIds?: string[];
+    rootPath?: string;
+  }>();
   const conv = await chat.createConversation(body);
+
+  // If user specified a working directory, create workspace immediately
+  if (body.rootPath) {
+    try {
+      await workspaceSvc.createWorkspace(conv.id, body.rootPath);
+    } catch { /* non-fatal */ }
+  }
+
   return c.json(conv, 201);
 });
 

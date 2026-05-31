@@ -19,6 +19,15 @@ workspaceRoutes.get("/", async (c) => {
   return c.json({ error: "conversationId query parameter required" }, 400);
 });
 
+// --- Directory browser (browse any path) — must be before /:id ---
+
+workspaceRoutes.get("/browse", async (c) => {
+  const targetPath = c.req.query("path");
+  if (!targetPath) return c.json({ error: "path query parameter required" }, 400);
+  const tree = svc.buildFileTree(targetPath);
+  return c.json(tree);
+});
+
 workspaceRoutes.get("/:id", async (c) => {
   const ws = await svc.getWorkspace(c.req.param("id")!);
   if (!ws) return c.json({ error: "Not found" }, 404);
@@ -29,6 +38,13 @@ workspaceRoutes.post("/", async (c) => {
   const body = await c.req.json<{ conversationId: string; rootPath: string }>();
   const ws = await svc.createWorkspace(body.conversationId, body.rootPath);
   return c.json(ws, 201);
+});
+
+workspaceRoutes.patch("/:id", async (c) => {
+  const body = await c.req.json<{ rootPath?: string }>();
+  const ws = await svc.updateWorkspace(c.req.param("id")!, body);
+  if (!ws) return c.json({ error: "Not found" }, 404);
+  return c.json(ws);
 });
 
 workspaceRoutes.delete("/:id", async (c) => {

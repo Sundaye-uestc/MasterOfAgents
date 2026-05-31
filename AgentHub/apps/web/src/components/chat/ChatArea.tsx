@@ -168,11 +168,15 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           break;
         case "run:started":
           setRunning(true);
+          // Refresh workspace — ensureWorkspace may have just created it
+          useWorkspaceStore.getState().load(conversationId);
           break;
         case "run:completed":
           setRunning(false);
           setStreamingMsgId(null);
           setCurrentRunId(null);
+          // Refresh workspace — agents may have modified files
+          useWorkspaceStore.getState().load(conversationId);
           break;
         case "run:failed":
           setRunning(false);
@@ -236,7 +240,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           break;
       }
     },
-    [onRefreshList, handleOrchEvent, workspaceUpdateFileChange]
+    [onRefreshList, handleOrchEvent, workspaceUpdateFileChange, conversationId]
   );
 
   const { send: wsSend } = useWebSocket(conversationId, onWsEvent);

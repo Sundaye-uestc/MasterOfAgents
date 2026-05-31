@@ -11,6 +11,7 @@ import {
   listFiles,
   createSnapshot,
   listFileChangesByConversation,
+  updateWorkspaceRootPath,
 } from "../lib/api.js";
 
 interface FileNode {
@@ -38,6 +39,7 @@ interface WorkspaceStoreState {
   load: (conversationId: string) => Promise<void>;
   addSnapshot: (label: string, runId: string, manifest: Record<string, unknown>) => Promise<void>;
   updateFileChange: (updated: FileChangeRow) => void;
+  updateRootPath: (newPath: string) => Promise<void>;
 }
 
 export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
@@ -100,5 +102,17 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
     set((s) => ({
       fileChanges: s.fileChanges.map((c) => (c.id === updated.id ? updated : c)),
     }));
+  },
+
+  updateRootPath: async (newPath) => {
+    const wsId = get().workspaceId;
+    if (!wsId) return;
+    const updated = await updateWorkspaceRootPath(wsId, newPath);
+    set({ rootPath: (updated as any).rootPath });
+    // Reload file tree for the new path
+    try {
+      const files = await listFiles(wsId);
+      set({ files });
+    } catch {}
   },
 }));

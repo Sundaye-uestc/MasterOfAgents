@@ -24,10 +24,10 @@ export function listConversations(q?: string) {
   return request<ConversationRow[]>(`/conversations${qs}`);
 }
 
-export function createConversation(title: string, type: "direct" | "group" = "direct", agentId?: string, agentIds?: string[]) {
+export function createConversation(title: string, type: "direct" | "group" = "direct", agentId?: string, agentIds?: string[], rootPath?: string) {
   return request<ConversationRow>("/conversations", {
     method: "POST",
-    body: JSON.stringify({ title, type, agentId, agentIds }),
+    body: JSON.stringify({ title, type, agentId, agentIds, rootPath }),
   });
 }
 
@@ -186,8 +186,21 @@ interface FileNode {
   children?: FileNode[];
 }
 
+export type { FileNode };
+
 export function listFiles(workspaceId: string) {
   return request<FileNode[]>(`/workspaces/${workspaceId}/files`);
+}
+
+export function browseDirectory(targetPath: string) {
+  return request<FileNode[]>(`/workspaces/browse?path=${encodeURIComponent(targetPath)}`);
+}
+
+export function updateWorkspaceRootPath(workspaceId: string, rootPath: string) {
+  return request<import("@agenthub/shared").WorkspaceRow>(`/workspaces/${workspaceId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ rootPath }),
+  });
 }
 
 export function createSnapshot(workspaceId: string, runId: string, label: string, manifest: Record<string, unknown>) {

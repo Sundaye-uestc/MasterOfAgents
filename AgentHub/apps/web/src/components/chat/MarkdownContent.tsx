@@ -1,6 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
+import { DiffBlock } from "./DiffBlock.js";
 
 const components: Components = {
   h1: ({ children }) => (
@@ -59,6 +60,11 @@ const components: Components = {
           {children}
         </code>
       );
+    }
+    // Diff code blocks: render with DiffBlock
+    if (className?.includes("language-diff")) {
+      const content = String(children).replace(/\n$/, "");
+      return <DiffBlock diff={content} />;
     }
     return (
       <code className={`text-xs font-mono ${className ?? ""}`} {...props}>

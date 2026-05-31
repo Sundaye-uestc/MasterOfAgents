@@ -1,9 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { FileChangeRow } from "@agenthub/shared";
 import { applyFileChange, revertFileChange } from "../../lib/api.js";
 import { DiffCard } from "./DiffCard.js";
 import { FileTree } from "./FileTree.js";
 import { SnapshotList } from "./SnapshotList.js";
+import { useUIStore } from "../../stores/ui.store.js";
+import { useWorkspaceStore } from "../../stores/workspace.store.js";
 
 interface FileNode {
   name: string;
@@ -40,6 +42,26 @@ export function WorkspacePanel({
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [showDirInput, setShowDirInput] = useState(false);
+  const [dirInput, setDirInput] = useState("");
+  const changesRef = useRef<HTMLDivElement>(null);
+
+  // Workspace store for current directory
+  const workspaceRootPath = useWorkspaceStore((s) => s.rootPath);
+  const workspaceUpdateRootPath = useWorkspaceStore((s) => s.updateRootPath);
+
+  // Cross-component linking: respond to selectedChangePath from ui.store
+  const selectedChangePath = useUIStore((s) => s.selectedChangePath);
+  const selectChangePath = useUIStore((s) => s.selectChangePath);
+
+  useEffect(() => {
+    if (selectedChangePath) {
+      setActiveTab("changes");
+      // Clear selection after handling
+      const timer = setTimeout(() => selectChangePath(null), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedChangePath, selectChangePath]);
 
   const handleFileSelect = useCallback((path: string) => {
     setSelectedPath(path);
@@ -72,21 +94,79 @@ export function WorkspacePanel({
 
   const pendingChanges = fileChanges.filter((c) => c.status === "pending");
 
+  const handleChangeDir = useCallback(() => {
+    setDirInput(workspaceRootPath ?? "");
+    setShowDirInput(true);
+  }, [workspaceRootPath]);
+
+  const handleConfirmDir = useCallback(async () => {
+    const path = dirInput.trim();
+    if (path) {
+      await workspaceUpdateRootPath(path);
+    }
+    setShowDirInput(false);
+  }, [dirInput, workspaceUpdateRootPath]);
+
   return (
     <div className="border-l border-gray-700 bg-gray-900 flex flex-col" style={{ width: "320px", maxHeight: "100vh" }}>
       {/* Header */}
-      <div className="border-b border-gray-800 px-3 py-2 flex items-center justify-between">
-        <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider">工作区</h3>
-        {onTogglePanel && (
-          <button
-            onClick={onTogglePanel}
-            className="text-gray-500 hover:text-gray-300 text-xs px-1"
-            title="关闭工作区"
-          >
-            ✕
-          </button>
+      <div className="border-b border-gray-800 px-3 py-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider">工作区</h3>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleChangeDir}
+              className="text-gray-500 hover:text-blue-400 text-[10px] px-1.5 py-0.5 rounded hover:bg-gray-800 transition-colors"
+              title="更改工作目录"
+            >
+              📂 更改工作目录
+            </button>
+            {onTogglePanel && (
+              <button
+                onClick={onTogglePanel}
+                className="text-gray-500 hover:text-gray-300 text-xs px-1"
+                title="关闭工作区"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+        {workspaceRootPath && (
+          <p className="text-[10px] text-gray-600 mt-1 truncate" title={workspaceRootPath}>
+            {workspaceRootPath}
+          </p>
         )}
       </div>
+
+      {/* Directory change input */}
+      {showDirInput && (
+        <div className="border-b border-gray-800 px-3 py-2 bg-gray-800/50">
+          <input
+            type="text"
+            value={dirInput}
+            onChange={(e) => setDirInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleConfirmDir(); if (e.key === "Escape") setShowDirInput(false); }}
+            className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 font-mono focus:outline-none focus:border-blue-500"
+            placeholder="D:\Projects\..."
+            autoFocus
+          />
+          <div className="flex gap-2 mt-1.5">
+            <button
+              onClick={handleConfirmDir}
+              className="text-xs px-2 py-1 rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 flex-1"
+            >
+              确认
+            </button>
+            <button
+              onClick={() => setShowDirInput(false)}
+              className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-400 hover:bg-gray-600 flex-1"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex border-b border-gray-800">
@@ -125,12 +205,14 @@ export function WorkspacePanel({
           />
         )}
         {activeTab === "changes" && (
-          <div className="divide-y divide-gray-800/50">
+          <div className="divide-y divide-gray-800/50" ref={changesRef}>
             {fileChanges.length === 0 && (
               <div className="px-3 py-4 text-xs text-gray-600 text-center">暂无变更</div>
             )}
-            {fileChanges.map((change) => (
-              <div key={change.id} className="bg-gray-900/50">
+            {fileChanges.map((change) => {
+              const isHighlighted = selectedChangePath === change.path;
+              return (
+              <div key={change.id} className={`${isHighlighted ? "ring-1 ring-blue-500 bg-blue-900/10" : "bg-gray-900/50"}`}>
                 <DiffCard change={change} />
                 {change.status === "pending" && (
                   <div className="flex gap-2 px-3 py-1.5">
@@ -151,7 +233,8 @@ export function WorkspacePanel({
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

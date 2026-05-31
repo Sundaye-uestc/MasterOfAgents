@@ -9,6 +9,7 @@ import type { WorkspaceRow, WorkspaceSnapshotRow, FileChangeRow } from "@agenthu
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as crypto from "node:crypto";
+import * as diffLib from "diff";
 
 // --- Manifest types ---
 
@@ -49,7 +50,7 @@ export class WorkspaceService {
     const existing = await this.getWorkspaceByConversation(conversationId);
     if (existing) return existing;
 
-    const rootPath = path.resolve(process.cwd(), "data", "workspaces", conversationId);
+    const rootPath = path.resolve(process.cwd(), "..", "Test");
     fs.mkdirSync(rootPath, { recursive: true });
     return this.createWorkspace(conversationId, rootPath);
   }
@@ -66,6 +67,24 @@ export class WorkspaceService {
     };
     db.insert(schema.workspaces).values(row).run();
     return row as any;
+  }
+
+  async updateWorkspace(id: string, updates: { rootPath?: string }): Promise<WorkspaceRow | undefined> {
+    const db = getDb();
+    const ws = await this.getWorkspace(id);
+    if (!ws) return undefined;
+
+    if (updates.rootPath) {
+      // Ensure the new directory exists
+      fs.mkdirSync(updates.rootPath, { recursive: true });
+      db.update(schema.workspaces)
+        .set({ rootPath: updates.rootPath } as any)
+        .where(eq(schema.workspaces.id, id))
+        .run();
+      ws.rootPath = updates.rootPath;
+    }
+
+    return ws;
   }
 
   async deleteWorkspace(id: string): Promise<boolean> {
@@ -104,8 +123,9 @@ export class WorkspaceService {
   ): Promise<WorkspaceSnapshotRow> {
     const db = getDb();
     const now = nowISO();
+    const id = newId();
     const row = {
-      id: newId(),
+      id,
       workspaceId,
       runId,
       label,
@@ -113,6 +133,15 @@ export class WorkspaceService {
       createdAt: now,
     };
     db.insert(schema.workspaceSnapshots).values(row).run();
+
+    // Copy workspace files to snapshot directory for later diffing
+    const ws = await this.getWorkspace(workspaceId);
+    if (ws && fs.existsSync(ws.rootPath)) {
+      const destDir = this._snapshotDir(id);
+      fs.mkdirSync(destDir, { recursive: true });
+      this._copyDir(ws.rootPath, destDir);
+    }
+
     return row as any;
   }
 
@@ -121,6 +150,13 @@ export class WorkspaceService {
     const snap = await this.getSnapshot(id);
     if (!snap) return false;
     db.delete(schema.workspaceSnapshots).where(eq(schema.workspaceSnapshots.id, id)).run();
+
+    // Clean up snapshot file copies
+    const snapDir = this._snapshotDir(id);
+    if (fs.existsSync(snapDir)) {
+      fs.rmSync(snapDir, { recursive: true, force: true });
+    }
+
     return true;
   }
 
@@ -238,7 +274,7 @@ export class WorkspaceService {
         changeType = "delete";
       } else if (before && after && before.hash !== after.hash) {
         changeType = "modify";
-        diff = this._generateDiff(filePath, before.hash, after.hash);
+        diff = this._generateDiff(beforeId, filePath, before.hash, after.hash);
       } else {
         continue; // unchanged
       }
@@ -275,11 +311,72 @@ export class WorkspaceService {
     return changes;
   }
 
-  /** Generate a unified-diff-style summary between two file versions */
-  private _generateDiff(filePath: string, _beforeHash: string, _afterHash: string): string {
-    // In a full implementation, this would retrieve the actual file contents
-    // from snapshots and produce a unified diff. For MVP, return a summary.
-    return `--- a/${filePath}\n+++ b/${filePath}\n@@ -1 +1 @@\n- ${_beforeHash.slice(0, 16)}\n+ ${_afterHash.slice(0, 16)}`;
+  /** Generate a real unified diff between before-snapshot and current workspace files */
+  private _generateDiff(beforeSnapshotId: string, filePath: string, _beforeHash: string, _afterHash: string): string {
+    const snapDir = this._snapshotDir(beforeSnapshotId);
+    const beforeFile = path.join(snapDir, filePath);
+
+    // Find the workspace root path by looking up the snapshot's workspace
+    const afterFile = this._findWorkspaceFile(beforeSnapshotId, filePath);
+
+    const beforeContent = fs.existsSync(beforeFile)
+      ? fs.readFileSync(beforeFile, "utf-8")
+      : "";
+    const afterContent = afterFile && fs.existsSync(afterFile)
+      ? fs.readFileSync(afterFile, "utf-8")
+      : "";
+
+    const patch = diffLib.createPatch(filePath, beforeContent, afterContent, "before", "after");
+    return patch;
+  }
+
+  /** Resolve the snapshot storage directory */
+  private _snapshotDir(snapshotId: string): string {
+    return path.resolve(process.cwd(), "data", "snapshots", snapshotId);
+  }
+
+  /** Look up the workspace file path for a given snapshot */
+  private _findWorkspaceFile(snapshotId: string, filePath: string): string | null {
+    // Walk up: snapshot → workspace → rootPath
+    const snap = this._getSnapshotSync(snapshotId);
+    if (!snap) return null;
+    const ws = this._getWorkspaceSync(snap.workspaceId);
+    if (!ws) return null;
+    return path.join(ws.rootPath, filePath);
+  }
+
+  /** Synchronously get a snapshot (for use in synchronous _generateDiff context) */
+  private _getSnapshotSync(id: string): WorkspaceSnapshotRow | undefined {
+    return getDb()
+      .select()
+      .from(schema.workspaceSnapshots)
+      .where(eq(schema.workspaceSnapshots.id, id))
+      .get() as any;
+  }
+
+  /** Synchronously get a workspace by ID */
+  private _getWorkspaceSync(id: string): WorkspaceRow | undefined {
+    return getDb()
+      .select()
+      .from(schema.workspaces)
+      .where(eq(schema.workspaces.id, id))
+      .get() as any;
+  }
+
+  /** Recursively copy a directory (skipping hidden files/dirs) */
+  private _copyDir(src: string, dest: string): void {
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name.startsWith(".")) continue;
+      const srcPath = path.join(src, entry.name);
+      const destPath = path.join(dest, entry.name);
+      if (entry.isDirectory()) {
+        fs.mkdirSync(destPath, { recursive: true });
+        this._copyDir(srcPath, destPath);
+      } else {
+        fs.copyFileSync(srcPath, destPath);
+      }
+    }
   }
 
   // --- File Changes ---

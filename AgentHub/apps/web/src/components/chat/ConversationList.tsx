@@ -59,6 +59,7 @@ export function ConversationList({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showNewModal, setShowNewModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  const [newRootPath, setNewRootPath] = useState("");
   const [newAgentId, setNewAgentId] = useState("default-claude");
   const [isGroupChat, setIsGroupChat] = useState(false);
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
@@ -126,6 +127,7 @@ export function ConversationList({
     } catch { /* ignore */ }
     setShowNewModal(true);
     setNewTitle("");
+    setNewRootPath("");
     setNewAgentId("default-claude");
     setIsGroupChat(false);
     setSelectedAgentIds([]);
@@ -136,12 +138,13 @@ export function ConversationList({
     const title = newTitle.trim() || "New Chat";
     setShowNewModal(false);
     try {
+      const rootPath = newRootPath.trim() || undefined;
       if (isGroupChat) {
         const ids = selectedAgentIds.length > 0 ? selectedAgentIds : [newAgentId];
-        const conv = await createConversation(title, "group", undefined, ids);
+        const conv = await createConversation(title, "group", undefined, ids, rootPath);
         onConversationCreated(conv, ids[0]);
       } else {
-        const conv = await createConversation(title, "direct", newAgentId, undefined);
+        const conv = await createConversation(title, "direct", newAgentId, undefined, rootPath);
         onConversationCreated(conv, newAgentId);
       }
     } catch (err) {
@@ -434,6 +437,21 @@ export function ConversationList({
               }}
               placeholder="输入对话名称"
               className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            />
+
+            <label className="block text-xs text-gray-400 mb-1 mt-3">
+              工作目录 <span className="text-gray-600">（可选，留空则使用默认目录）</span>
+            </label>
+            <input
+              type="text"
+              value={newRootPath}
+              onChange={(e) => setNewRootPath(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleConfirmCreate();
+                if (e.key === "Escape") setShowNewModal(false);
+              }}
+              placeholder="例: D:\Projects\MyWorkDir"
+              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500 font-mono"
             />
 
             <label className="block text-xs text-gray-400 mb-1 mt-3">

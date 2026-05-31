@@ -1,6 +1,6 @@
 # AgentHub 待办事项
 
-**更新日期：** 2026-05-31（Phase 3 遗留完成 + Phase 4.3 部分完成）
+**更新日期：** 2026-05-31（Phase 3 遗留 + 4.3 完成，4.2 完成）
 
 ---
 
@@ -42,14 +42,14 @@ Agent 每次新对话都是"冷启动"，没有跨对话记忆。单次对话中
 
 ### 4.2 对话中 Diff 展示完善
 
-- [ ] Agent 回复未携带 Diff — 确认 Agent（Claude Code / Codex）是否在 `text_delta` 中输出 diff 内容，以及前端是否正确解析和渲染
-- [ ] DiffCard 在对话流中的定位 — FileChangeList 已渲染 DiffCard，但 Agent 消息中的代码差异可能应当内联展示而非仅出现在右侧面板
-- [ ] 消息内 Diff 语法高亮 — 对话气泡中 Markdown 渲染的 ` ```diff ` 代码块应使用 DiffCard 组件替代纯文本
-- [ ] Diff 与 FileChange 联动 — 点击消息中的 diff 应高亮右侧面板中对应的 file_change 记录
-- [ ] 增量 Diff 渲染 — 长 diff 默认折叠，可展开查看完整上下文
+- [x] Agent 回复未携带 Diff — DiffBlock 组件已就绪，可解析 Agent 输出的 `` ```diff `` 块并彩色渲染
+- [x] DiffCard 在对话流中的定位 — MarkdownContent 中 `` ```diff `` 块使用 DiffBlock 内联渲染
+- [x] 消息内 Diff 语法高亮 — DiffBlock 组件：+ 绿 / - 红 / @@ 蓝 / 上下文灰
+- [x] Diff 与 FileChange 联动 — 点击 diff 文件路径自动打开 WorkspacePanel 变更 Tab 并高亮对应记录
+- [x] 增量 Diff 渲染 — 超过 20 行的 diff 默认折叠，可展开/收起
 
 ### 当前行为
-Agent 可能通过 markdown 代码块输出文件变更，但前端仅作为普通文本渲染，没有利用 file_changes 数据链路进行结构化展示。DiffCard 组件已存在但仅在 WorkspacePanel 中展示。
+Agent 消息中的 `` ```diff `` 代码块使用 DiffBlock 组件渲染（彩色行、文件路径可点击定位）。WorkspacePanel 的 DiffCard 同样使用 DiffBlock 展示真实 unified diff（服务端通过 `diff` 库生成，快照文件副本存储于 `data/snapshots/`）。点击 diff 文件路径自动切换到 WorkspacePanel 变更 Tab 并高亮对应记录。
 
 ---
 
