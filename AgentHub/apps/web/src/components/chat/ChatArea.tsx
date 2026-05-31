@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { MessageRow, FileChangeRow } from "@agenthub/shared";
-import { listMessages, sendMessage, stopRun, deleteMessage, pinMessage, getPinnedMessages, retryMessage, listMembers, listAgents, listFileChangesByConversation } from "../../lib/api.js";
+import { listMessages, sendMessage, stopRun, deleteMessage, pinMessage, getPinnedMessages, retryMessage, listMembers, listAgents } from "../../lib/api.js";
 import { useWebSocket } from "../../hooks/useWebSocket.js";
 import type { WsServerEvent } from "../../hooks/useWebSocket.js";
 import { useOrchestrationState } from "../../hooks/useOrchestrationState.js";
@@ -13,6 +13,7 @@ import { MarkdownContent } from "./MarkdownContent.js";
 import { ReplyPreviewCard } from "./ReplyPreviewCard.js";
 import { PinnedMessageBar } from "./PinnedMessageBar.js";
 import { FileChangeList } from "../workspace/FileChangeList.js";
+import { useWorkspaceStore } from "../../stores/workspace.store.js";
 
 interface ToolInvocation {
   id: string;
@@ -37,10 +38,9 @@ interface Props {
   conversationTitle?: string;
   adapterKind?: string;
   userAvatar?: string | null;
-  onFileChangesSync?: (changes: FileChangeRow[]) => void;
 }
 
-export function ChatArea({ conversationId, onRefreshList, agentId, conversationType, conversationTitle, adapterKind, userAvatar, onFileChangesSync }: Props) {
+export function ChatArea({ conversationId, onRefreshList, agentId, conversationType, conversationTitle, adapterKind, userAvatar }: Props) {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -64,8 +64,11 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
   } | null>(null);
   const [pinnedMessages, setPinnedMessages] = useState<MessageRow[]>([]);
   const [showPinnedBar, setShowPinnedBar] = useState(true);
-  const [fileChanges, setFileChanges] = useState<FileChangeRow[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Workspace store for file changes (single source of truth)
+  const workspaceFileChanges = useWorkspaceStore((s) => s.fileChanges);
+  const workspaceUpdateFileChange = useWorkspaceStore((s) => s.updateFileChange);
 
   const { state: orch, handleWsEvent: handleOrchEvent, reset: resetOrch } = useOrchestrationState();
 
@@ -121,15 +124,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
     getPinnedMessages(conversationId)
       .then(setPinnedMessages)
       .catch(() => {});
-    listFileChangesByConversation(conversationId)
-      .then(setFileChanges)
-      .catch(() => {});
   }, [conversationId]);
-
-  // Sync fileChanges to parent (e.g. WorkspacePanel in App)
-  useEffect(() => {
-    onFileChangesSync?.(fileChanges);
-  }, [fileChanges, onFileChangesSync]);
 
   // WebSocket for real-time events
   const onWsEvent = useCallback(
@@ -233,13 +228,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
         case "file:changed": {
           const fc = (event as any).change as FileChangeRow;
           if (!fc) break;
-          setFileChanges((prev) => {
-            const idx = prev.findIndex((c) => c.id === fc.id);
-            if (idx >= 0) {
-              return [...prev.slice(0, idx), fc, ...prev.slice(idx + 1)];
-            }
-            return [fc, ...prev];
-          });
+          workspaceUpdateFileChange(fc);
           break;
         }
         case "orchestrator:plan_created":
@@ -247,7 +236,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           break;
       }
     },
-    [onRefreshList, handleOrchEvent]
+    [onRefreshList, handleOrchEvent, workspaceUpdateFileChange]
   );
 
   const { send: wsSend } = useWebSocket(conversationId, onWsEvent);
@@ -393,10 +382,8 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
   }, [permRequest, wsSend]);
 
   const handleFileChangeUpdate = useCallback((updated: FileChangeRow) => {
-    setFileChanges((prev) =>
-      prev.map((c) => (c.id === updated.id ? updated : c))
-    );
-  }, []);
+    workspaceUpdateFileChange(updated);
+  }, [workspaceUpdateFileChange]);
 
   // Multi-agent color mapping for messages
   const agentColor = (adapterKind: string) => {
@@ -533,7 +520,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
       )}
 
       {/* File changes */}
-      <FileChangeList changes={fileChanges} onUpdate={handleFileChangeUpdate} />
+      <FileChangeList changes={workspaceFileChanges} onUpdate={handleFileChangeUpdate} />
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6">

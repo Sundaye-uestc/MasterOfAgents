@@ -8,6 +8,7 @@ import {
   getWorkspace,
   createWorkspace,
   listSnapshots,
+  listFiles,
   createSnapshot,
   listFileChangesByConversation,
 } from "../lib/api.js";
@@ -68,7 +69,11 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
             createdAt: s.createdAt,
             runId: s.runId,
           }));
-        } catch {}
+        } catch { /* snapshot load failure is non-fatal */ }
+
+        try {
+          files = await listFiles(ws.id);
+        } catch { /* file tree load failure is non-fatal */ }
       }
 
       set({ files, snapshots, fileChanges: changes, loading: false });

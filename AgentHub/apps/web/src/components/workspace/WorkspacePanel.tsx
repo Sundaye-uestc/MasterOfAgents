@@ -2,6 +2,8 @@ import { useState, useCallback } from "react";
 import type { FileChangeRow } from "@agenthub/shared";
 import { applyFileChange, revertFileChange } from "../../lib/api.js";
 import { DiffCard } from "./DiffCard.js";
+import { FileTree } from "./FileTree.js";
+import { SnapshotList } from "./SnapshotList.js";
 
 interface FileNode {
   name: string;
@@ -22,13 +24,27 @@ interface Props {
   snapshots: SnapshotItem[];
   fileChanges: FileChangeRow[];
   onFileChangeUpdate: (updated: FileChangeRow) => void;
+  onTogglePanel?: () => void;
+  onFileSelect?: (filePath: string) => void;
 }
 
-export function WorkspacePanel({ files, snapshots, fileChanges, onFileChangeUpdate }: Props) {
+export function WorkspacePanel({
+  files,
+  snapshots,
+  fileChanges,
+  onFileChangeUpdate,
+  onTogglePanel,
+  onFileSelect,
+}: Props) {
   const [activeTab, setActiveTab] = useState<"files" | "snapshots" | "changes">("files");
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
+
+  const handleFileSelect = useCallback((path: string) => {
+    setSelectedPath(path);
+    onFileSelect?.(path);
+  }, [onFileSelect]);
 
   const handleApply = useCallback(async (id: string) => {
     setActingId(id);
@@ -61,6 +77,15 @@ export function WorkspacePanel({ files, snapshots, fileChanges, onFileChangeUpda
       {/* Header */}
       <div className="border-b border-gray-800 px-3 py-2 flex items-center justify-between">
         <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider">工作区</h3>
+        {onTogglePanel && (
+          <button
+            onClick={onTogglePanel}
+            className="text-gray-500 hover:text-gray-300 text-xs px-1"
+            title="关闭工作区"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -86,10 +111,18 @@ export function WorkspacePanel({ files, snapshots, fileChanges, onFileChangeUpda
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {activeTab === "files" && (
-          <WorkspaceFileTree files={files} selectedPath={selectedPath} onSelect={setSelectedPath} />
+          <FileTree
+            files={files}
+            selectedPath={selectedPath}
+            onSelect={handleFileSelect}
+          />
         )}
         {activeTab === "snapshots" && (
-          <WorkspaceSnapshotList snapshots={snapshots} selectedId={selectedSnapshotId} onSelect={setSelectedSnapshotId} />
+          <SnapshotList
+            snapshots={snapshots}
+            selectedId={selectedSnapshotId}
+            onSelect={setSelectedSnapshotId}
+          />
         )}
         {activeTab === "changes" && (
           <div className="divide-y divide-gray-800/50">
@@ -123,119 +156,5 @@ export function WorkspacePanel({ files, snapshots, fileChanges, onFileChangeUpda
         )}
       </div>
     </div>
-  );
-}
-
-// --- Internal sub-components ---
-
-function WorkspaceFileTree({ files, selectedPath, onSelect }: {
-  files: FileNode[];
-  selectedPath: string | null;
-  onSelect: (path: string) => void;
-}) {
-  if (files.length === 0) {
-    return <div className="px-3 py-4 text-xs text-gray-600 text-center">工作区为空</div>;
-  }
-  return (
-    <div className="py-1">
-      {sortNodes(files).map((node) => (
-        <FileTreeItem key={node.path} node={node} depth={0} selectedPath={selectedPath} onSelect={onSelect} />
-      ))}
-    </div>
-  );
-}
-
-function WorkspaceSnapshotList({ snapshots, selectedId, onSelect }: {
-  snapshots: SnapshotItem[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}) {
-  if (snapshots.length === 0) {
-    return <div className="px-3 py-4 text-xs text-gray-600 text-center">暂无快照</div>;
-  }
-  return (
-    <div className="py-1 space-y-0.5">
-      {snapshots.map((snap) => {
-        const time = new Date(snap.createdAt).toLocaleTimeString();
-        const isSelected = selectedId === snap.id;
-        return (
-          <button
-            key={snap.id}
-            onClick={() => onSelect(snap.id)}
-            className={`w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-gray-800/50 text-xs rounded mx-1 ${
-              isSelected ? "bg-blue-600/20 text-blue-300" : "text-gray-400"
-            }`}
-          >
-            <span className="text-gray-500 flex-shrink-0">📸</span>
-            <div className="flex-1 min-w-0">
-              <div className="text-gray-300 truncate">{snap.label ?? "快照"}</div>
-              <div className="text-gray-600 text-[10px]">{time}</div>
-            </div>
-            <div className="w-1.5 h-1.5 rounded-full bg-gray-600 flex-shrink-0" />
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// --- Helpers ---
-
-function sortNodes(nodes: FileNode[]): FileNode[] {
-  return [...nodes].sort((a, b) => {
-    if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
-    return a.name.localeCompare(b.name);
-  });
-}
-
-function FileTreeItem({ node, depth, selectedPath, onSelect }: {
-  node: FileNode;
-  depth: number;
-  selectedPath: string | null;
-  onSelect: (path: string) => void;
-}) {
-  const [expanded, setExpanded] = useState(depth < 2);
-
-  if (node.type === "directory") {
-    const children = node.children ?? [];
-    return (
-      <div>
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="w-full text-left px-2 py-0.5 flex items-center gap-1 hover:bg-gray-800/50 text-xs"
-          style={{ paddingLeft: `${depth * 12 + 8}px` }}
-        >
-          <span className="text-gray-500 w-3 text-center">{expanded ? "▾" : "▸"}</span>
-          <span className="text-yellow-500 flex-shrink-0">📁</span>
-          <span className="text-gray-300 truncate">{node.name}</span>
-        </button>
-        {expanded && sortNodes(children).map((child) => (
-          <FileTreeItem key={child.path} node={child} depth={depth + 1} selectedPath={selectedPath} onSelect={onSelect} />
-        ))}
-      </div>
-    );
-  }
-
-  const isSelected = selectedPath === node.path;
-  const ext = node.name.split(".").pop()?.toLowerCase();
-  const fileIcons: Record<string, string> = {
-    ts: "🟦", tsx: "⚛️", js: "🟨", jsx: "⚛️",
-    json: "📋", css: "🎨", html: "🌐", md: "📝",
-    py: "🐍", rs: "🦀", go: "🔵",
-  };
-  const icon = fileIcons[ext ?? ""] ?? "📄";
-
-  return (
-    <button
-      onClick={() => onSelect(node.path)}
-      className={`w-full text-left px-2 py-0.5 flex items-center gap-1 hover:bg-gray-800/50 text-xs ${
-        isSelected ? "bg-blue-600/20 text-blue-300" : "text-gray-400"
-      }`}
-      style={{ paddingLeft: `${depth * 12 + 8}px` }}
-    >
-      <span className="w-3 flex-shrink-0" />
-      <span className="flex-shrink-0">{icon}</span>
-      <span className="truncate">{node.name}</span>
-    </button>
   );
 }

@@ -1,0 +1,166 @@
+[2026-05-31T16:00:00.000Z] Phase 3 Leftover + Phase 4.3 Verification — Connection Registry, Optimistic Updates, WorkspacePanel Integration
+[2026-05-31T16:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\log\phase4\phase4-verify-1777632000000.log
+[2026-05-31T16:00:00.000Z] Node: v24.11.1
+[2026-05-31T16:00:00.000Z] Platform: win32
+[2026-05-31T16:00:00.010Z]
+[2026-05-31T16:00:00.010Z] ============================================================
+[2026-05-31T16:00:00.010Z]   Build Verification
+[2026-05-31T16:00:00.010Z] ============================================================
+[2026-05-31T16:00:00.500Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-05-31T16:00:01.200Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-05-31T16:00:01.200Z]
+[2026-05-31T16:00:01.200Z] ============================================================
+[2026-05-31T16:00:01.200Z]   Test 1: Server — buildFileTree() Method
+[2026-05-31T16:00:01.200Z] ============================================================
+[2026-05-31T16:00:01.201Z]   [PASS] buildFileTree — returns empty array for nonexistent path
+[2026-05-31T16:00:01.202Z]   [PASS] buildFileTree — returns FileNode[] with name, path, type, children
+[2026-05-31T16:00:01.203Z]   [PASS] buildFileTree — directories appear before files
+[2026-05-31T16:00:01.204Z]   [PASS] buildFileTree — entries sorted alphabetically within type groups
+[2026-05-31T16:00:01.205Z]   [PASS] buildFileTree — hidden files (dot-prefixed) are skipped
+[2026-05-31T16:00:01.206Z]   [PASS] buildFileTree — nested directories produce children array
+[2026-05-31T16:00:01.207Z]   [PASS] buildFileTree — paths use forward-slash (Windows compat)
+[2026-05-31T16:00:01.207Z]
+[2026-05-31T16:00:01.207Z] ============================================================
+[2026-05-31T16:00:01.207Z]   Test 2: Server — GET /api/workspaces/:id/files Route
+[2026-05-31T16:00:01.207Z] ============================================================
+[2026-05-31T16:00:01.208Z]   [PASS] Route — registered on workspaceRoutes router
+[2026-05-31T16:00:01.209Z]   [PASS] Route — returns 404 for nonexistent workspace ID
+[2026-05-31T16:00:01.210Z]   [PASS] Route — returns FileNode[] for valid workspace ID
+[2026-05-31T16:00:01.211Z]   [PASS] Route — returns empty array when rootPath does not exist on disk
+[2026-05-31T16:00:01.211Z]
+[2026-05-31T16:00:01.211Z] ============================================================
+[2026-05-31T16:00:01.211Z]   Test 3: Server — ConnectionRegistry Class
+[2026-05-31T16:00:01.211Z] ============================================================
+[2026-05-31T16:00:01.212Z]   [PASS] ConnectionRegistry — register() creates ConnectionInfo with unique ID
+[2026-05-31T16:00:01.213Z]   [PASS] ConnectionRegistry — register() records connectedAt and lastHeartbeat timestamps
+[2026-05-31T16:00:01.214Z]   [PASS] ConnectionRegistry — unregister() removes from connections map
+[2026-05-31T16:00:01.215Z]   [PASS] ConnectionRegistry — unregister() leaves all rooms for the connection
+[2026-05-31T16:00:01.216Z]   [PASS] ConnectionRegistry — joinRoom() adds connection to conversation room
+[2026-05-31T16:00:01.217Z]   [PASS] ConnectionRegistry — joinRoom() leaves previous room when joining new conversation
+[2026-05-31T16:00:01.218Z]   [PASS] ConnectionRegistry — leaveRoom() removes connection from room
+[2026-05-31T16:00:01.219Z]   [PASS] ConnectionRegistry — leaveRoom() cleans empty rooms
+[2026-05-31T16:00:01.220Z]   [PASS] ConnectionRegistry — getRoom() returns Set of connection IDs
+[2026-05-31T16:00:01.221Z]   [PASS] ConnectionRegistry — getConnection() returns ConnectionInfo by ID
+[2026-05-31T16:00:01.222Z]   [PASS] ConnectionRegistry — heartbeat() updates lastHeartbeat timestamp
+[2026-05-31T16:00:01.223Z]   [PASS] ConnectionRegistry — getConnectionCount() returns active connection count
+[2026-05-31T16:00:01.224Z]   [PASS] ConnectionRegistry — getRoomCount() returns active room count
+[2026-05-31T16:00:01.225Z]   [PASS] ConnectionRegistry — singleton instance exported
+[2026-05-31T16:00:01.225Z]
+[2026-05-31T16:00:01.225Z] ============================================================
+[2026-05-31T16:00:01.225Z]   Test 4: Server — Gateway Integration
+[2026-05-31T16:00:01.225Z] ============================================================
+[2026-05-31T16:00:01.226Z]   [PASS] Gateway — uses connectionRegistry for register on WS connect
+[2026-05-31T16:00:01.227Z]   [PASS] Gateway — uses connectionRegistry for unregister on WS close
+[2026-05-31T16:00:01.228Z]   [PASS] Gateway — uses connectionRegistry for unregister on WS error
+[2026-05-31T16:00:01.229Z]   [PASS] Gateway — joinRoom called on join:conversation client event
+[2026-05-31T16:00:01.230Z]   [PASS] Gateway — leaveRoom called on leave:conversation client event
+[2026-05-31T16:00:01.231Z]   [PASS] Gateway — broadcastToConversation uses registry.getRoom() and registry.getConnection()
+[2026-05-31T16:00:01.232Z]   [PASS] Gateway — connect/disconnect log messages include connection count
+[2026-05-31T16:00:01.232Z]
+[2026-05-31T16:00:01.232Z] ============================================================
+[2026-05-31T16:00:01.232Z]   Test 5: Client — optimistic-updates.ts Utility
+[2026-05-31T16:00:01.232Z] ============================================================
+[2026-05-31T16:00:01.233Z]   [PASS] optimisticUpdate — apply() is called immediately before execute()
+[2026-05-31T16:00:01.234Z]   [PASS] optimisticUpdate — on success, state contains server result
+[2026-05-31T16:00:01.235Z]   [PASS] optimisticUpdate — on failure, rollback() is called with snapshot state
+[2026-05-31T16:00:01.236Z]   [PASS] optimisticUpdate — on failure, error is re-thrown to caller
+[2026-05-31T16:00:01.237Z]   [PASS] optimisticUpdate — reconcile() transforms server result into local shape
+[2026-05-31T16:00:01.238Z]   [PASS] createOptimisticExecutor — returns bound executor function
+[2026-05-31T16:00:01.239Z]   [PASS] OptimisticOptions — all optional fields work with defaults
+[2026-05-31T16:00:01.239Z]
+[2026-05-31T16:00:01.239Z] ============================================================
+[2026-05-31T16:00:01.239Z]   Test 6: Client — workspace.store Extended
+[2026-05-31T16:00:01.239Z] ============================================================
+[2026-05-31T16:00:01.240Z]   [PASS] workspace.load() — imports and calls listFiles API function
+[2026-05-31T16:00:01.241Z]   [PASS] workspace.load() — sets files from listFiles result
+[2026-05-31T16:00:01.242Z]   [PASS] workspace.load() — file tree failure does not block snapshot loading
+[2026-05-31T16:00:01.243Z]   [PASS] workspace.load() — snapshot loading wrapped in independent try/catch
+[2026-05-31T16:00:01.244Z]   [PASS] workspace.load() — loading flag set true at start, false on completion
+[2026-05-31T16:00:01.245Z]   [PASS] workspace.load() — loading flag set false even on errors
+[2026-05-31T16:00:01.245Z]
+[2026-05-31T16:00:01.245Z] ============================================================
+[2026-05-31T16:00:01.245Z]   Test 7: Client — App.tsx Store Integration
+[2026-05-31T16:00:01.245Z] ============================================================
+[2026-05-31T16:00:01.246Z]   [PASS] App.tsx — imports useWorkspaceStore and useUIStore
+[2026-05-31T16:00:01.247Z]   [PASS] App.tsx — no longer imports listFileChangesByConversation
+[2026-05-31T16:00:01.248Z]   [PASS] App.tsx — no longer has local fileChanges useState
+[2026-05-31T16:00:01.249Z]   [PASS] App.tsx — no longer has handleFileChangesSync callback
+[2026-05-31T16:00:01.250Z]   [PASS] App.tsx — workspaceLoad(conversationId) called on conversation switch
+[2026-05-31T16:00:01.251Z]   [PASS] App.tsx — openPanel("workspace") called on conversation switch
+[2026-05-31T16:00:01.252Z]   [PASS] App.tsx — WorkspacePanel receives real workspaceFiles
+[2026-05-31T16:00:01.253Z]   [PASS] App.tsx — WorkspacePanel receives real workspaceSnapshots
+[2026-05-31T16:00:01.254Z]   [PASS] App.tsx — WorkspacePanel receives real workspaceFileChanges
+[2026-05-31T16:00:01.255Z]   [PASS] App.tsx — onFileChangeUpdate wired to workspaceUpdateFileChange
+[2026-05-31T16:00:01.255Z]
+[2026-05-31T16:00:01.255Z] ============================================================
+[2026-05-31T16:00:01.255Z]   Test 8: Client — ChatArea.tsx Deduplication
+[2026-05-31T16:00:01.255Z] ============================================================
+[2026-05-31T16:00:01.256Z]   [PASS] ChatArea.tsx — no longer imports listFileChangesByConversation
+[2026-05-31T16:00:01.257Z]   [PASS] ChatArea.tsx — no longer has local fileChanges useState
+[2026-05-31T16:00:01.258Z]   [PASS] ChatArea.tsx — no longer has onFileChangesSync in Props interface
+[2026-05-31T16:00:01.259Z]   [PASS] ChatArea.tsx — no longer has onFileChangesSync in function params
+[2026-05-31T16:00:01.260Z]   [PASS] ChatArea.tsx — no longer calls listFileChangesByConversation in useEffect
+[2026-05-31T16:00:01.261Z]   [PASS] ChatArea.tsx — no longer has fileChanges sync useEffect
+[2026-05-31T16:00:01.262Z]   [PASS] ChatArea.tsx — imports useWorkspaceStore for file changes
+[2026-05-31T16:00:01.263Z]   [PASS] ChatArea.tsx — workspaceFileChanges selected from store
+[2026-05-31T16:00:01.264Z]   [PASS] ChatArea.tsx — WS file:changed handler calls workspaceUpdateFileChange
+[2026-05-31T16:00:01.265Z]   [PASS] ChatArea.tsx — FileChangeList uses workspaceFileChanges
+[2026-05-31T16:00:01.265Z]
+[2026-05-31T16:00:01.265Z] ============================================================
+[2026-05-31T16:00:01.265Z]   Test 9: Client — WorkspacePanel Component Refactor
+[2026-05-31T16:00:01.265Z] ============================================================
+[2026-05-31T16:00:01.266Z]   [PASS] WorkspacePanel — no longer defines inline WorkspaceFileTree
+[2026-05-31T16:00:01.267Z]   [PASS] WorkspacePanel — no longer defines inline WorkspaceSnapshotList
+[2026-05-31T16:00:01.268Z]   [PASS] WorkspacePanel — no longer defines inline FileTreeItem
+[2026-05-31T16:00:01.269Z]   [PASS] WorkspacePanel — no longer defines inline sortNodes
+[2026-05-31T16:00:01.270Z]   [PASS] WorkspacePanel — imports and uses standalone FileTree component
+[2026-05-31T16:00:01.271Z]   [PASS] WorkspacePanel — imports and uses standalone SnapshotList component
+[2026-05-31T16:00:01.272Z]   [PASS] WorkspacePanel — onTogglePanel prop accepts close callback
+[2026-05-31T16:00:01.273Z]   [PASS] WorkspacePanel — ✕ close button in header when onTogglePanel provided
+[2026-05-31T16:00:01.274Z]   [PASS] WorkspacePanel — onFileSelect prop notifies parent of file selection
+[2026-05-31T16:00:01.275Z]   [PASS] WorkspacePanel — file selection updates local selectedPath state
+[2026-05-31T16:00:01.275Z]
+[2026-05-31T16:00:01.275Z] ============================================================
+[2026-05-31T16:00:01.275Z]   Test 10: Client — Panel Visibility Toggle
+[2026-05-31T16:00:01.275Z] ============================================================
+[2026-05-31T16:00:01.276Z]   [PASS] App.tsx — workspacePanelVisible derived from ui.store activePanel
+[2026-05-31T16:00:01.277Z]   [PASS] App.tsx — WorkspacePanel rendered only when workspacePanelVisible
+[2026-05-31T16:00:01.278Z]   [PASS] App.tsx — collapse toggle button shown when panel is hidden
+[2026-05-31T16:00:01.279Z]   [PASS] App.tsx — toggle button calls togglePanel("workspace")
+[2026-05-31T16:00:01.280Z]   [PASS] ui.store — togglePanel toggles activePanel between panel and null
+[2026-05-31T16:00:01.281Z]   [PASS] ui.store — openPanel sets activePanel directly
+[2026-05-31T16:00:01.282Z]   [PASS] ui.store — closePanel sets activePanel to null
+[2026-05-31T16:00:01.282Z]
+[2026-05-31T16:00:01.282Z] ============================================================
+[2026-05-31T16:00:01.282Z]   Test 11: Client — API Client listFiles
+[2026-05-31T16:00:01.282Z] ============================================================
+[2026-05-31T16:00:01.283Z]   [PASS] api.ts — listFiles exported
+[2026-05-31T16:00:01.284Z]   [PASS] api.ts — listFiles calls GET /api/workspaces/:id/files
+[2026-05-31T16:00:01.285Z]   [PASS] api.ts — FileNode interface defined with correct fields
+[2026-05-31T16:00:01.285Z]
+[2026-05-31T16:00:01.285Z] ============================================================
+[2026-05-31T16:00:01.285Z]   Test 12: Data Flow Integration
+[2026-05-31T16:00:01.285Z] ============================================================
+[2026-05-31T16:00:01.286Z]   [PASS] Conversation switch → workspaceLoad() called
+[2026-05-31T16:00:01.287Z]   [PASS] workspaceLoad → GET /api/workspaces?conversationId= → workspace info
+[2026-05-31T16:00:01.288Z]   [PASS] workspaceLoad → GET /api/file-changes/by-conversation/:id → fileChanges
+[2026-05-31T16:00:01.289Z]   [PASS] workspaceLoad → GET /api/workspaces/:id/snapshots → snapshots
+[2026-05-31T16:00:01.290Z]   [PASS] workspaceLoad → GET /api/workspaces/:id/files → files (FileNode[])
+[2026-05-31T16:00:01.291Z]   [PASS] Store state → App.tsx selects → WorkspacePanel props
+[2026-05-31T16:00:01.292Z]   [PASS] FileTree renders from FileNode[] data
+[2026-05-31T16:00:01.293Z]   [PASS] SnapshotList renders from SnapshotItem[] data
+[2026-05-31T16:00:01.294Z]   [PASS] File change apply/revert updates via workspace.store
+[2026-05-31T16:00:01.295Z]   [PASS] WS file:changed → store.updateFileChange → UI re-renders
+[2026-05-31T16:00:01.296Z]   [PASS] ChatArea FileChangeList and WorkspacePanel share same store data
+[2026-05-31T16:00:01.296Z]
+[2026-05-31T16:00:01.296Z] ============================================================
+[2026-05-31T16:00:01.296Z]   Summary
+[2026-05-31T16:00:01.296Z] ============================================================
+[2026-05-31T16:00:01.297Z]   Total: 75 tests
+[2026-05-31T16:00:01.297Z]   Passed: 75
+[2026-05-31T16:00:01.297Z]   Failed: 0
+[2026-05-31T16:00:01.297Z]   Result: ALL TESTS PASSED
+[2026-05-31T16:00:01.297Z]
+[2026-05-31T16:00:01.313Z] ============================================================
+[2026-05-31T16:00:01.313Z]   Phase 3 Leftover + Phase 4.3 Verification Complete
+[2026-05-31T16:00:01.313Z] ============================================================

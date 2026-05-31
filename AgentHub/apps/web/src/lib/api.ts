@@ -179,6 +179,17 @@ export function listSnapshots(workspaceId: string) {
   return request<import("@agenthub/shared").WorkspaceSnapshotRow[]>(`/workspaces/${workspaceId}/snapshots`);
 }
 
+interface FileNode {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  children?: FileNode[];
+}
+
+export function listFiles(workspaceId: string) {
+  return request<FileNode[]>(`/workspaces/${workspaceId}/files`);
+}
+
 export function createSnapshot(workspaceId: string, runId: string, label: string, manifest: Record<string, unknown>) {
   return request<import("@agenthub/shared").WorkspaceSnapshotRow>(`/workspaces/${workspaceId}/snapshots`, {
     method: "POST",

@@ -2,9 +2,11 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { ConversationList, type AgentInfo } from "./components/chat/ConversationList.js";
 import { ChatArea } from "./components/chat/ChatArea.js";
 import { WorkspacePanel } from "./components/workspace/WorkspacePanel.js";
-import { getConversationAgentsMap, listFileChangesByConversation } from "./lib/api.js";
+import { getConversationAgentsMap } from "./lib/api.js";
+import { useWorkspaceStore } from "./stores/workspace.store.js";
+import { useUIStore } from "./stores/ui.store.js";
 import { useUserAvatar } from "./hooks/useUserAvatar.js";
-import type { ConversationRow, FileChangeRow } from "@agenthub/shared";
+import type { ConversationRow } from "@agenthub/shared";
 
 export function App() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -96,23 +98,25 @@ export function App() {
     [activeConversationId]
   );
 
-  // Workspace panel state
-  const [fileChanges, setFileChanges] = useState<FileChangeRow[]>([]);
+  // Workspace panel state — from Zustand store
+  const workspaceFiles = useWorkspaceStore((s) => s.files);
+  const workspaceSnapshots = useWorkspaceStore((s) => s.snapshots);
+  const workspaceFileChanges = useWorkspaceStore((s) => s.fileChanges);
+  const workspaceLoad = useWorkspaceStore((s) => s.load);
+  const workspaceUpdateFileChange = useWorkspaceStore((s) => s.updateFileChange);
 
-  const handleFileChangesSync = useCallback((changes: FileChangeRow[]) => {
-    setFileChanges(changes);
-  }, []);
+  // UI panel visibility
+  const workspacePanelVisible = useUIStore((s) => s.activePanel === "workspace");
+  const openPanel = useUIStore((s) => s.openPanel);
+  const togglePanel = useUIStore((s) => s.togglePanel);
 
-  // Load file changes on conversation switch (before ChatArea syncs via callback)
+  // Load workspace data on conversation switch
   useEffect(() => {
     if (activeConversationId) {
-      listFileChangesByConversation(activeConversationId)
-        .then(setFileChanges)
-        .catch(() => {});
-    } else {
-      setFileChanges([]);
+      workspaceLoad(activeConversationId);
+      openPanel("workspace");
     }
-  }, [activeConversationId]);
+  }, [activeConversationId, workspaceLoad, openPanel]);
 
   const activeAgentId = activeConversationId
     ? agentMap[activeConversationId]?.agentId
@@ -242,7 +246,6 @@ export function App() {
             conversationTitle={chatTitle}
             adapterKind={activeAdapterKind}
             userAvatar={userAvatar}
-            onFileChangesSync={handleFileChangesSync}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -255,17 +258,25 @@ export function App() {
       </div>
 
       {/* Workspace Panel — files, snapshots, file changes */}
-      {activeConversationId && (
+      {activeConversationId && workspacePanelVisible && (
         <WorkspacePanel
-          files={[]}
-          snapshots={[]}
-          fileChanges={fileChanges}
-          onFileChangeUpdate={(updated) =>
-            setFileChanges((prev) =>
-              prev.map((c) => (c.id === updated.id ? updated : c))
-            )
-          }
+          files={workspaceFiles}
+          snapshots={workspaceSnapshots}
+          fileChanges={workspaceFileChanges}
+          onFileChangeUpdate={workspaceUpdateFileChange}
+          onTogglePanel={() => togglePanel("workspace")}
         />
+      )}
+
+      {/* Workspace toggle button (when panel is hidden) */}
+      {activeConversationId && !workspacePanelVisible && (
+        <button
+          onClick={() => togglePanel("workspace")}
+          className="absolute right-0 top-1/2 -translate-y-1/2 bg-gray-800 border border-gray-700 rounded-l-lg px-1 py-3 text-gray-400 hover:text-gray-200 hover:bg-gray-700 z-10"
+          title="显示工作区"
+        >
+          ◀
+        </button>
       )}
 
       {/* Toast notification */}

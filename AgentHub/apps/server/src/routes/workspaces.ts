@@ -61,3 +61,12 @@ workspaceRoutes.delete("/:id/snapshots/:snapshotId", async (c) => {
   if (!ok) return c.json({ error: "Not found" }, 404);
   return c.json({ ok: true });
 });
+
+// --- File tree ---
+
+workspaceRoutes.get("/:id/files", async (c) => {
+  const ws = await svc.getWorkspace(c.req.param("id")!);
+  if (!ws) return c.json({ error: "Workspace not found" }, 404);
+  const tree = svc.buildFileTree(ws.rootPath);
+  return c.json(tree);
+});

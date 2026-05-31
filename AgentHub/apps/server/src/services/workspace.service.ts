@@ -19,6 +19,13 @@ export interface FileEntry {
 
 export type Manifest = Record<string, FileEntry>;
 
+export interface FileNode {
+  name: string;
+  path: string;       // relative path from rootPath
+  type: "file" | "directory";
+  children?: FileNode[];
+}
+
 export class WorkspaceService {
   // --- Workspaces ---
 
@@ -147,6 +154,48 @@ export class WorkspaceService {
   private _fileHash(filePath: string): string {
     const content = fs.readFileSync(filePath);
     return crypto.createHash("sha256").update(content).digest("hex");
+  }
+
+  /** Recursively build a FileNode tree from a directory on disk */
+  buildFileTree(rootPath: string): FileNode[] {
+    if (!fs.existsSync(rootPath)) return [];
+    return this._buildTree(rootPath, rootPath);
+  }
+
+  private _buildTree(basePath: string, currentPath: string): FileNode[] {
+    const result: FileNode[] = [];
+    const entries = fs.readdirSync(currentPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (entry.name.startsWith(".")) continue;
+
+      const fullPath = path.join(currentPath, entry.name);
+      const relativePath = path.relative(basePath, fullPath).replace(/\\/g, "/");
+
+      if (entry.isDirectory()) {
+        const children = this._buildTree(basePath, fullPath);
+        result.push({
+          name: entry.name,
+          path: relativePath,
+          type: "directory",
+          children,
+        });
+      } else {
+        result.push({
+          name: entry.name,
+          path: relativePath,
+          type: "file",
+        });
+      }
+    }
+
+    // Directories first, then alphabetical within each group
+    result.sort((a, b) => {
+      if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    return result;
   }
 
   // --- Snapshot diffing ---
