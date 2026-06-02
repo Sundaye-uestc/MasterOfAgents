@@ -7,6 +7,8 @@ import { eq, desc, like, and } from "drizzle-orm";
 import { newId, nowISO } from "../lib/ids.js";
 import type { ConversationRow, MessageRow } from "@agenthub/shared";
 import { broadcastToConversation } from "../ws/gateway.js";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 export class ChatService {
   // --- Conversations ---
@@ -340,14 +342,33 @@ export class ChatService {
     db.delete(schema.messages).where(eq(schema.messages.conversationId, id)).run();
     db.delete(schema.conversationMembers).where(eq(schema.conversationMembers.conversationId, id)).run();
 
-    // Workspaces and snapshots
+    // Workspaces and snapshots — clean up DB rows AND on-disk files
     const wsRows = db
       .select({ id: schema.workspaces.id })
       .from(schema.workspaces)
       .where(eq(schema.workspaces.conversationId, id))
       .all() as { id: string }[];
+
     for (const ws of wsRows) {
+      // Delete snapshot DB rows + on-disk snapshot directories
+      const snapRows = db
+        .select({ id: schema.workspaceSnapshots.id })
+        .from(schema.workspaceSnapshots)
+        .where(eq(schema.workspaceSnapshots.workspaceId, ws.id))
+        .all() as { id: string }[];
+      for (const snap of snapRows) {
+        const snapDir = path.resolve(process.cwd(), "data", "snapshots", snap.id);
+        if (fs.existsSync(snapDir)) {
+          fs.rmSync(snapDir, { recursive: true, force: true });
+        }
+      }
       db.delete(schema.workspaceSnapshots).where(eq(schema.workspaceSnapshots.workspaceId, ws.id)).run();
+
+      // Clean up on-disk workspace directory (data/workspaces/<id>/)
+      const wsDir = path.resolve(process.cwd(), "data", "workspaces", ws.id);
+      if (fs.existsSync(wsDir)) {
+        fs.rmSync(wsDir, { recursive: true, force: true });
+      }
     }
     db.delete(schema.workspaces).where(eq(schema.workspaces.conversationId, id)).run();
 
