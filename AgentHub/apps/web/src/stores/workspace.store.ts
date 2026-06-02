@@ -29,6 +29,7 @@ interface SnapshotItem {
 }
 
 interface WorkspaceStoreState {
+  activeConversationId: string | null;
   workspaceId: string | null;
   rootPath: string | null;
   files: FileNode[];
@@ -44,6 +45,7 @@ interface WorkspaceStoreState {
 }
 
 export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
+  activeConversationId: null,
   workspaceId: null,
   rootPath: null,
   files: [],
@@ -52,7 +54,16 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   loading: false,
 
   load: async (conversationId) => {
-    set({ loading: true });
+    const prevConvId = get().activeConversationId;
+    const isNewConversation = prevConvId !== conversationId;
+
+    if (isNewConversation) {
+      // Clear per-conversation state when switching conversations
+      set({ activeConversationId: conversationId, loading: true, fileChanges: [], files: [], snapshots: [], workspaceId: null, rootPath: null });
+    } else {
+      set({ loading: true });
+    }
+
     try {
       const [ws, changes] = await Promise.all([
         getWorkspace(conversationId),
@@ -79,7 +90,20 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
         } catch { /* file tree load failure is non-fatal */ }
       }
 
-      set({ files, snapshots, fileChanges: changes, loading: false });
+      set((s) => {
+        // Within the same conversation, merge WS-delivered changes with HTTP response.
+        // Prevents WS-delivered changes from being overwritten by a slower HTTP load().
+        if (s.activeConversationId !== conversationId) {
+          // Conversation changed while request was in-flight — discard
+          return {};
+        }
+        const existingIds = new Set(s.fileChanges.map((c) => c.id));
+        const freshChanges = changes.filter((c: FileChangeRow) => !existingIds.has(c.id));
+        const merged = freshChanges.length > 0
+          ? [...freshChanges, ...s.fileChanges]
+          : s.fileChanges;
+        return { files, snapshots, fileChanges: merged, loading: false };
+      });
     } catch {
       set({ loading: false });
     }
@@ -100,9 +124,17 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   },
 
   updateFileChange: (updated) => {
-    set((s) => ({
-      fileChanges: s.fileChanges.map((c) => (c.id === updated.id ? updated : c)),
-    }));
+    set((s) => {
+      const idx = s.fileChanges.findIndex((c) => c.id === updated.id);
+      if (idx === -1) {
+        // New entry — prepend so it appears at the top
+        return { fileChanges: [updated, ...s.fileChanges] };
+      }
+      // Existing entry — replace in-place
+      const next = [...s.fileChanges];
+      next[idx] = updated;
+      return { fileChanges: next };
+    });
   },
 
   updateRootPath: async (newPath) => {

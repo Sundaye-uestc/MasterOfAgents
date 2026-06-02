@@ -1,6 +1,28 @@
 # AgentHub 待办事项
 
-**更新日期：** 2026-06-02（短期记忆缺陷已修复）
+**更新日期：** 2026-06-02
+
+---
+
+## ⚠️ 当前已知问题
+
+### 🔴 文件更改提示待完善（高优先级）
+
+Agent 回复完毕后，对话流中的 **文件变更（FileChangeList）提示不稳定**：
+- **现象**：Agent 完成后不显示文件变更提示，刷新页面后也不出现
+- **根因**：`run_completed` 事件在 `diffSnapshots`（快照对比生成 FileChange 记录）之前广播，前端 HTTP 请求可能到达时 DB 尚未写入
+- **已做修复**（2026-06-02）：
+  - Server：延迟 `run_completed` 广播，确保 `diffSnapshots` 先于前端 `load()` 执行
+  - Server：`diffSnapshots` 完成后广播 `file:changed` WS 事件
+  - Frontend：`updateFileChange` 改为 upsert（支持新增 + 更新）
+  - Frontend：`load()` 同对话内合并、切换对话时清空（防串味）
+- **验证结果**：❌ **未通过（2026-06-02 手动验证）** — Agent 回复完毕后文件变更提示仍不出现，事件重排 + WS 广播双保险未生效，需进一步排查
+- **相关文件**：`agent-runtime.service.ts`、`workspace.store.ts`、`ChatArea.tsx`
+
+### 🟡 多 Agent 编排任务 ID 冲突（已修复）
+
+- Planner 生成固定 ID（task-1/task-2）导致二次运行 UNIQUE constraint 失败
+- **已修复**：UUID 映射（`orchestrator.service.ts`）
 
 ---
 
@@ -49,19 +71,6 @@ Agent 消息中的 `` ```diff `` 代码块使用 DiffBlock 组件渲染（彩色
 
 ---
 
-### 4.4 Agent 回复富媒体内联展示
-
-- [ ] 代码 Diff 内联 — Agent 回复中的 `` ```diff `` 代码块已在 MarkdownContent 中使用 DiffBlock 渲染（✅ 已实现），但尚未与 file_changes 实时数据链路打通
-- [ ] 网页预览卡片 — Agent 生成的 HTML/网页产物应在对话流中以内联 iframe 或缩略图卡片形式预览
-- [ ] 文件附件 — Agent 产出的文件（图片、PDF、代码文件等）应以附件卡片形式展示，支持下载和预览
-- [ ] 产物卡片统一组件 — 设计统一的 `ArtifactCard` 内联渲染组件，替代纯文本 Markdown 链接
-- [ ] 用户直接操作 — 用户应能在聊天流中直接预览网页、下载文件、应用 diff，无需切换到右侧面板
-
-### 当前行为
-Agent 回复中的 Markdown 链接、图片等以标准 Markdown 组件渲染。`` ```diff `` 代码块已通过 DiffBlock 彩色渲染。但网页预览（iframe）、文件附件卡片、产物卡片等富媒体内联展示尚未实现，用户需切换到 WorkspacePanel 查看变更。
-
----
-
 ### 4.3 WorkspacePanel 集成完善
 
 - [x] 文件树数据为空 — 服务端 `GET /api/workspaces/:id/files` + 前端 `listFiles` + `workspace.store` 已接入
@@ -77,8 +86,25 @@ Agent 回复中的 Markdown 链接、图片等以标准 Markdown 组件渲染。
 - [x] 新建对话指定工作目录 — 创建对话时可选填写，留空使用默认目录
 - [x] Agent 工作目录修复 — `workingDir` 使用 workspace rootPath 而非 `process.cwd()`
 - [x] WS 事件驱动的 workspace 刷新 — `run:started`/`run:completed` 触发重新加载
+- [x] 事件重排修复 — `run_completed` 延迟到 `diffSnapshots` 之后广播，消除竞态条件
+- [x] 对话隔离 — `activeConversationId` 追踪，切换对话时清空旧 `fileChanges`
+- [x] Store upsert — `updateFileChange` 支持新增条目（不仅是更新已有条目）
+- [ ] **🔴 文件更改实时提示 — ❌ 验证未通过** — 事件重排 + WS 广播修复后手动测试，Agent 完成后变更提示仍不出现，需进一步排查根因
 - [ ] 实时同步不完整 — WS `file:changed` 已接入 store，但多连接场景下的时序问题待验证
 - [ ] 后端确保 manifest 数据正确生成 — workspace 的 manifest/snapshots 链路需端到端验证
 
 ### 当前行为
-WorkspacePanel 渲染在右侧（可拖拽调整宽度），文件 Tab 显示工作区目录树（带展开/折叠），快照 Tab 显示快照时间线（支持回滚），变更 Tab 展示 file_changes 数据（DiffBlock 彩色渲染、新增文件可直接查看内容）。面板可通过 ✕ 按钮关闭、折叠按钮展开。默认工作目录为 `Test/`，新建对话时可指定自定义目录。`workspace.store` 作为文件树/快照/变更的唯一数据源。Agent 在 workspace 目录下运行，修改的文件正确反映在面板中。
+WorkspacePanel 渲染在右侧（可拖拽调整宽度），文件 Tab 显示工作区目录树（带展开/折叠），快照 Tab 显示快照时间线（支持回滚），变更 Tab 展示 file_changes 数据（DiffBlock 彩色渲染、新增文件可直接查看内容）。面板可通过 ✕ 按钮关闭、折叠按钮展开。默认工作目录为 `Test/`，新建对话时可指定自定义目录。`workspace.store` 作为文件树/快照/变更的唯一数据源。Agent 在 workspace 目录下运行，修改的文件正确反映在面板中。**文件变更提示依赖事件重排 + WS 广播双保险，待端到端验证。**
+
+---
+
+### 4.4 Agent 回复富媒体内联展示
+
+- [ ] 代码 Diff 内联 — Agent 回复中的 `` ```diff `` 代码块已在 MarkdownContent 中使用 DiffBlock 渲染（✅ 已实现），但尚未与 file_changes 实时数据链路打通
+- [ ] 网页预览卡片 — Agent 生成的 HTML/网页产物应在对话流中以内联 iframe 或缩略图卡片形式预览
+- [ ] 文件附件 — Agent 产出的文件（图片、PDF、代码文件等）应以附件卡片形式展示，支持下载和预览
+- [ ] 产物卡片统一组件 — 设计统一的 `ArtifactCard` 内联渲染组件，替代纯文本 Markdown 链接
+- [ ] 用户直接操作 — 用户应能在聊天流中直接预览网页、下载文件、应用 diff，无需切换到右侧面板
+
+### 当前行为
+Agent 回复中的 Markdown 链接、图片等以标准 Markdown 组件渲染。`` ```diff `` 代码块已通过 DiffBlock 彩色渲染。但网页预览（iframe）、文件附件卡片、产物卡片等富媒体内联展示尚未实现，用户需切换到 WorkspacePanel 查看变更。

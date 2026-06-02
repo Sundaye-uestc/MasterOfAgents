@@ -11,6 +11,7 @@ import { eq } from "drizzle-orm";
 import { newId, nowISO } from "../lib/ids.js";
 import type { ChatService } from "./chat.service.js";
 import { WorkspaceService } from "./workspace.service.js";
+import { broadcastToConversation } from "../ws/gateway.js";
 
 let singleton: AgentRuntimeService | null = null;
 
@@ -133,7 +134,17 @@ export class AgentRuntimeService {
           signal: abortController.signal,
         });
 
+        // Defer run_completed until AFTER diffSnapshots, so the frontend
+        // always sees file changes when it calls load() on run:completed.
+        let deferredCompletedEvent: AgentEvent | null = null;
+
         for await (const event of stream) {
+          // Defer run_completed / run_failed until after snapshot diffing
+          if (event.type === "run_completed" || event.type === "run_failed") {
+            deferredCompletedEvent = event;
+            continue;
+          }
+
           onEvent(event, agentMsg.id);
 
           // Persist tool invocations
@@ -181,10 +192,24 @@ export class AgentRuntimeService {
           const afterManifest = workspaceSvc.generateManifest(ws.rootPath);
           const afterSnap = await workspaceSvc.createSnapshot(ws.id, runId, "after", afterManifest);
           if (beforeSnapshotId) {
-            await workspaceSvc.diffSnapshots(beforeSnapshotId, afterSnap.id);
+            const changes = await workspaceSvc.diffSnapshots(beforeSnapshotId, afterSnap.id);
+            // Broadcast each file change so the frontend updates in real-time
+            for (const fc of changes) {
+              broadcastToConversation(conversationId, {
+                type: "file:changed",
+                change: fc,
+              });
+            }
           }
         } catch (snapErr) {
           console.warn(`[runtime] Failed to create after snapshot: ${(snapErr as Error).message}`);
+        }
+
+        // --- Now emit the deferred run_completed / run_failed ---
+        // This MUST happen after diffSnapshots so the frontend's load() HTTP
+        // request always finds file changes in the DB.
+        if (deferredCompletedEvent) {
+          onEvent(deferredCompletedEvent, agentMsg.id);
         }
 
         // Mark completed only if run was not aborted externally
