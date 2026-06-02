@@ -8,8 +8,7 @@
 
 | # | BUG | 状态 | 描述 |
 |---|-----|------|------|
-| 1 | **文件变更提示不出现** | ❌ 未修复 | Agent 回复完毕后 FileChangeList 不显示文件变更；刷新页面后变更记录正常出现。WS `file:changed` 事件 + HTTP `load()` 双通道均无法实时送达前端 |
-| 2 | **文件变更重复提示** | ❌ 未修复 | 同一文件的同一次操作（如 create: hello.py）出现多条重复记录。可能原因：`file_change` 事件在 stream 中触发 + `diffSnapshots` 又写入一份，导致 DB 中存在重复行 |
+| 1 | **文件变更重复提示** | ❌ 未修复 | 同一文件的同一次操作（如 create: hello.py）出现多条重复记录。**仅群聊模式中出现**，单聊暂未发现。可能原因：`file_change` 事件在 stream 中触发 + `diffSnapshots` 又写入一份，导致 DB 中存在重复行 |
 
 ---
 
@@ -77,10 +76,9 @@ Agent 回复中的 Markdown 链接、图片等以标准 Markdown 组件渲染。
 
 **待修复：**
 
-- [ ] 实时同步不完整 — WS `file:changed` 已接入 store，但 Agent 回复完毕后 FileChangeList 仍为空白（需刷新页面才出现），**BUG #1**
-- [ ] 文件变更去重 — 同一文件操作出现多条重复 FileChange 记录，需排查 `file_change` 事件 + `diffSnapshots` 双写入问题，**BUG #2**
+- [ ] 文件变更去重 — 同一文件操作出现多条重复 FileChange 记录（**仅群聊模式**），需排查 `file_change` 事件 + `diffSnapshots` 双写入问题，**BUG #1**
 
 ### 当前行为
 WorkspacePanel 渲染在右侧（可拖拽调整宽度），文件 Tab 显示工作区目录树（带展开/折叠），快照 Tab 显示快照时间线（支持回滚），变更 Tab 展示 file_changes 数据（DiffBlock 彩色渲染、新增文件可直接查看内容）。面板可通过 ✕ 按钮关闭、折叠按钮展开。默认工作目录为 `Test/`，新建对话时可指定自定义目录。`workspace.store` 作为文件树/快照/变更的唯一数据源。Agent 在 workspace 目录下运行，修改的文件正确反映在面板中。
 
-**已知问题（2026-06-02）：** FileChangeList 在 Agent 回复完毕后不显示变更（需刷新），且同一文件操作出现重复记录。详见顶部 "⚠️ 当前已知 BUG"。
+**已知问题（2026-06-02）：** 同一文件操作出现重复记录。详见顶部 "⚠️ 当前已知 BUG"。

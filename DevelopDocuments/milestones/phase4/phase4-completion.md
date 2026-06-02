@@ -152,3 +152,9 @@
 - `_copyDir()`: 增加循环检测（dest 在 src 内则跳过） + 跳过 `node_modules`/`data`/`.git`
 - `_buildTree()`: 增加深度上限 20 层 + 同样跳过上述目录
 - 清理了所有被污染的磁盘快照文件和 DB 记录
+
+### 4.5 FileChange 通知不出现（BUG #1）
+
+**问题：** Agent 回复完毕后 FileChangeList 不显示文件变更，需刷新页面后才出现。WS `file:changed` 事件 + HTTP `load()` 双通道均无法实时送达前端。
+
+**状态：** ✅ 已修复（校验通过）
