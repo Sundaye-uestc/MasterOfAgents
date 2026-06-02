@@ -1,0 +1,6 @@
+{
+  "code-runner.executorMap": {
+    "python": "d:/Projects/MasterOfAgents/.venv/Scripts/python.exe"
+  },
+  "code-runner.runInTerminal": false
+}
