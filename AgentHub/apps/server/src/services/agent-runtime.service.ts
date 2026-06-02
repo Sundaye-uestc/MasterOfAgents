@@ -137,10 +137,13 @@ export class AgentRuntimeService {
         // Defer run_completed until AFTER diffSnapshots, so the frontend
         // always sees file changes when it calls load() on run:completed.
         let deferredCompletedEvent: AgentEvent | null = null;
+        let eventCount = 0;
 
         for await (const event of stream) {
+          eventCount++;
           // Defer run_completed / run_failed until after snapshot diffing
           if (event.type === "run_completed" || event.type === "run_failed") {
+            console.log(`[runtime] ⏸️  Deferring ${event.type} event (total events: ${eventCount})`);
             deferredCompletedEvent = event;
             continue;
           }
@@ -192,14 +195,19 @@ export class AgentRuntimeService {
           const afterManifest = workspaceSvc.generateManifest(ws.rootPath);
           const afterSnap = await workspaceSvc.createSnapshot(ws.id, runId, "after", afterManifest);
           if (beforeSnapshotId) {
+            console.log(`[runtime] 🔍 Running diffSnapshots: before=${beforeSnapshotId.slice(0,8)}... after=${afterSnap.id.slice(0,8)}...`);
             const changes = await workspaceSvc.diffSnapshots(beforeSnapshotId, afterSnap.id);
+            console.log(`[runtime] 📁 diffSnapshots found ${changes.length} file change(s): ${changes.map(c => `${c.changeType}:${c.path}`).join(', ') || '(none)'}`);
             // Broadcast each file change so the frontend updates in real-time
             for (const fc of changes) {
+              console.log(`[runtime] 📤 Broadcasting file:changed — ${fc.changeType}:${fc.path}`);
               broadcastToConversation(conversationId, {
                 type: "file:changed",
                 change: fc,
               });
             }
+          } else {
+            console.warn(`[runtime] ⚠️  No beforeSnapshotId — skipping diffSnapshots`);
           }
         } catch (snapErr) {
           console.warn(`[runtime] Failed to create after snapshot: ${(snapErr as Error).message}`);
@@ -209,7 +217,10 @@ export class AgentRuntimeService {
         // This MUST happen after diffSnapshots so the frontend's load() HTTP
         // request always finds file changes in the DB.
         if (deferredCompletedEvent) {
+          console.log(`[runtime] ▶️  Emitting deferred ${deferredCompletedEvent.type} — diffSnapshots completed before this`);
           onEvent(deferredCompletedEvent, agentMsg.id);
+        } else {
+          console.warn(`[runtime] ⚠️  No deferred completion event — run_completed/run_failed was never captured from stream`);
         }
 
         // Mark completed only if run was not aborted externally

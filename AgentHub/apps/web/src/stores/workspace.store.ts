@@ -102,6 +102,7 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
         const merged = freshChanges.length > 0
           ? [...freshChanges, ...s.fileChanges]
           : s.fileChanges;
+        console.log(`[workspace.store] 💾 load() HTTP returned ${changes.length} changes, existing=${s.fileChanges.length}, fresh=${freshChanges.length}, merged=${merged.length}`);
         return { files, snapshots, fileChanges: merged, loading: false };
       });
     } catch {
@@ -127,10 +128,10 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
     set((s) => {
       const idx = s.fileChanges.findIndex((c) => c.id === updated.id);
       if (idx === -1) {
-        // New entry — prepend so it appears at the top
+        console.log(`[workspace.store] 📝 updateFileChange: ADD ${updated.changeType}:${updated.path} (id=${updated.id.slice(0,8)}...) → total=${s.fileChanges.length + 1}`);
         return { fileChanges: [updated, ...s.fileChanges] };
       }
-      // Existing entry — replace in-place
+      console.log(`[workspace.store] 📝 updateFileChange: UPDATE ${updated.changeType}:${updated.path} (id=${updated.id.slice(0,8)}...) → total=${s.fileChanges.length}`);
       const next = [...s.fileChanges];
       next[idx] = updated;
       return { fileChanges: next };

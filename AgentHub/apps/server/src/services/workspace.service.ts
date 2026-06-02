@@ -290,6 +290,7 @@ export class WorkspaceService {
     const beforeSnap = await this.getSnapshot(beforeId);
     const afterSnap = await this.getSnapshot(afterId);
     if (!beforeSnap || !afterSnap) {
+      console.error(`[workspace] diffSnapshots failed: before=${!!beforeSnap} after=${!!afterSnap}`);
       throw new Error("Snapshot not found");
     }
 
@@ -299,6 +300,8 @@ export class WorkspaceService {
     const afterManifest: Manifest = afterSnap.manifestJson
       ? JSON.parse(afterSnap.manifestJson)
       : {};
+
+    console.log(`[workspace] 📋 diffSnapshots: before has ${Object.keys(beforeManifest).length} files, after has ${Object.keys(afterManifest).length} files`);
 
     const runId = afterSnap.runId ?? beforeSnap.runId ?? newId();
     const db = getDb();
@@ -316,11 +319,14 @@ export class WorkspaceService {
 
       if (!before && after) {
         changeType = "create";
+        console.log(`[workspace]   ➕ create: ${filePath}`);
       } else if (before && !after) {
         changeType = "delete";
+        console.log(`[workspace]   ➖ delete: ${filePath}`);
       } else if (before && after && before.hash !== after.hash) {
         changeType = "modify";
         diff = this._generateDiff(beforeId, filePath, before.hash, after.hash);
+        console.log(`[workspace]   ✏️  modify: ${filePath} (${before.hash.slice(0,8)} → ${after.hash.slice(0,8)})`);
       } else {
         continue; // unchanged
       }
