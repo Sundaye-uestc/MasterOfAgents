@@ -6,7 +6,7 @@ Multi-Agent Collaboration Platform — 多 Agent 协作平台。支持单聊/群
 
 - **Node.js** >= 20
 - **pnpm** >= 9
-- **Python** >= 3.8（仅启动脚本）
+- **Python** = 3.14（仅启动脚本）
 
 ## 快速启动
 

@@ -1,12 +1,12 @@
 # Phase 4 开发完成文档
 
-**完成日期：** 2026-05-31
+**完成日期：** 2026-05-31（更新于 2026-06-02：4.1 短期记忆修复）
 
 ---
 
 ## 概述
 
-完成 Phase 3 遗留基础设施模块 + Phase 4.2 Diff 展示完善 + Phase 4.3 WorkspacePanel 集成完善。打通了从服务端 workspace → store → UI 的完整数据链路，并新增快照回滚、文件内容查看、面板拖拽、工作目录管理等功能。
+完成 Phase 3 遗留基础设施模块 + Phase 4.1 Agent 短期记忆修复 + Phase 4.2 Diff 展示完善 + Phase 4.3 WorkspacePanel 集成完善。打通了从服务端 workspace → store → UI 的完整数据链路，新增快照回滚、文件内容查看、面板拖拽、工作目录管理等功能，并修复了 Agent 无法感知对话上下文的严重缺陷。
 
 ---
 
@@ -28,7 +28,62 @@
 
 ---
 
-## 二、Phase 4.2 对话中 Diff 展示完善
+## 二、Phase 4.1 Agent 短期记忆修复（2026-06-02）
+
+### 2.1 缺陷现象
+
+Agent 每次收到新消息时，只看到当前消息本身，完全不知道对话历史。例如用户先问"写一个 hello world"，再问"把输出改成中文"，Agent 不知道前面写过什么。
+
+### 2.2 根因分析
+
+1. `chat.service.ts` / `agent-runtime.service.ts` 调用 adapter 时只传了 `prompt: body.content`（当前消息），未构建历史上下文
+2. `adapter.run()` 使用 `-p "当前消息"` 启动子进程，适配器不加载数据库中的历史消息
+3. `--no-session-persistence` flag 禁用了 CLI 层的会话持久化，确保每次运行从零开始
+4. `PlannerService.buildPlannerPrompt()` 虽定义了 `conversationHistory?` 字段，但无调用方填充
+
+### 2.3 修复方案
+
+**核心思路：** 每次 Agent run 启动时，从 DB 加载同 conversation 的历史消息，注入到 `--system-prompt` 中，使 Agent 感知完整对话上下文。
+
+**数据流：**
+
+```
+用户发送消息
+  → agent-runtime.service.ts startDirectRun()
+    → chatService.buildAgentContext(conversationId)
+      → 查询 messages 表（按 createdAt 排序）
+      → pinned 消息优先注入（最多 5 条）
+      → 最近 20 条普通消息（排除当前 prompt）
+      → 4000 字符上限截断
+      → 返回 [{ role, content }, ...]
+    → adapter.run({ prompt, messageHistory, ... })
+      → claude-code.adapter.ts / codex.adapter.ts
+        → 格式化为 [用户] / [AI助手] 标记的对话历史
+        → 注入 --system-prompt
+```
+
+### 2.4 修改文件清单
+
+| 文件 | 变更 |
+|---|---|
+| `adapters/base.ts` | `RunInput` 新增 `messageHistory?: { role, content }[]` 字段 |
+| `chat.service.ts` | 新增 `buildAgentContext()` — 从 DB 读历史 + pinned 优先 + 截断 |
+| `agent-runtime.service.ts` | `startDirectRun()` 调用 `buildAgentContext()` 并传入 `adapter.run()` |
+| `claude-code.adapter.ts` | 将 `messageHistory` 格式化为对话历史注入 `--system-prompt` |
+| `codex.adapter.ts` | 同样的历史注入逻辑（与 Claude Code adapter 一致） |
+| `orchestrator.service.ts` | 群聊路径调用 `buildAgentContext()` 填充 `PlannerInput.conversationHistory` |
+
+### 2.5 关键约束
+
+- **上下文窗口限制：** 4000 字符硬截断，保证不超出 CLI 限制
+- **pinned 优先：** 已 pin 的消息必定注入，最多 5 条
+- **历史角色标记：** `[用户]` / `[AI助手]` 清晰区分发言人
+- **排除当前消息：** `normal.slice(-maxMessages, -1)` 避免重复发送当前 prompt
+- **群聊兼容：** Orchestrator 调用 Planner 时同步填充 `conversationHistory`
+
+---
+
+## 三、Phase 4.2 对话中 Diff 展示完善
 
 ### 2.1 服务端：真实 unified diff 生成
 
@@ -59,7 +114,7 @@
 
 ---
 
-## 三、Phase 4.3 WorkspacePanel 集成完善
+## 四、Phase 4.3 WorkspacePanel 集成完善
 
 ### 3.1 服务端：文件树 API
 
@@ -105,6 +160,7 @@
 
 | 决策 | 说明 |
 |---|---|
+| `buildAgentContext()` 注入短期记忆 | 每次 run 从 DB 读取历史 → system prompt，4000 字符截断 |
 | workspace.store 作为单一数据源 | 文件树、快照、变更仅由 store 管理 |
 | ui.store 管理面板状态 | 扩展支持 selectedChangePath 跨组件通信 |
 | DiffBlock 为统一 diff 渲染器 | MarkdownContent 和 DiffCard 共享 |
@@ -116,6 +172,7 @@
 ## 验证结果
 
 - TypeScript 编译：server ✅ / web ✅（零错误）
+- **4.1 短期记忆：** agent 能感知对话历史（`buildAgentContext()` → system prompt），群聊 Planner 同步填充 `conversationHistory`
 - 数据链路：store.load() → API → WorkspacePanel 三 Tab 渲染
 - 快照回滚：确认后恢复文件 → 文件树自动刷新
 - Diff 渲染：`+` 绿 / `-` 红 / `@@` 蓝 / 长 diff 折叠
