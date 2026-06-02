@@ -241,21 +241,27 @@ export class WorkspaceService {
   /** Recursively build a FileNode tree from a directory on disk */
   buildFileTree(rootPath: string): FileNode[] {
     if (!fs.existsSync(rootPath)) return [];
-    return this._buildTree(rootPath, rootPath);
+    return this._buildTree(rootPath, rootPath, 0);
   }
 
-  private _buildTree(basePath: string, currentPath: string): FileNode[] {
+  private _buildTree(basePath: string, currentPath: string, depth: number): FileNode[] {
+    // Safety: prevent stack overflow from deeply nested (possibly corrupted) directories
+    if (depth > 20) return [];
     const result: FileNode[] = [];
     const entries = fs.readdirSync(currentPath, { withFileTypes: true });
 
     for (const entry of entries) {
       if (entry.name.startsWith(".")) continue;
+      // Skip large / dangerous directories
+      if (entry.isDirectory() && (entry.name === "node_modules" || entry.name === "data" || entry.name === ".git")) {
+        continue;
+      }
 
       const fullPath = path.join(currentPath, entry.name);
       const relativePath = path.relative(basePath, fullPath).replace(/\\/g, "/");
 
       if (entry.isDirectory()) {
-        const children = this._buildTree(basePath, fullPath);
+        const children = this._buildTree(basePath, fullPath, depth + 1);
         result.push({
           name: entry.name,
           path: relativePath,
@@ -409,11 +415,22 @@ export class WorkspaceService {
       .get() as any;
   }
 
-  /** Recursively copy a directory (skipping hidden files/dirs) */
+  /** Recursively copy a directory (skipping hidden/system/dangerous dirs) */
   private _copyDir(src: string, dest: string): void {
+    // Guard: prevent dest-from-src recursion (e.g. copying workspace into its own data/ subdirectory)
+    const resolvedDest = path.resolve(dest);
+    const resolvedSrc = path.resolve(src);
+    if (resolvedDest.startsWith(resolvedSrc + path.sep) || resolvedDest === resolvedSrc) {
+      return; // destination is inside source — would cause infinite recursion
+    }
+
     const entries = fs.readdirSync(src, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.name.startsWith(".")) continue;
+      // Skip large / dangerous directories that should never be snapshotted
+      if (entry.isDirectory() && (entry.name === "node_modules" || entry.name === "data" || entry.name === ".git")) {
+        continue;
+      }
       const srcPath = path.join(src, entry.name);
       const destPath = path.join(dest, entry.name);
       if (entry.isDirectory()) {

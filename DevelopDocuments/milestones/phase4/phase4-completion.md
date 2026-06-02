@@ -1,6 +1,6 @@
 # Phase 4 开发完成文档
 
-**完成日期：** 2026-05-31
+**完成日期：** 2026-05-31（更新于 2026-06-02）
 
 ---
 
@@ -121,3 +121,34 @@
 - Diff 渲染：`+` 绿 / `-` 红 / `@@` 蓝 / 长 diff 折叠
 - 联动：点击 diff 路径 → WorkspacePanel 变更 Tab + 高亮
 - 面板拖拽：240–600px，实时调整
+
+---
+
+## 四、2026-06-02 BUG 修复
+
+### 4.1 Planner 任务 ID 碰撞 → 消息消失
+
+**问题：** Planner LLM 生成固定 ID（`task-1`、`task-2`），跨运行冲突导致 `UNIQUE constraint failed: tasks.id`，前端临时消息被移除。
+
+**修复：** `orchestrator.service.ts` — 在 DB 写入前将 planner ID 映射为 `newId()` 生成的 UUID，同时重映射 `dependencies` 引用。
+
+### 4.2 对话删除后磁盘孤儿数据残留
+
+**问题：** `deleteConversation` 只清理 DB 行，`data/snapshots/<id>/` 和 `data/workspaces/<id>/` 目录留在磁盘。
+
+**修复：** `chat.service.ts` — 删除对话前遍历 workspace → snapshot，先 `fs.rmSync` 删除磁盘目录，再删除 DB 行。
+
+### 4.3 跨对话 FileChange 串味
+
+**问题：** 全局 Zustand store 导致 A 对话的变更显示在 B 对话框中。切换对话时 HTTP `load()` 的飞行中响应与 WS 事件交错覆盖。
+
+**修复：** `workspace.store.ts` — 新增 `activeConversationId` 追踪；切换对话时清空状态；飞行中响应若 `activeConversationId` 不匹配则丢弃；`updateFileChange` 采用 upsert 模式。
+
+### 4.4 快照递归复制自身 → ENAMETOOLONG
+
+**问题：** 当 workspace rootPath 覆盖 `data/snapshots/` 所在目录树时，`_copyDir` 将快照目录复制进自身，导致无限嵌套路径和 `ENAMETOOLONG` 错误。
+
+**修复：** `workspace.service.ts`
+- `_copyDir()`: 增加循环检测（dest 在 src 内则跳过） + 跳过 `node_modules`/`data`/`.git`
+- `_buildTree()`: 增加深度上限 20 层 + 同样跳过上述目录
+- 清理了所有被污染的磁盘快照文件和 DB 记录

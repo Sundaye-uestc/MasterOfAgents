@@ -1,6 +1,15 @@
 # AgentHub 待办事项
 
-**更新日期：** 2026-05-31（Phase 3 遗留 + 4.2 + 4.3 完成）
+**更新日期：** 2026-06-02（整理完成项至 phase4-completion，保留待办和已知 BUG）
+
+---
+
+## ⚠️ 当前已知 BUG
+
+| # | BUG | 状态 | 描述 |
+|---|-----|------|------|
+| 1 | **文件变更提示不出现** | ❌ 未修复 | Agent 回复完毕后 FileChangeList 不显示文件变更；刷新页面后变更记录正常出现。WS `file:changed` 事件 + HTTP `load()` 双通道均无法实时送达前端 |
+| 2 | **文件变更重复提示** | ❌ 未修复 | 同一文件的同一次操作（如 create: hello.py）出现多条重复记录。可能原因：`file_change` 事件在 stream 中触发 + `diffSnapshots` 又写入一份，导致 DB 中存在重复行 |
 
 ---
 
@@ -42,14 +51,10 @@ Agent 每次新对话都是"冷启动"，没有跨对话记忆。单次对话中
 
 ### 4.2 对话中 Diff 展示完善
 
-- [x] Agent 回复未携带 Diff — DiffBlock 组件已就绪，可解析 Agent 输出的 `` ```diff `` 块并彩色渲染
-- [x] DiffCard 在对话流中的定位 — MarkdownContent 中 `` ```diff `` 块使用 DiffBlock 内联渲染
-- [x] 消息内 Diff 语法高亮 — DiffBlock 组件：+ 绿 / - 红 / @@ 蓝 / 上下文灰
-- [x] Diff 与 FileChange 联动 — 点击 diff 文件路径自动打开 WorkspacePanel 变更 Tab 并高亮对应记录
-- [x] 增量 Diff 渲染 — 超过 20 行的 diff 默认折叠，可展开/收起
+> ✅ 全部完成，详见 `milestones/phase4/phase4-completion.md`
 
 ### 当前行为
-Agent 消息中的 `` ```diff `` 代码块使用 DiffBlock 组件渲染（彩色行、文件路径可点击定位）。WorkspacePanel 的 DiffCard 同样使用 DiffBlock 展示真实 unified diff（服务端通过 `diff` 库生成，快照文件副本存储于 `data/snapshots/`）。点击 diff 文件路径自动切换到 WorkspacePanel 变更 Tab 并高亮对应记录。
+Agent 消息中的 `` ```diff `` 代码块使用 DiffBlock 组件渲染（彩色行、文件路径可点击定位）。WorkspacePanel 的 DiffCard 同样使用 DiffBlock 展示真实 unified diff。点击 diff 文件路径自动切换到 WorkspacePanel 变更 Tab 并高亮对应记录。
 
 ---
 
@@ -68,21 +73,14 @@ Agent 回复中的 Markdown 链接、图片等以标准 Markdown 组件渲染。
 
 ### 4.3 WorkspacePanel 集成完善
 
-- [x] 文件树数据为空 — 服务端 `GET /api/workspaces/:id/files` + 前端 `listFiles` + `workspace.store` 已接入
-- [x] 快照列表为空 — 快照通过 `workspace.store.load()` 加载并传入 WorkspacePanel
-- [x] workspace.store 未接入 App — `useWorkspaceStore` 已在 App.tsx 中使用，作为单一数据源
-- [x] 文件树构建 — `WorkspaceService.buildFileTree()` 递归扫描目录生成 `FileNode[]`
-- [x] 文件树选中状态 — `onFileSelect` 回调已提供
-- [x] 面板可见性控制 — `ui.store` + 折叠/展开按钮已实现
-- [x] 面板宽度拖拽调整 — 左边缘拖拽手柄，240px~600px
-- [x] 快照回滚 — `rollbackToSnapshot()` 恢复工作目录到快照时状态
-- [x] 新增文件内容查看 — "create" 类型变更展开后显示文件实际内容（二进制检测）
-- [x] 工作目录手动更改 — 文本输入方式指定新路径
-- [x] 新建对话指定工作目录 — 创建对话时可选填写，留空使用默认目录
-- [x] Agent 工作目录修复 — `workingDir` 使用 workspace rootPath 而非 `process.cwd()`
-- [x] WS 事件驱动的 workspace 刷新 — `run:started`/`run:completed` 触发重新加载
-- [ ] 实时同步不完整 — WS `file:changed` 已接入 store，但多连接场景下的时序问题待验证
-- [ ] 后端确保 manifest 数据正确生成 — workspace 的 manifest/snapshots 链路需端到端验证
+> ✅ 基础功能全部完成，详见 `milestones/phase4/phase4-completion.md`
+
+**待修复：**
+
+- [ ] 实时同步不完整 — WS `file:changed` 已接入 store，但 Agent 回复完毕后 FileChangeList 仍为空白（需刷新页面才出现），**BUG #1**
+- [ ] 文件变更去重 — 同一文件操作出现多条重复 FileChange 记录，需排查 `file_change` 事件 + `diffSnapshots` 双写入问题，**BUG #2**
 
 ### 当前行为
 WorkspacePanel 渲染在右侧（可拖拽调整宽度），文件 Tab 显示工作区目录树（带展开/折叠），快照 Tab 显示快照时间线（支持回滚），变更 Tab 展示 file_changes 数据（DiffBlock 彩色渲染、新增文件可直接查看内容）。面板可通过 ✕ 按钮关闭、折叠按钮展开。默认工作目录为 `Test/`，新建对话时可指定自定义目录。`workspace.store` 作为文件树/快照/变更的唯一数据源。Agent 在 workspace 目录下运行，修改的文件正确反映在面板中。
+
+**已知问题（2026-06-02）：** FileChangeList 在 Agent 回复完毕后不显示变更（需刷新），且同一文件操作出现重复记录。详见顶部 "⚠️ 当前已知 BUG"。
