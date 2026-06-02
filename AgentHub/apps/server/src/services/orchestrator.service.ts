@@ -66,8 +66,25 @@ export class OrchestratorService {
       capabilities: a.capabilities?.map((c: any) => c.label ?? c) ?? [],
     }));
 
+    // Build conversation history for planner context
+    let conversationHistory: string | undefined;
+    try {
+      const historyEntries = await this.chatService.buildAgentContext(conversationId);
+      if (historyEntries.length > 0) {
+        conversationHistory = historyEntries
+          .map((m) => `[${m.role === "user" ? "用户" : m.role === "agent" ? "AI助手" : "系统"}]: ${m.content}`)
+          .join("\n\n");
+      }
+    } catch (err) {
+      console.warn(`[orchestrator] Failed to build conversation history: ${(err as Error).message}`);
+    }
+
     const plan = this.parseMentionedTasks(prompt, agentConfigs) ??
-      await this.planner.generateTaskPlan({ prompt, availableAgents: agentInfos });
+      await this.planner.generateTaskPlan({
+        prompt,
+        availableAgents: agentInfos,
+        conversationHistory,
+      });
 
     // Persist plan to run
     db.update(schema.runs)

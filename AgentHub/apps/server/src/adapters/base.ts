@@ -9,6 +9,8 @@ export interface RunInput {
   agentId: string;
   prompt: string;
   systemPrompt?: string;
+  /** Previous conversation messages for short-term memory context */
+  messageHistory?: Array<{ role: "user" | "agent" | "system"; content: string }>;
   workingDir?: string;
   signal?: AbortSignal;
 }

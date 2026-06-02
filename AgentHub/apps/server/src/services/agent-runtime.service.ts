@@ -64,6 +64,14 @@ export class AgentRuntimeService {
   }): Promise<{ runId: string; agentMessageId: string }> {
     const { conversationId, agentId, agentConfig, prompt, systemPrompt, triggerMessageId, chatService, onEvent } = params;
 
+    // Build conversation history for short-term memory context
+    let messageHistory: Array<{ role: "user" | "agent" | "system"; content: string }> | undefined;
+    try {
+      messageHistory = await chatService.buildAgentContext(conversationId);
+    } catch (err) {
+      console.warn(`[runtime] Failed to build agent context: ${(err as Error).message}`);
+    }
+
     // Create run record
     const runId = newId();
     const now = nowISO();
@@ -119,6 +127,7 @@ export class AgentRuntimeService {
           agentId,
           prompt,
           systemPrompt,
+          messageHistory,
           workingDir: workspaceRoot ?? process.cwd(),
 
           signal: abortController.signal,

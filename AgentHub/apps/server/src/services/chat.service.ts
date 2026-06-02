@@ -368,6 +368,67 @@ export class ChatService {
       .reverse() as any;
   }
 
+  /**
+   * Build conversation history context for agent consumption.
+   * Reads recent messages from DB and formats them as structured history.
+   * Includes pinned messages first, then recent N messages.
+   * Max 4000 chars to fit within context window limits.
+   */
+  async buildAgentContext(
+    conversationId: string,
+    maxMessages = 20,
+    maxChars = 4000,
+  ): Promise<Array<{ role: "user" | "agent" | "system"; content: string }>> {
+    const db = getDb();
+    const allMessages = db
+      .select()
+      .from(schema.messages)
+      .where(eq(schema.messages.conversationId, conversationId))
+      .orderBy(schema.messages.createdAt)
+      .all() as any[];
+
+    // Separate pinned messages
+    const pinned: any[] = [];
+    const normal: any[] = [];
+    for (const msg of allMessages) {
+      let isPinned = false;
+      try {
+        if (msg.metadataJson) {
+          isPinned = JSON.parse(msg.metadataJson).pinned === true;
+        }
+      } catch { /* ignore parse errors */ }
+      (isPinned ? pinned : normal).push(msg);
+    }
+
+    // Build result: pinned first, then recent normal messages
+    const result: Array<{ role: "user" | "agent" | "system"; content: string }> = [];
+    let totalChars = 0;
+
+    const addMsg = (msg: any) => {
+      const content = (msg.content ?? "").trim();
+      if (!content) return;
+      if (totalChars + content.length > maxChars) return;
+      result.push({
+        role: msg.role as "user" | "agent" | "system",
+        content,
+      });
+      totalChars += content.length;
+    };
+
+    // Pinned messages first (max 5)
+    for (const msg of pinned.slice(-5)) {
+      addMsg(msg);
+    }
+
+    // Recent normal messages (max maxMessages, excluding the last user message being processed)
+    const recentNormal = normal.slice(-maxMessages, -1); // exclude latest (current prompt)
+    for (const msg of recentNormal) {
+      addMsg(msg);
+    }
+
+    return result;
+  }
+
   /** Find the user message that preceded a given agent message */
   async getPreviousUserMessage(agentMessageId: string): Promise<MessageRow | null> {
     const agentMsg = await this.getMessage(agentMessageId);

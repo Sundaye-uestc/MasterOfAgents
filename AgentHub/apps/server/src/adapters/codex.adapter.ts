@@ -64,11 +64,20 @@ export class CodexAdapter implements AgentPlatformAdapter {
       throw new Error("Adapter not prepared. Call prepare() first.");
     }
 
-    const { runId, agentId, prompt, systemPrompt, workingDir, signal } = input;
+    const { runId, agentId, prompt, systemPrompt, messageHistory, workingDir, signal } = input;
     this.activeRunIds.add(runId);
 
     const ts = Date.now();
     yield { type: "run_started", runId, agentId, timestamp: ts };
+
+    // Build effective system prompt: inject conversation history for short-term memory
+    let effectiveSystemPrompt = systemPrompt ?? this.agentConfig.systemPrompt ?? "";
+    if (messageHistory && messageHistory.length > 0) {
+      const historyBlock = messageHistory
+        .map((m) => `[${m.role === "user" ? "用户" : m.role === "agent" ? "AI助手" : "系统"}]: ${m.content}`)
+        .join("\n\n");
+      effectiveSystemPrompt = `以下是本次对话的历史记录（按时间顺序）：\n\n${historyBlock}\n\n---\n以上是对话历史。现在请根据以下用户的最新消息进行回复。\n${effectiveSystemPrompt}`;
+    }
 
     const args = [
       "-p", prompt,
@@ -81,8 +90,8 @@ export class CodexAdapter implements AgentPlatformAdapter {
       args.push("--permission-mode", "bypassPermissions");
     }
 
-    if (systemPrompt) {
-      args.push("--system-prompt", systemPrompt);
+    if (effectiveSystemPrompt) {
+      args.push("--system-prompt", effectiveSystemPrompt);
     }
 
     const processId = `${this.platform}-${runId}`;
