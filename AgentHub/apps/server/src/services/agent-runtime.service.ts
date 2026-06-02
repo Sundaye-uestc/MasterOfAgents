@@ -213,14 +213,24 @@ export class AgentRuntimeService {
           console.warn(`[runtime] Failed to create after snapshot: ${(snapErr as Error).message}`);
         }
 
-        // --- Now emit the deferred run_completed / run_failed ---
+        // --- Now emit the completion event ---
         // This MUST happen after diffSnapshots so the frontend's load() HTTP
         // request always finds file changes in the DB.
+        //
+        // If the stream never produced a run_completed/run_failed (edge case:
+        // CLI crash, stream-json format change, etc.), emit a synthetic
+        // run_completed so the frontend always transitions out of "thinking".
         if (deferredCompletedEvent) {
           console.log(`[runtime] ▶️  Emitting deferred ${deferredCompletedEvent.type} — diffSnapshots completed before this`);
           onEvent(deferredCompletedEvent, agentMsg.id);
         } else {
-          console.warn(`[runtime] ⚠️  No deferred completion event — run_completed/run_failed was never captured from stream`);
+          console.warn(`[runtime] ⚠️  No completion event from stream — emitting synthetic run_completed to unblock frontend`);
+          onEvent({
+            type: "run_completed",
+            runId,
+            summary: "Agent finished (stream ended without explicit completion)",
+            timestamp: Date.now(),
+          } as AgentEvent, agentMsg.id);
         }
 
         // Mark completed only if run was not aborted externally
