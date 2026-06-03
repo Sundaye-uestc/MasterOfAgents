@@ -68,7 +68,7 @@ export interface AgentEventArtifact {
   type: "artifact_created";
   runId: string;
   artifactId: string;
-  artifactType: "file" | "diff" | "webpage" | "archive";
+  artifactType: "file" | "diff" | "webpage" | "archive" | "slideshow";
   path: string;
   mimeType?: string;
   timestamp: number;

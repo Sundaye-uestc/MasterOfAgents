@@ -2,7 +2,7 @@
 // Artifact types — shared between server and web
 // ============================================================
 
-export type ArtifactType = "file" | "diff" | "webpage" | "archive";
+export type ArtifactType = "file" | "diff" | "webpage" | "archive" | "slideshow";
 
 export type DeployStatus = "pending" | "building" | "deployed" | "failed";
 

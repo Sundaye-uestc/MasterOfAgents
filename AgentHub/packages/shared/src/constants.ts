@@ -27,6 +27,7 @@ export const ARTIFACT_TYPES = {
   DIFF: "diff",
   WEBPAGE: "webpage",
   ARCHIVE: "archive",
+  SLIDESHOW: "slideshow",
 } as const;
 
 /** Deployment statuses */

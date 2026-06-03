@@ -4,7 +4,7 @@
 
 import { z } from "zod";
 
-export const ArtifactTypeSchema = z.enum(["file", "diff", "webpage", "archive"]);
+export const ArtifactTypeSchema = z.enum(["file", "diff", "webpage", "archive", "slideshow"]);
 
 export const DeployStatusSchema = z.enum(["pending", "building", "deployed", "failed"]);
 

@@ -121,7 +121,7 @@ export interface ArtifactRow {
   id: string;
   runId: string | null;
   messageId: string | null;
-  type: "file" | "diff" | "webpage" | "archive";
+  type: "file" | "diff" | "webpage" | "archive" | "slideshow";
   name: string;
   path: string | null;
   mimeType: string | null;

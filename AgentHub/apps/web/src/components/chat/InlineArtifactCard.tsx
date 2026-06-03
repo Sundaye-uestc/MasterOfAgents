@@ -2,7 +2,7 @@ import type { ArtifactRow } from "@agenthub/shared";
 import { WebPreviewCard } from "../artifact/WebPreviewCard.js";
 import { DownloadCard } from "../artifact/DownloadCard.js";
 import { TextPreviewCard } from "../artifact/TextPreviewCard.js";
-import { PptxViewerCard } from "../artifact/PptxViewerCard.js";
+import { ImageSlideshowCard } from "../artifact/ImageSlideshowCard.js";
 
 interface Props {
   artifact: ArtifactRow;
@@ -23,15 +23,6 @@ function isText(mimeType: string | null): boolean {
     mimeType === "application/json" ||
     mimeType === "application/javascript" ||
     mimeType === "text/typescript"
-  );
-}
-
-function isPresentation(mimeType: string | null): boolean {
-  if (!mimeType) return false;
-  return (
-    mimeType.includes("presentation") ||
-    mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-    mimeType === "application/vnd.ms-powerpoint"
   );
 }
 
@@ -91,6 +82,20 @@ export function InlineArtifactCard({ artifact }: Props) {
     );
   }
 
+  // Slide image slideshow (merged server-side from multiple slide-*.png files)
+  if (artifact.type === "slideshow") {
+    let imageUrls: string[] = [];
+    try {
+      const meta = artifact.metadataJson ? JSON.parse(artifact.metadataJson) : null;
+      if (meta?.imageUrls?.length > 0) {
+        imageUrls = meta.imageUrls;
+      }
+    } catch { /* ignore parse errors */ }
+    if (imageUrls.length > 0) {
+      return <ImageSlideshowCard images={imageUrls} name={artifact.name} />;
+    }
+  }
+
   // Text file inline preview
   if (isText(artifact.mimeType)) {
     return (
@@ -102,16 +107,7 @@ export function InlineArtifactCard({ artifact }: Props) {
     );
   }
 
-  // PPT / Presentation file — client-side inline slide viewer
-  if (isPresentation(artifact.mimeType)) {
-    return (
-      <div className="border border-gray-700 rounded-lg overflow-hidden">
-        <PptxViewerCard url={url} name={artifact.name} />
-      </div>
-    );
-  }
-
-  // Default: DownloadCard for all other types
+  // Default: DownloadCard for PPTX and all other types
   return (
     <div className="border border-gray-700 rounded-lg overflow-hidden">
       <DownloadCard

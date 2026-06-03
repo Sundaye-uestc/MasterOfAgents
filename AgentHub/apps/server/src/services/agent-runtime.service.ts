@@ -211,7 +211,7 @@ export class AgentRuntimeService {
             // index.html viewer; JS scripts generated alongside PPT are noise.
             const shouldSkipFile = (filePath: string): boolean => {
               const normalized = filePath.replace(/\\/g, "/");
-              // PPT slide images — anywhere (images/ folder, root, etc.)
+              // PPT slide images — merged into a single slideshow artifact below
               if (/(^|\/)slide-?\d*\.(png|jpg|jpeg|webp)$/i.test(normalized)) return true;
               // PPT metadata / input plans
               if (/\/(prompts|slides_plan)\.json$/i.test(normalized)) return true;
@@ -410,6 +410,76 @@ export class AgentRuntimeService {
                 }
               } catch (pptxErr) {
                 crashLog(`PPTX preview FAILED for ${fc.path}: ${(pptxErr as Error).message}`);
+              }
+            }
+
+            // --- Merge slide images into a single slideshow artifact ---
+            const slideImageChanges = changes.filter((c) => {
+              const n = c.path.replace(/\\/g, "/");
+              return /(^|\/)slide-?\d+\.(png|jpg|jpeg|webp)$/i.test(n) && c.changeType !== "delete";
+            });
+            if (slideImageChanges.length >= 2) {
+              try {
+                // Sort by slide number
+                slideImageChanges.sort((a, b) => {
+                  const na = parseInt(a.path.match(/slide-?(\d+)/)?.[1] ?? "0", 10);
+                  const nb = parseInt(b.path.match(/slide-?(\d+)/)?.[1] ?? "0", 10);
+                  return na - nb;
+                });
+
+                const slideshowId = newId();
+                const artifactDir = path.resolve(process.cwd(), "data", "artifacts", slideshowId);
+                fs.mkdirSync(artifactDir, { recursive: true });
+
+                const imageUrls: string[] = [];
+                for (const si of slideImageChanges) {
+                  const srcPath = path.resolve(ws.rootPath, si.path);
+                  const destName = path.basename(si.path);
+                  const destPath = path.join(artifactDir, destName);
+                  if (fs.existsSync(srcPath)) {
+                    fs.copyFileSync(srcPath, destPath);
+                    imageUrls.push(`/artifacts/static/${slideshowId}/${destName}`);
+                  }
+                }
+
+                if (imageUrls.length >= 2) {
+                  const slideshowArtRow = {
+                    id: slideshowId,
+                    runId,
+                    messageId: agentMsg.id,
+                    type: "slideshow" as const,
+                    name: `幻灯片预览 (${imageUrls.length} 页)`,
+                    path: `artifacts/${slideshowId}/`,
+                    mimeType: "application/json",
+                    size: 0,
+                    previewUrl: null,
+                    metadataJson: JSON.stringify({ imageUrls, slideCount: imageUrls.length }),
+                    createdAt: nowISO(),
+                  } as any;
+
+                  db.insert(schema.artifacts).values({
+                    id: slideshowArtRow.id,
+                    runId: slideshowArtRow.runId,
+                    messageId: slideshowArtRow.messageId,
+                    type: slideshowArtRow.type,
+                    name: slideshowArtRow.name,
+                    path: slideshowArtRow.path,
+                    mimeType: slideshowArtRow.mimeType,
+                    size: slideshowArtRow.size,
+                    previewUrl: slideshowArtRow.previewUrl,
+                    metadataJson: slideshowArtRow.metadataJson,
+                    createdAt: slideshowArtRow.createdAt,
+                  }).run();
+
+                  broadcastToConversation(conversationId, {
+                    type: "artifact:created",
+                    artifact: slideshowArtRow,
+                  } as any);
+
+                  crashLog(`Slideshow artifact: ${slideshowId.slice(0, 8)} with ${imageUrls.length} images`);
+                }
+              } catch (slideshowErr) {
+                crashLog(`Slideshow artifact FAILED: ${(slideshowErr as Error).message}`);
               }
             }
           } else {
