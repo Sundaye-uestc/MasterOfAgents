@@ -8,6 +8,24 @@
 
 - [ ] Codex CLI 安装与端到端验证（当前 `spawn codex ENOENT`，运行时自动降级为 ClaudeCodeAdapter；代码已完成）
 
+---
+
+## Phase 5 PPT 生成能力集成 ✅
+
+全部完成，详见 [phase5-completion.md](milestones/phase5/phase5-completion.md)。
+
+- [x] PPT 生成脚本集成 — NanoBanana 脚本迁移到 `AgentHub/ppt/`，适配路径解析
+- [x] PPTX → HTML 预览转换器 — `pptx_to_preview.py` 文本/表格/图片提取 + 自包含 HTML 播放器
+- [x] Artifact pipeline 增强 — `.pptx` MIME 映射 + `shouldSkipFile` 过滤（slide 图片/元数据/JS 脚本）
+- [x] Agent system prompt — 中文输出偏好 + PPT 能力指令注入（claude-code + codex 两个 adapter）
+- [x] Agent PPT 行为约束 — 禁止 LibreOffice / PowerShell COM / 子代理视觉审查，服务端自动生成预览
+- [x] slide 图片过滤增强 — 正则从仅匹配 `images/` 子目录扩展为匹配任意目录下的 `slide*.png/jpg/webp`
+- [x] 前端 PPT 展示 — `InlineArtifactCard` 新增 `isPresentation()` 分发 + 📊 下载卡片
+- [x] PPTX 内联预览 — 服务端自动转换 → `type: "webpage"` artifact → WebPreviewCard iframe
+- [x] SKILL.md 精简 — 675 → 105 行
+- [x] Skills 目录清理 — 删除 5 个无用文件（README.md / prompt_file_reader.py / video_viewer.html / .env / .env.example）
+- [x] 环境配置 — GEMINI_API_KEY 合并到根 `.env` + 依赖补充（python-dotenv / pptxgenjs）
+
 ### 当前风险
 
 | 风险 | 状态 | 应对 |
