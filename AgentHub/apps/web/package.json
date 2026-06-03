@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@agenthub/shared": "workspace:*",
+    "jszip": "^3.10.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
