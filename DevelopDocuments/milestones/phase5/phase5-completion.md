@@ -1,6 +1,6 @@
 # Phase 5 开发完成文档
 
-**完成日期：** 2026-06-03（更新：PPT 指令优化 + slide 过滤增强）
+**完成日期：** 2026-06-03（更新：PPT 指令优化 + slide 过滤增强 + 客户端 PPTX 渲染 + QA 指令 v2）
 
 ---
 
@@ -303,7 +303,95 @@ Agent 在用 pptxgenjs 生成 PPTX 后，会自发执行一系列不必要的 QA
 
 ---
 
-## 十一、修改文件汇总（更新）
+## 十二、客户端 PPTX 渲染（2026-06-03）
+
+### 12.1 问题背景
+
+原有的 PPTX 预览流程依赖服务端 `pptx_to_preview.py`（python-pptx）将 PPTX 转为 HTML，创建 **两个 artifact**：PPTX 文件 artifact + HTML 预览 artifact。但前端最终只展示了 PPTX 下载卡片，内联预览不稳定。
+
+### 12.2 方案：纯客户端 JSZip + DOMParser 解析
+
+**核心思路**：不再依赖服务端 Python 转换，前端直接读取 PPTX 二进制 → JSZip 解压 → DOMParser 解析 OOXML XML → React 渲染幻灯片。
+
+**新增依赖**：`jszip`（pnpm add jszip --filter @agenthub/web）
+
+### 12.3 文件清单
+
+| 文件 | 行数 | 说明 |
+|---|---|---|
+| `lib/pptx-parser.ts`（新建） | ~400 | PPTX 解析器：JSZip 解压 ZIP → DOMParser namespace-aware 解析 OOXML → 提取文本形状（位置/格式/颜色）、嵌入图片（关系链 + Blob URL）、表格 |
+| `components/artifact/PptxViewerCard.tsx`（新建） | ~280 | React 幻灯片查看器：fetch ArrayBuffer → parsePptx() → 绝对定位 HTML 渲染 → 键盘/触摸/点击导航 + 圆点指示 + 下载按钮 |
+
+### 12.4 工作流程
+
+```
+用户收到 PPTX artifact
+  → InlineArtifactCard 检测 isPresentation()
+  → PptxViewerCard 挂载
+    → fetch(/api/artifacts/static/{id}/file.pptx)
+    → JSZip.load(arrayBuffer)
+    → 读取 ppt/presentation.xml（幻灯片尺寸）
+    → 读取 ppt/slides/slideN.xml → DOMParser 解析 OOXML
+    → 读取 ppt/slides/_rels/slideN.xml.rels + ppt/media/*（嵌入图片）
+    → 渲染：绝对定位 div 模拟幻灯片布局 + 导航控件
+```
+
+### 12.5 变更
+
+| 文件 | 动作 | 说明 |
+|---|---|---|
+| `apps/web/src/lib/pptx-parser.ts` | 新建 | 客户端 PPTX 解析器 |
+| `apps/web/src/components/artifact/PptxViewerCard.tsx` | 新建 | 客户端幻灯片查看器组件 |
+| `apps/web/src/components/chat/InlineArtifactCard.tsx` | 修改 | PPTX 从下载卡片改为路由到 PptxViewerCard |
+| `apps/web/package.json` | 修改 | 新增 jszip 依赖 |
+
+**特点**：
+- 零服务端依赖，纯浏览器解析
+- 渲染保持原始幻灯片位置/格式/颜色
+- 支持嵌入图片提取和展示
+- 深色主题播放器，键盘（← → Home End）+ 触摸滑动 + 点击边缘翻页
+- 失败时回退为下载按钮
+
+---
+
+## 十三、PPT QA 指令 v2 强化（2026-06-03）
+
+### 13.1 问题
+
+v1 指令虽然禁止了 LibreOffice/COM/子代理审查，但 Agent 仍在生成后自发执行 QA 流程：文本提取 → 导出图片 → 子代理视觉审查 → 修复间距/对比度/对齐 → 再审查 → 生成 QA 表格（如"检查项 | Slide 1 | Slide 2 | ..."），整个过程使 PPT 生成时间翻倍。
+
+### 13.2 根因
+
+v1 指令只列出了"不要做什么"，但：
+- 没有解释"为什么不需要做"（系统已自动生成预览）
+- 没有覆盖 Agent 自创的 QA 模式（文本提取、数学验证、QA 表格等）
+- Agent 担心交付质量差，会用任何可用手段做自我审查
+
+### 13.3 修复：v2 指令
+
+**文件：** `claude-code.adapter.ts`、`codex.adapter.ts`
+
+v2 指令核心变化：
+
+| 维度 | v1 | v2 |
+|---|---|---|
+| 系统能力说明 | 无 | 开篇："系统自动生成 HTML 预览，用户无需下载即可翻页查看" |
+| 角色定位 | Agent 负责生成 + 检查 + 修复 | "你的任务只有两步：生成 → 告知完成" |
+| 禁止项 | 3 条笼统约束 | **7 条具体行为逐一列出**，每条对应实际观察到的 QA 套路 |
+| 正面引导 | 无 | 4 步正确流程 + 结束语模板："PPT 已生成，请查看下方预览。如需调整请告诉我。" |
+
+**7 条明确禁止项**：
+1. ❌ 提取 PPTX 文本检查内容
+2. ❌ 用任何方式导出为图片做视觉审查
+3. ❌ 启动子代理做视觉审查
+4. ❌ 做间距/颜色/对齐/对比度数学验证
+5. ❌ 生成 QA 报告表格
+6. ❌ 说"发现 X 个问题，正在修复"后重新生成
+7. ❌ 任何形式的"先审查再修复"循环
+
+---
+
+## 十四、修改文件汇总（更新）
 
 | 文件 | 动作 | 说明 |
 |---|---|---|
@@ -314,9 +402,11 @@ Agent 在用 pptxgenjs 生成 PPTX 后，会自发执行一系列不必要的 QA
 | `AgentHub/ppt/prompts/transition_template.md` | 新建 | 转场提示词模板 |
 | `AgentHub/ppt/templates/viewer.html` | 新建 | HTML 播放器模板 |
 | `AgentHub/ppt/.env.example` | 新建 | 环境变量参考 |
-| `apps/server/src/services/agent-runtime.service.ts` | 修改 | MIME 映射 + shouldSkipFile（含 slide 图片过滤增强）+ PPTX 预览生成 |
-| `apps/server/src/adapters/claude-code.adapter.ts` | 修改 | 中文指令 + PPT 能力注入 + PPT 行为约束（禁止 LibreOffice/COM/子代理审查） |
-| `apps/server/src/adapters/codex.adapter.ts` | 修改 | 中文指令 + PPT 能力注入 + PPT 行为约束（禁止 LibreOffice/COM/子代理审查） |
+| `apps/server/src/services/agent-runtime.service.ts` | 修改 | MIME 映射 + shouldSkipFile（slide 图片过滤增强）+ PPTX 预览生成 |
+| `apps/server/src/adapters/claude-code.adapter.ts` | 修改 | 中文指令 + PPT 能力注入 + PPT QA 行为约束 v2（7 条明确禁止） |
+| `apps/server/src/adapters/codex.adapter.ts` | 修改 | 中文指令 + PPT 能力注入 + PPT QA 行为约束 v2（7 条明确禁止） |
+| `apps/web/src/lib/pptx-parser.ts` | 新建 | 客户端 PPTX 解析器（JSZip + DOMParser） |
+| `apps/web/src/components/artifact/PptxViewerCard.tsx` | 新建 | 客户端幻灯片查看器（键盘/触摸/点击导航） |
 | `apps/web/src/components/chat/InlineArtifactCard.tsx` | 修改 | isPresentation() + PPT 下载卡片 |
 | `skills/NanoBanana-PPT-Skills/SKILL.md` | 修改 | 精简 675→105 行 |
 | `skills/NanoBanana-PPT-Skills/README.md` | 删除 | 无用文档 |
@@ -338,7 +428,9 @@ Agent 在用 pptxgenjs 生成 PPTX 后，会自发执行一系列不必要的 QA
 | PPTX 服务端转 HTML 预览 | 前端无需支持 PPTX 渲染，复用 WebPreviewCard iframe |
 | shouldSkipFile 过滤 | 幻灯片图片（任意目录）、元数据 JSON、JS 脚本不触发广播和 artifact |
 | PPT 生成脚本放置于 AgentHub/ppt/ | 作为服务端永久资源，Agent 通过 CLI 调用 |
-| 禁止 Agent 自审查 | PPT 指令中明确禁止 LibreOffice/COM/子代理视觉审查，由服务端 artifact pipeline 自动生成预览 |
+| 客户端 PPTX 渲染 | JSZip + DOMParser 纯浏览器解析，不依赖服务端 Python（pptx_to_preview.py 保留为备用） |
+| 禁止 Agent 自审查 | PPT 指令 v2：7 条具体禁止项，覆盖文本提取/图片导出/子代理审查/数学验证/QA 表格等所有观察到的 QA 套路 |
+| 生成→告知模式 | Agent 任务简化为"生成 PPTX → 验证存在 → 告知用户"，系统自动生成预览 |
 | 精简 SKILL.md | 从 675 行砍至 105 行，核心生成功能 + 必要美观度 |
 | 环境变量集中管理 | 根目录 .env 统一管理所有 API 密钥 |
 
@@ -354,8 +446,10 @@ Agent 在用 pptxgenjs 生成 PPTX 后，会自发执行一系列不必要的 QA
 - `shouldSkipFile` 过滤生效 ✅ （幻灯片图片 + metadata JSON + JS 脚本）
 - slide 图片过滤增强 ✅ （根目录 `slide.jpg`、`slide-1.png` 等均可拦截）
 - Agent PPT 指令含 LibreOffice/COM/子代理审查禁止 ✅
-- `InlineArtifactCard` PPT 下载卡片显示 ✅
-- PPTX 预览 HTML 作为 webpage artifact 创建 ✅
+- `InlineArtifactCard` PPT 路由到 PptxViewerCard 客户端渲染 ✅
+- PptxViewerCard 键盘/触摸/点击导航 + 圆点指示器 ✅
+- pptx-parser 提取文本（位置/格式/颜色）+ 图片（Blob URL）+ 表格 ✅
+- PPT QA 指令 v2：7 条禁止项覆盖所有观察到的 QA 套路 ✅
 - SKILL.md 精简完成 ✅ （675→105 行）
 - skills/ 目录清理完成 ✅ （仅保留 6 个核心文件）
 - GEMINI_API_KEY 已配置到根 .env ✅
@@ -372,5 +466,9 @@ Agent 在用 pptxgenjs 生成 PPTX 后，会自发执行一系列不必要的 QA
 | `3bf04b6` | Feat: inject Chinese language preference + PPT capability into agent system prompt |
 | `af778dc` | Feat: add PPT presentation card in InlineArtifactCard |
 | `2cfcf11` | Chore: add pptxgenjs dependency for programmatic PPT generation |
+| `dbb92f0` | Fix: optimize PPT agent instructions + broaden slide image filter |
+| `1162437` | Docs: add pptx_to_preview.py + Phase 5 completion doc + update todo |
+| `c5887a4` | Chore: condense SKILL.md (675→105) + remove useless skill files |
+| `ca9ac66` | Docs: merge Timeline into WorkOverview, rename to OVERVIEW.md |
 
-另有部分工作（pptx_to_preview.py、SKILL.md 精简、skills 目录清理、.env 合并）尚未提交，位于当前工作目录。
+后续客户端 PPTX 渲染 + QA 指令 v2 尚未提交。
