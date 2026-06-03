@@ -10,6 +10,8 @@ import type { AgentPlatformAdapter, RunInput } from "./base.js";
 import { parseStreamLine, isStreamComplete } from "../runtime/stream-json-parser.js";
 import { ProcessSupervisor } from "../runtime/process-supervisor.js";
 import { crashLog } from "../lib/crash-log.js";
+import * as path from "node:path";
+import * as fs from "node:fs";
 
 export class CodexAdapter implements AgentPlatformAdapter {
   readonly platform: string;
@@ -76,7 +78,7 @@ export class CodexAdapter implements AgentPlatformAdapter {
 
     // Explicitly tell the agent its working directory so it doesn't forget
     const cwd = workingDir ?? process.cwd();
-    const cwdBlock = `\n当前工作目录: ${cwd}\n请将所有新建/修改的文件放在此目录下，除非用户明确指定了其他路径。`;
+    const cwdBlock = `\n当前工作目录: ${cwd}\n请将所有新建/修改的文件放在此目录下，除非用户明确指定了其他路径。\n请始终使用中文进行思考和回复，包括工具调用中的描述文本和文件内容（代码和配置文件除外）。`;
 
     if (messageHistory && messageHistory.length > 0) {
       const historyBlock = messageHistory
@@ -97,6 +99,48 @@ export class CodexAdapter implements AgentPlatformAdapter {
     if (this.permissionMode === "bypass") {
       args.push("--permission-mode", "bypassPermissions");
     }
+
+    // Add PPT generation capability instructions
+    const pptDir = path.resolve(process.cwd(), "..", "ppt");
+    const pptAvailable = fs.existsSync(path.join(pptDir, "generate_ppt.py"));
+    let pptBlock = "";
+    if (pptAvailable) {
+      pptBlock = `
+## PPT 生成能力
+
+你可以为用户生成高质量 PPT。工作流程：
+
+1. **规划内容**: 分析用户需求，在 workspace 中创建 slides_plan.json：
+\`\`\`json
+{
+  "title": "演示文稿标题",
+  "slides": [
+    { "slide_number": 1, "page_type": "cover", "content": "标题\\n副标题" },
+    { "slide_number": 2, "page_type": "content", "content": "要点1: ...\\n要点2: ..." },
+    { "slide_number": 3, "page_type": "data", "content": "数据展示内容" },
+    { "slide_number": 4, "page_type": "content", "content": "总结内容" }
+  ]
+}
+\`\`\`
+page_type 可选: cover(封面)、content(内容页)、data(数据/总结页)
+
+2. **生成 PPT**: 执行命令生成图示幻灯片：
+\`\`\`bash
+python ${pptDir.replace(/\\/g, '\\\\')}\\\\generate_ppt.py --plan slides_plan.json --style gradient-glass --resolution 2K --output ppt_output
+\`\`\`
+可选风格: gradient-glass (科技商务风格，推荐), vector-illustration (教育培训风格)
+可选分辨率: 2K (快速，推荐), 4K (高清，适合打印)
+
+3. **检查结果**: 生成完成后，HTML 预览查看器位于 ppt_output/index.html，图片在 ppt_output/images/。
+   请告知用户生成结果并指引他们查看预览。
+
+注意事项:
+- 生成每页大约需要 30 秒，请提前告知用户等待
+- slides_plan.json 必须放在 workspace（当前工作目录）下
+- 如果用户没有指定页数，默认生成 5-7 页
+`;
+    }
+    effectiveSystemPrompt = effectiveSystemPrompt + pptBlock;
 
     if (effectiveSystemPrompt) {
       args.push("--system-prompt", effectiveSystemPrompt);
