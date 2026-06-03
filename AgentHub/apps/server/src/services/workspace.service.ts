@@ -193,9 +193,9 @@ export class WorkspaceService {
     const entries = fs.readdirSync(currentPath, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(currentPath, entry.name);
+      // Skip hidden files and directories (consistent with _copyDir)
+      if (entry.name.startsWith(".")) continue;
       if (entry.isDirectory()) {
-        // Skip hidden directories
-        if (entry.name.startsWith(".")) continue;
         this._walkDir(basePath, fullPath, manifest);
       } else if (entry.isFile()) {
         const relativePath = path.relative(basePath, fullPath).replace(/\\/g, "/");
@@ -213,9 +213,11 @@ export class WorkspaceService {
 
   /** Try to read a text file from the workspace. Returns { text, isBinary } */
   readFileContent(rootPath: string, filePath: string): { text: string | null; isBinary: boolean; size: number } {
-    const fullPath = path.resolve(rootPath, filePath);
+    // Normalize both paths to resolve platform-specific separators (Windows backslash vs forward slash)
+    const normalizedRoot = path.resolve(rootPath);
+    const fullPath = path.resolve(normalizedRoot, filePath);
     // Security: ensure path stays within rootPath
-    if (!fullPath.startsWith(rootPath)) {
+    if (!fullPath.startsWith(normalizedRoot + path.sep) && fullPath !== normalizedRoot) {
       return { text: null, isBinary: true, size: 0 };
     }
     if (!fs.existsSync(fullPath)) {
