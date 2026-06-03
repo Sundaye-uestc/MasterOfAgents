@@ -17,7 +17,7 @@ import { initDb, saveDb } from "./db/index.js";
 import { seedAgents } from "./db/seed.js";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { crashLog } from "./lib/crash-log.js";
+import { crashLog, clearCrashLog } from "./lib/crash-log.js";
 
 // Ensure data directory exists
 const DATA_DIR = resolve(process.cwd(), "data");
@@ -104,6 +104,7 @@ async function main() {
     crashLog(`PROCESS beforeExit code=${code}`);
   });
 
+  clearCrashLog();
   crashLog(`Server starting on port ${PORT} [PID=${process.pid}]`);
 
   process.on("SIGINT", () => shutdown("SIGINT"));

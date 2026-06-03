@@ -16,6 +16,13 @@ if (!fs.existsSync(dir)) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+/** Truncate crash.log on server start so each session starts fresh */
+export function clearCrashLog(): void {
+  try {
+    fs.writeFileSync(CRASH_LOG_PATH, "", "utf-8");
+  } catch { /* best effort */ }
+}
+
 export function crashLog(line: string): void {
   const ts = new Date().toISOString();
   const entry = `[${ts}] ${line}\n`;
