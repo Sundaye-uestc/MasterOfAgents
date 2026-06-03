@@ -1,6 +1,7 @@
 import type { ArtifactRow } from "@agenthub/shared";
 import { WebPreviewCard } from "../artifact/WebPreviewCard.js";
 import { DownloadCard } from "../artifact/DownloadCard.js";
+import { TextPreviewCard } from "../artifact/TextPreviewCard.js";
 
 interface Props {
   artifact: ArtifactRow;
@@ -12,6 +13,16 @@ function isImage(mimeType: string | null): boolean {
 
 function isWebpage(artifact: ArtifactRow): boolean {
   return artifact.type === "webpage" || artifact.mimeType === "text/html";
+}
+
+function isText(mimeType: string | null): boolean {
+  if (!mimeType) return false;
+  return (
+    mimeType.startsWith("text/") ||
+    mimeType === "application/json" ||
+    mimeType === "application/javascript" ||
+    mimeType === "text/typescript"
+  );
 }
 
 /** Build the static file serving URL for the artifact */
@@ -67,6 +78,17 @@ export function InlineArtifactCard({ artifact }: Props) {
           />
         </div>
       </div>
+    );
+  }
+
+  // Text file inline preview
+  if (isText(artifact.mimeType)) {
+    return (
+      <TextPreviewCard
+        url={url}
+        name={artifact.name}
+        mimeType={artifact.mimeType}
+      />
     );
   }
 

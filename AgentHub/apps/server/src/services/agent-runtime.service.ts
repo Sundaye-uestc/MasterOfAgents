@@ -235,10 +235,48 @@ export class AgentRuntimeService {
                   mimeType = `image/${ext === ".jpg" ? "jpeg" : ext === ".svg" ? "svg+xml" : ext.slice(1)}`;
                 } else if (ext === ".pdf") {
                   mimeType = "application/pdf";
-                } else if ([".md", ".txt", ".xml", ".yaml", ".yml", ".csv"].includes(ext)) {
+                } else if ([".md", ".txt", ".xml", ".yaml", ".yml", ".csv", ".log"].includes(ext)) {
                   mimeType = "text/plain";
+                } else if ([".py", ".pyw"].includes(ext)) {
+                  mimeType = "text/x-python";
+                } else if (ext === ".java") {
+                  mimeType = "text/x-java";
+                } else if (ext === ".go") {
+                  mimeType = "text/x-go";
+                } else if (ext === ".rs") {
+                  mimeType = "text/x-rust";
+                } else if ([".c", ".h"].includes(ext)) {
+                  mimeType = "text/x-c";
+                } else if ([".cpp", ".cxx", ".hpp", ".hxx", ".cc"].includes(ext)) {
+                  mimeType = "text/x-c++";
+                } else if ([".sh", ".bash", ".zsh"].includes(ext)) {
+                  mimeType = "text/x-shellscript";
+                } else if (ext === ".rb") {
+                  mimeType = "text/x-ruby";
+                } else if (ext === ".php") {
+                  mimeType = "text/x-php";
+                } else if (ext === ".swift") {
+                  mimeType = "text/x-swift";
+                } else if ([".kt", ".kts"].includes(ext)) {
+                  mimeType = "text/x-kotlin";
+                } else if (ext === ".scala") {
+                  mimeType = "text/x-scala";
+                } else if (ext === ".r") {
+                  mimeType = "text/x-r";
+                } else if (ext === ".sql") {
+                  mimeType = "text/x-sql";
+                } else if (ext === ".lua") {
+                  mimeType = "text/x-lua";
+                } else if (ext === ".toml") {
+                  mimeType = "text/x-toml";
+                } else if ([".ini", ".cfg", ".conf", ".env"].includes(ext)) {
+                  mimeType = "text/plain";
+                } else if ([".vue", ".svelte"].includes(ext)) {
+                  mimeType = "text/html";
                 } else {
-                  continue; // skip files with unregistered extensions
+                  // Fallback: treat unrecognized extensions as plain text
+                  // (agent-created files are virtually always text-based)
+                  mimeType = "text/plain";
                 }
 
                 try {
