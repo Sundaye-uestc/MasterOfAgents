@@ -45,6 +45,12 @@ export interface PptxShape {
   top: number;
   width: number;
   height: number;
+  /** Visual fill color (CSS) — parsed from <a:solidFill> */
+  fillColor?: string;
+  /** Border color (CSS) */
+  borderColor?: string;
+  /** Border width in pixels */
+  borderWidth?: number;
   /** For text shapes */
   paragraphs?: PptxParagraph[];
   /** For image shapes */
@@ -59,6 +65,8 @@ export interface PptxSlide {
   widthPx: number;
   heightPx: number;
   layoutName?: string;
+  /** Slide-level background image data URL */
+  backgroundImage?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -106,6 +114,39 @@ function hexToCss(hex: string): string {
 // Parsing
 // ---------------------------------------------------------------------------
 
+/** Extract fill color from <a:solidFill> or <a:solidFill> inside an spPr-like element */
+function parseFill(el: Element): { fillColor?: string } {
+  const solidFill = el.getElementsByTagNameNS(NS_A, "solidFill").item(0);
+  if (solidFill) {
+    const srgbClr = solidFill.getElementsByTagNameNS(NS_A, "srgbClr").item(0);
+    if (srgbClr) {
+      const val = attr(srgbClr, "val");
+      if (val) return { fillColor: hexToCss(val) };
+    }
+    const schemeClr = solidFill.getElementsByTagNameNS(NS_A, "schemeClr").item(0);
+    if (schemeClr) {
+      // Use the same scheme map defined below; we inline a fallback
+      const sVal = attr(schemeClr, "val");
+      if (sVal) return { fillColor: schemeColorMap[sVal] || undefined };
+    }
+  }
+  return {};
+}
+
+/** Resolve a namespaced attribute with fallback to prefix:localName form */
+function attrNS(el: Element, ns: string, localName: string, prefix: string): string {
+  const v = el.getAttributeNS(ns, localName);
+  if (v) return v;
+  return el.getAttribute(`${prefix}:${localName}`) ?? "";
+}
+
+const schemeColorMap: Record<string, string> = {
+  tx1: "#000000", tx2: "#44546a", bg1: "#ffffff", bg2: "#f2f2f2",
+  accent1: "#4472c4", accent2: "#ed7d31", accent3: "#a5a5a5",
+  accent4: "#ffc000", accent5: "#5b9bd5", accent6: "#70ad47",
+  dk1: "#000000", dk2: "#44546a", lt1: "#ffffff", lt2: "#f2f2f2",
+};
+
 function parseRun(rEl: Element): PptxTextRun {
   const rPr = rEl.getElementsByTagNameNS(NS_A, "rPr").item(0);
   const tEl = rEl.getElementsByTagNameNS(NS_A, "t").item(0);
@@ -130,25 +171,8 @@ function parseRun(rEl: Element): PptxTextRun {
     if (srgbClr) {
       run.color = hexToCss(attr(srgbClr, "val"));
     } else if (schemeClr) {
-      // Map common scheme colors
       const schemeVal = attr(schemeClr, "val");
-      const schemeMap: Record<string, string> = {
-        tx1: "#000000",
-        tx2: "#44546a",
-        bg1: "#ffffff",
-        bg2: "#f2f2f2",
-        accent1: "#4472c4",
-        accent2: "#ed7d31",
-        accent3: "#a5a5a5",
-        accent4: "#ffc000",
-        accent5: "#5b9bd5",
-        accent6: "#70ad47",
-        dk1: "#000000",
-        dk2: "#44546a",
-        lt1: "#ffffff",
-        lt2: "#f2f2f2",
-      };
-      run.color = schemeMap[schemeVal] || "";
+      run.color = schemeColorMap[schemeVal] || "";
     }
   }
 
@@ -178,7 +202,12 @@ function parseTextShape(sp: Element): PptxShape {
   const ext = xfrm?.getElementsByTagNameNS(NS_A, "ext").item(0);
 
   const paragraphs: PptxParagraph[] = [];
-  const txBody = sp.getElementsByTagNameNS(NS_A, "txBody")?.item(0);
+  // txBody is in the presentationml namespace (NS_P), but some generators
+  // may place it in drawingml (NS_A). Check both for maximum compatibility.
+  let txBody = sp.getElementsByTagNameNS(NS_P, "txBody")?.item(0) ?? null;
+  if (!txBody) {
+    txBody = sp.getElementsByTagNameNS(NS_A, "txBody")?.item(0) ?? null;
+  }
   if (txBody) {
     const pElements = Array.from(txBody.getElementsByTagNameNS(NS_A, "p"));
     for (const pEl of pElements) {
@@ -186,6 +215,22 @@ function parseTextShape(sp: Element): PptxShape {
       if (para.runs.length > 0 && para.runs.some((r) => r.text.trim())) {
         paragraphs.push(para);
       }
+    }
+  }
+
+  // Extract shape visual properties: fill, border
+  const spPr = sp.getElementsByTagNameNS(NS_P, "spPr").item(0)
+    ?? sp.getElementsByTagNameNS(NS_A, "spPr").item(0);
+  const fillInfo = spPr ? parseFill(spPr) : ({} as { fillColor?: string });
+  let borderColor: string | undefined;
+  let borderWidth: number | undefined;
+  if (spPr) {
+    const ln = spPr.getElementsByTagNameNS(NS_A, "ln").item(0);
+    if (ln) {
+      const lnW = attr(ln, "w"); // EMU
+      if (lnW) borderWidth = Math.max(1, Math.round(emuToPx(parseInt(lnW, 10))));
+      const lnFill = parseFill(ln);
+      borderColor = lnFill.fillColor || "#cccccc";
     }
   }
 
@@ -199,6 +244,9 @@ function parseTextShape(sp: Element): PptxShape {
     top: off ? emuToPx(emuAttr(off, "y")) : 0,
     width: ext ? emuToPx(emuAttr(ext, "cx")) : 0,
     height: ext ? emuToPx(emuAttr(ext, "cy")) : 0,
+    fillColor: fillInfo.fillColor,
+    borderColor,
+    borderWidth,
     paragraphs,
   };
 }
@@ -212,15 +260,15 @@ function parseImageShape(
   const off = xfrm?.getElementsByTagNameNS(NS_A, "off").item(0);
   const ext = xfrm?.getElementsByTagNameNS(NS_A, "ext").item(0);
 
-  // Find blipFill → blip → @r:embed
+  // Find blipFill → blip → @r:embed (with namespace fallback)
   let imageDataUrl: string | null = null;
-  const blipFill = sp.getElementsByTagNameNS(NS_P, "blipFill").item(0);
+  const blipFill = sp.getElementsByTagNameNS(NS_P, "blipFill").item(0)
+    ?? sp.getElementsByTagNameNS(NS_A, "blipFill").item(0);
   if (blipFill) {
     const blip = blipFill.getElementsByTagNameNS(NS_A, "blip").item(0);
-    const embed = blip?.getAttributeNS(NS_R, "embed") ?? "";
+    const embed = blip ? attrNS(blip, NS_R, "embed", "r") : "";
     if (embed && relationships.has(embed)) {
       const target = relationships.get(embed)!;
-      // target is like "../media/image1.png" — extract filename
       const filename = target.replace(/^.*[\\/]/, "");
       const blob = mediaFiles.get(filename);
       if (blob) {
@@ -351,6 +399,31 @@ export async function parsePptx(arrayBuffer: ArrayBuffer): Promise<PptxSlide[]> 
 
     const shapes: PptxShape[] = [];
 
+    // --- Slide-level background ---
+    let backgroundImage: string | null = null;
+    const cSld = slideDoc.getElementsByTagNameNS(NS_P, "cSld").item(0);
+    if (cSld) {
+      const bg = cSld.getElementsByTagNameNS(NS_P, "bg").item(0);
+      if (bg) {
+        const bgPr = bg.getElementsByTagNameNS(NS_P, "bgPr").item(0);
+        if (bgPr) {
+          const bgBlipFill = bgPr.getElementsByTagNameNS(NS_A, "blipFill").item(0);
+          if (bgBlipFill) {
+            const bgBlip = bgBlipFill.getElementsByTagNameNS(NS_A, "blip").item(0);
+            const bgEmbed = bgBlip ? attrNS(bgBlip, NS_R, "embed", "r") : "";
+            if (bgEmbed && relationships.has(bgEmbed)) {
+              const bgTarget = relationships.get(bgEmbed)!;
+              const bgFilename = bgTarget.replace(/^.*[\\/]/, "");
+              const bgBlob = mediaFiles.get(bgFilename);
+              if (bgBlob) {
+                backgroundImage = URL.createObjectURL(bgBlob);
+              }
+            }
+          }
+        }
+      }
+    }
+
     // Find the shape tree
     const spTree = slideDoc.getElementsByTagNameNS(NS_P, "spTree").item(0);
     if (spTree) {
@@ -386,6 +459,7 @@ export async function parsePptx(arrayBuffer: ArrayBuffer): Promise<PptxSlide[]> 
       shapes,
       widthPx: emuToPx(slideW),
       heightPx: emuToPx(slideH),
+      backgroundImage,
     });
     slideIdx++;
   }

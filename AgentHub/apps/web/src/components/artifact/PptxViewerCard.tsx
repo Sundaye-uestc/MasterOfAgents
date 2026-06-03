@@ -36,6 +36,10 @@ function SlideShape({ shape, scaleX, scaleY }: { shape: PptxShape; scaleX: numbe
     overflow: "hidden",
     boxSizing: "border-box",
     padding: "2px 6px",
+    ...(shape.fillColor ? { background: shape.fillColor } : {}),
+    ...(shape.borderWidth && shape.borderWidth > 0
+      ? { border: `${shape.borderWidth}px solid ${shape.borderColor || "#ccc"}` }
+      : {}),
   };
 
   if (shape.type === "image" && shape.imageDataUrl) {
@@ -188,6 +192,7 @@ export function PptxViewerCard({ url, name }: Props) {
     const scaledSlides = slides.map((s) => ({
       shapes: s.shapes,
       slideNum: s.index + 1,
+      backgroundImage: s.backgroundImage ?? null,
     }));
 
     return { scaledSlides, slideWidth, slideHeight };
@@ -315,7 +320,9 @@ export function PptxViewerCard({ url, name }: Props) {
               position: "relative",
               width: slideWidth,
               height: slideHeight || "auto",
-              background: "#fff",
+              background: s.backgroundImage
+                ? `#fff url(${s.backgroundImage}) center/cover no-repeat`
+                : "#fff",
               boxShadow: "0 2px 20px rgba(0,0,0,0.4)",
               margin: "0 auto",
               fontFamily: "'Segoe UI', Arial, 'Microsoft YaHei', sans-serif",
