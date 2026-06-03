@@ -98,7 +98,10 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
           return {};
         }
         const existingIds = new Set(s.fileChanges.map((c) => c.id));
-        const freshChanges = changes.filter((c: FileChangeRow) => !existingIds.has(c.id));
+        const existingKeys = new Set(s.fileChanges.map((c) => `${c.path}::${c.changeType}`));
+        const freshChanges = changes.filter(
+          (c: FileChangeRow) => !existingIds.has(c.id) && !existingKeys.has(`${c.path}::${c.changeType}`)
+        );
         const merged = freshChanges.length > 0
           ? [...freshChanges, ...s.fileChanges]
           : s.fileChanges;
@@ -126,15 +129,26 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
 
   updateFileChange: (updated) => {
     set((s) => {
-      const idx = s.fileChanges.findIndex((c) => c.id === updated.id);
-      if (idx === -1) {
-        console.log(`[workspace.store] 📝 updateFileChange: ADD ${updated.changeType}:${updated.path} (id=${updated.id.slice(0,8)}...) → total=${s.fileChanges.length + 1}`);
-        return { fileChanges: [updated, ...s.fileChanges] };
+      // 1) Exact ID match — same record, just update it
+      const idxById = s.fileChanges.findIndex((c) => c.id === updated.id);
+      if (idxById !== -1) {
+        console.log(`[workspace.store] 📝 updateFileChange: UPDATE ${updated.changeType}:${updated.path} (id=${updated.id.slice(0,8)}...) → total=${s.fileChanges.length}`);
+        const next = [...s.fileChanges];
+        next[idxById] = updated;
+        return { fileChanges: next };
       }
-      console.log(`[workspace.store] 📝 updateFileChange: UPDATE ${updated.changeType}:${updated.path} (id=${updated.id.slice(0,8)}...) → total=${s.fileChanges.length}`);
-      const next = [...s.fileChanges];
-      next[idx] = updated;
-      return { fileChanges: next };
+
+      // 2) Same (path, changeType) but different ID — duplicate from another source, skip
+      const dup = s.fileChanges.some(
+        (c) => c.path === updated.path && c.changeType === updated.changeType
+      );
+      if (dup) {
+        console.log(`[workspace.store] ⏭️  Skip duplicate: ${updated.changeType}:${updated.path} (already shown)`);
+        return {};
+      }
+
+      console.log(`[workspace.store] 📝 updateFileChange: ADD ${updated.changeType}:${updated.path} (id=${updated.id.slice(0,8)}...) → total=${s.fileChanges.length + 1}`);
+      return { fileChanges: [updated, ...s.fileChanges] };
     });
   },
 
