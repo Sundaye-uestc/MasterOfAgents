@@ -94,24 +94,20 @@ export function InlineDiffCard({ change, onUpdate }: Props) {
       {/* Actions (only for pending changes) */}
       {isPending && (
         <div className="border-t border-gray-700 bg-gray-800/30 px-2 py-1 flex items-center gap-2">
-          {change.changeType !== "delete" && (
-            <button
-              onClick={handleApply}
-              disabled={applying}
-              className="px-2 py-0.5 rounded bg-green-600/20 text-green-400 hover:bg-green-600/40 disabled:opacity-50"
-            >
-              {applying ? "..." : "✓ 应用"}
-            </button>
-          )}
-          {change.changeType !== "create" && (
-            <button
-              onClick={handleRevert}
-              disabled={applying}
-              className="px-2 py-0.5 rounded bg-orange-600/20 text-orange-400 hover:bg-orange-600/40 disabled:opacity-50"
-            >
-              {applying ? "..." : "↩ 回滚"}
-            </button>
-          )}
+          <button
+            onClick={handleApply}
+            disabled={applying}
+            className="px-2 py-0.5 rounded bg-green-600/20 text-green-400 hover:bg-green-600/40 disabled:opacity-50"
+          >
+            {applying ? "..." : "✓ 应用"}
+          </button>
+          <button
+            onClick={handleRevert}
+            disabled={applying}
+            className="px-2 py-0.5 rounded bg-orange-600/20 text-orange-400 hover:bg-orange-600/40 disabled:opacity-50"
+          >
+            {applying ? "..." : "↩ 回滚"}
+          </button>
         </div>
       )}
     </div>
