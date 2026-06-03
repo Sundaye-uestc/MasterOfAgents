@@ -1,463 +1,257 @@
 # Phase 5 开发完成文档
 
-**完成日期：** 2026-06-03（更新：PPT 指令优化 + slide 过滤增强 + 客户端 PPTX 渲染 + QA 指令 v2）
+**完成日期：** 2026-06-03
 
 ---
 
 ## 概述
 
-Phase 5 的核心目标是将 NanoBanana PPT 生成能力集成到 AgentHub 中，使用户在聊天界面即可请求 Agent 生成 PPT，并通过 artifact pipeline 自动展示预览。同时完成了 agent 中文输出偏好注入、PPT 内部文件过滤、PPTX 到 HTML 预览转换、SKILL.md 精简、skills 目录清理，以及环境变量合并等工作。
+Phase 5 将 NanoBanana PPT 生成能力集成到 AgentHub，用户通过聊天即可请求 Agent 生成 PPT。核心成果：
+
+- **PPT 生成**：Agent 用 pptxgenjs（秒级）或 Gemini AI（视觉丰富）生成 .pptx 文件
+- **自动预览**：服务端合并 slide 图片为 slideshow artifact → 前端 `ImageSlideshowCard` 翻页轮播
+- **Agent 行为约束**：v3 正面约束指令，阻止 Agent 在生成后做无意义的自我审查
+- **辅助功能**：中文输出注入、SKILL.md 精简、环境配置合并、artifact pipeline 增强
 
 ---
 
-## 一、PPT 生成脚本集成到 AgentHub
+## 一、文件清单
 
-### 1.1 文件迁移
-
-将 `skills/NanoBanana-PPT-Skills/` 核心文件复制到 `AgentHub/ppt/`，作为服务端永久资源：
-
-```
-AgentHub/ppt/
-├── generate_ppt.py                  # 主生成脚本（适配后）
-├── pptx_to_preview.py               # PPTX → HTML 预览转换器（新建）
-├── .env.example                     # 环境变量参考
-├── prompts/
-│   └── transition_template.md       # 转场提示词模板
-├── styles/
-│   ├── gradient-glass.md            # 渐变毛玻璃风格
-│   └── vector-illustration.md       # 矢量插画风格
-└── templates/
-    └── viewer.html                  # HTML 播放器模板
-```
-
-### 1.2 generate_ppt.py 适配
-
-**文件：** `AgentHub/ppt/generate_ppt.py`（新建，510 行）
-
-适配要点：
-- 使用 `SCRIPTS_DIR = Path(__file__).parent.resolve()` 定位脚本目录，不再依赖 CWD
-- 风格路径智能解析：支持完整路径、相对路径、简写名（如 `gradient-glass` → `styles/gradient-glass.md`）
-- 失败时打印可用风格列表，方便 Agent 纠错
-- 输出 JSON 结果块（`---RESULT---` / `---END RESULT---`），便于 Agent 解析
-
-```python
-def resolve_style_path(style_arg: str) -> Path:
-    # 依次尝试：原样 → +.md → STYLES_DIR/name → STYLES_DIR/name.md
-    # 全部失败时列出可用风格并退出
-```
-
----
-
-## 二、PPTX 到 HTML 预览转换器
-
-### 2.1 pptx_to_preview.py
-
-**文件：** `AgentHub/ppt/pptx_to_preview.py`（新建，525 行）
-
-在服务端将 `.pptx` 文件转换为自包含的 HTML 幻灯片预览器，支持：
-
-- **文本提取**：使用 python-pptx 遍历每张幻灯片的所有形状，提取段落文本、富文本格式（粗体、斜体、字号、颜色）、对齐方式
-- **表格提取**：将 PPTX 表格渲染为 HTML `<table>`，带边框样式
-- **图片提取**：从 PPTX ZIP 包中提取 `ppt/media/` 下的嵌入图片
-- **位置保留**：EMU → px 转换，保持形状在幻灯片中的相对位置
-- **HTML 播放器**：深色背景主题、淡入动画、键盘导航（←→ Home End）、触摸滑动、点击边缘翻页、圆点指示器
-
-```
-用法: python pptx_to_preview.py --input presentation.pptx --output preview_dir
-```
-
-### 2.2 服务端自动调用
-
-**文件：** `AgentHub/apps/server/src/services/agent-runtime.service.ts`（修改）
-
-在 artifact 创建循环后，检测 `.pptx` / `.ppt` 文件变更，自动运行 `pptx_to_preview.py`：
-
-```typescript
-// 检测 PPTX 变更
-const pptxChanges = changes.filter(c => {
-  const ext = path.extname(c.path).toLowerCase();
-  return [".pptx", ".ppt"].includes(ext) && c.changeType !== "delete";
-});
-
-// 依次处理：运行 python 脚本 → 复制预览目录到 data/artifacts/{id}/
-// → 创建 webpage 类型 artifact → broadcast artifact:created
-```
-
----
-
-## 三、Artifact Pipeline 增强
-
-### 3.1 PPTX MIME 类型映射
-
-在 `agent-runtime.service.ts` 扩展名→MIME 映射中新增：
-
-```typescript
-} else if ([".pptx", ".ppt"].includes(ext)) {
-  mimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-}
-```
-
-### 3.2 PPT 内部文件过滤（shouldSkipFile）
-
-**问题**：PPT 生成过程产生数百个文件（slide 图片、metadata JSON、JS 脚本），每个都触发 file:changed 广播和 artifact 创建，严重污染聊天 UI。
-
-**方案**：新增 `shouldSkipFile` 过滤器，跳过以下文件：
-
-| 过滤规则 | 匹配模式 | 说明 |
-|---|---|---|
-| 幻灯片图片 | `/images/slide-\d+\.(png\|jpg\|jpeg\|webp)$` | 每页一张，最多数十张 |
-| 元数据 JSON | `/(prompts\|slides_plan)\.json$` | 生成过程的内部记录 |
-| JS 脚本 | `/\.js$` | 生成过程中创建的辅助脚本 |
-
-被跳过的文件不会触发 `file:changed` 广播，也不会创建 artifact。用户只看到最终产物（PPX 文件 + HTML 预览）。
-
-### 3.3 PPTX 预览作为 Webpage Artifact
-
-PPTX 预览 HTML 被创建为 `type: "webpage"` 的 artifact，前端 `InlineArtifactCard` 将其路由到 `WebPreviewCard`（可折叠 iframe），实现与普通 HTML 文件一致的内联预览体验。
-
----
-
-## 四、Agent System Prompt 增强
-
-### 4.1 中文输出偏好
-
-**文件：** `apps/server/src/adapters/claude-code.adapter.ts`、`codex.adapter.ts`
-
-在 system prompt 中注入中文语言指令，确保 Agent 始终使用中文思考和回复：
-
-```typescript
-const cwdBlock = `\n当前工作目录: ${cwd}\n请将所有新建/修改的文件放在此目录下...\n请始终使用中文进行思考和回复，包括工具调用中的描述文本和文件内容（代码和配置文件除外）。`;
-```
-
-### 4.2 PPT 生成能力指令
-
-同样的两个 adapter 文件中，自动检测 `AgentHub/ppt/generate_ppt.py` 存在后，注入 PPT 生成指南：
-
-```
-## PPT 生成能力
-
-你可以为用户生成 PPT。方法如下：
-1. 规划内容 → slides_plan.json（cover / content / data 页面类型）
-2. 执行生成 → python AgentHub/ppt/generate_ppt.py --plan ... --style ... --resolution ...
-3. 返回结果 → index.html 预览页面 + images/
-
-可用风格: gradient-glass (科技商务), vector-illustration (教育培训)
-分辨率: 2K (2752×1536，推荐), 4K (5504×3072)
-生成耗时约 30 秒/页
-```
-
----
-
-## 五、前端 PPT 展示
-
-### 5.1 InlineArtifactCard 分发
-
-**文件：** `apps/web/src/components/chat/InlineArtifactCard.tsx`（修改）
-
-新增 `isPresentation()` 检测函数 + PPT 下载卡片，分发顺序更新为：
-
-```
-webpage → image → text → presentation → download fallback
-```
-
-PPT 卡片展示：
-- 📊 图标 + 文件名 + "PPT 演示文稿" 标签
-- 橙色下载按钮（`bg-orange-600`）
-
-```typescript
-function isPresentation(mimeType: string | null): boolean {
-  if (!mimeType) return false;
-  return mimeType.includes("presentation") ||
-    mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-    mimeType === "application/vnd.ms-powerpoint";
-}
-```
-
-### 5.2 PPTX 内联预览
-
-由于 PPTX 已被 `pptx_to_preview.py` 转换为 HTML 预览并创建为 `type: "webpage"` 的 artifact，前端通过 `WebPreviewCard`（可折叠 iframe）自然展示。用户可在聊天界面直接翻页浏览 PPT，无需下载。
-
----
-
-## 六、SKILL.md 精简
-
-### 6.1 修改内容
-
-**文件：** `skills/NanoBanana-PPT-Skills/SKILL.md`（修改）
-
-- **前**：675 行，包含大量冗余说明、详细示例、开发文档
-- **后**：~105 行，保留核心生成功能和必要美观度
-
-保留内容：
-- 快速开始（4 步：确认需求 → 生成 slides_plan.json → 执行生成 → 返回结果）
-- slides_plan.json 格式规范（page_type: cover / content / data）
-- 命令参数参考表（`--plan` / `--style` / `--resolution` / `--output`）
-- 两种风格简介（gradient-glass / vector-illustration，各 2-3 行）
-- 环境要求（GEMINI_API_KEY + Python 依赖）
-- 输出结构
-- 3 条常见问题
-
-移除内容：
-- 冗长的风格详细描述（原始 ~50 行 → 精简为 2-3 行/风格）
-- 重复的 API key 配置说明
-- 开发注意事项
-- 版本历史
-
----
-
-## 七、Skills 目录清理
-
-### 7.1 删除文件清单
-
-| 文件 | 删除原因 |
-|---|---|
-| `README.md`（871 行）| 开发文档，对 PPT 生成功能无用，内容已在 SKILL.md 中覆盖 |
-| `prompt_file_reader.py`（117 行）| 视频功能辅助脚本，与 PPT 生成无关 |
-| `templates/video_viewer.html`（437 行）| 视频播放器模板，与 PPT 生成无关 |
-| `.env` | 真实密钥已移至根目录 `.env` |
-| `.env.example`（109 行）| 密钥说明已合并到根目录，AgentHub/ppt/ 保留一份参考 |
-
-### 7.2 清理后目录结构
-
-```
-skills/NanoBanana-PPT-Skills/
-├── SKILL.md                  # 精简后的核心文档
-├── generate_ppt.py           # 生成脚本（参考用途）
-├── prompts/
-│   └── transition_template.md
-├── styles/
-│   ├── gradient-glass.md
-│   └── vector-illustration.md
-└── templates/
-    └── viewer.html
-```
-
----
-
-## 八、环境配置
-
-### 8.1 API Key 合并
-
-从 `skills/NanoBanana-PPT-Skills/.env` 提取 `GEMINI_API_KEY` 合并到根目录 `.env`：
-
-```env
-GEMINI_API_KEY=REDACTED
-```
-
-同时预留了 Kling（可灵 AI）密钥占位符，供后续视频功能使用。
-
-### 8.2 依赖补充
-
-**Python**（`requirements.txt`）：
-```
-python-dotenv>=1.0.0
-```
-
-**Node.js**（`package.json`）：
-```
-"pptxgenjs": "^4.0.1"
-```
-
----
-
-## 十、Agent PPT 生成行为优化（2026-06-03）
-
-### 10.1 问题现象
-
-Agent 在用 pptxgenjs 生成 PPTX 后，会自发执行一系列不必要的 QA 步骤：
-- 尝试安装/使用 LibreOffice 将 PPTX 导出为图片
-- 回退到 PowerShell COM 对象做图片导出
-- 启动子代理（sub-agent）做视觉审查
-- 根据审查结果微调 spacing/布局后重新生成
-
-这些步骤每次耗费数分钟且完全多余——服务端 artifact pipeline 已自动将 PPTX 转为 HTML 预览供用户查看。
-
-### 10.2 修复方案
-
-**文件：** `apps/server/src/adapters/claude-code.adapter.ts`、`codex.adapter.ts`
-
-重写 PPT 生成指令块，新增：
-
-- **方式一（AI 图示幻灯片）** vs **方式二（程序化 PPTX）** 的明确区分
-- **⚠️ 重要约束**段落：
-  - 绝对禁止安装/使用 LibreOffice
-  - 绝对禁止使用 PowerShell COM 对象导出图片
-  - 绝对禁止子代理视觉审查
-  - 生成后仅需验证文件存在且 >1KB，直接告知用户结果
-  - 如有小问题用户会自行反馈，无需预先修复
-
-### 10.3 slide 图片过滤增强
-
-**文件：** `apps/server/src/services/agent-runtime.service.ts`
-
-**问题**：`shouldSkipFile` 的 slide 图片正则 `/\/images\/slide-\d+\.(png|jpg|jpeg|webp)$/i` 仅匹配 `images/` 子目录下的文件。Agent 在根目录直接生成的 `slide.jpg` 等文件未被过滤，仍出现在聊天 UI 中。
-
-**修复**：将正则改为 `/(^|\/)slide-?\d*\.(png|jpg|jpeg|webp)$/i`，匹配任意目录下的 slide 图片：
-
-| 文件路径 | 旧规则 | 新规则 |
-|---|---|---|
-| `images/slide-01.png` | ✅ 过滤 | ✅ 过滤 |
-| `slide.jpg` | ❌ 漏过 | ✅ 过滤 |
-| `slide-1.png` | ❌ 漏过 | ✅ 过滤 |
-| `slide01.webp` | ❌ 漏过 | ✅ 过滤 |
-
----
-
-## 十二、客户端 PPTX 渲染（2026-06-03）
-
-### 12.1 问题背景
-
-原有的 PPTX 预览流程依赖服务端 `pptx_to_preview.py`（python-pptx）将 PPTX 转为 HTML，创建 **两个 artifact**：PPTX 文件 artifact + HTML 预览 artifact。但前端最终只展示了 PPTX 下载卡片，内联预览不稳定。
-
-### 12.2 方案：纯客户端 JSZip + DOMParser 解析
-
-**核心思路**：不再依赖服务端 Python 转换，前端直接读取 PPTX 二进制 → JSZip 解压 → DOMParser 解析 OOXML XML → React 渲染幻灯片。
-
-**新增依赖**：`jszip`（pnpm add jszip --filter @agenthub/web）
-
-### 12.3 文件清单
+### 1.1 新建文件
 
 | 文件 | 行数 | 说明 |
 |---|---|---|
-| `lib/pptx-parser.ts`（新建） | ~400 | PPTX 解析器：JSZip 解压 ZIP → DOMParser namespace-aware 解析 OOXML → 提取文本形状（位置/格式/颜色）、嵌入图片（关系链 + Blob URL）、表格 |
-| `components/artifact/PptxViewerCard.tsx`（新建） | ~280 | React 幻灯片查看器：fetch ArrayBuffer → parsePptx() → 绝对定位 HTML 渲染 → 键盘/触摸/点击导航 + 圆点指示 + 下载按钮 |
+| `AgentHub/ppt/generate_ppt.py` | 510 | AI 图示幻灯片生成（Gemini API，路径自适应） |
+| `AgentHub/ppt/pptx_to_preview.py` | 525 | PPTX → 自包含 HTML 预览（python-pptx，备用） |
+| `AgentHub/ppt/styles/gradient-glass.md` | — | 渐变毛玻璃科技商务风格 |
+| `AgentHub/ppt/styles/vector-illustration.md` | — | 矢量插画教育培训风格 |
+| `AgentHub/ppt/prompts/transition_template.md` | — | 转场提示词模板 |
+| `AgentHub/ppt/templates/viewer.html` | — | HTML 播放器模板 |
+| `AgentHub/ppt/.env.example` | — | 环境变量参考 |
+| `apps/web/src/lib/pptx-parser.ts` | ~420 | 客户端 PPTX 解析器（JSZip + DOMParser OOXML） |
+| `apps/web/src/components/artifact/PptxViewerCard.tsx` | ~280 | 客户端 PPTX 查看器（已弃用，保留参考） |
+| `apps/web/src/components/artifact/ImageSlideshowCard.tsx` | ~180 | **活动** — slide 图片轮播组件（键盘/触摸/点击翻页） |
 
-### 12.4 工作流程
+### 1.2 修改文件
+
+| 文件 | 说明 |
+|---|---|
+| `apps/server/src/adapters/claude-code.adapter.ts` | 中文输出 + PPT 生成指令 + QA v3 正面约束 |
+| `apps/server/src/adapters/codex.adapter.ts` | 同上，与 Claude 适配器一致 |
+| `apps/server/src/services/agent-runtime.service.ts` | MIME 映射 + shouldSkipFile 过滤 + PPTX→HTML 自动转换 + **slideshow artifact 合并** |
+| `apps/web/src/components/chat/InlineArtifactCard.tsx` | `type === "slideshow"` → ImageSlideshowCard；PPTX → DownloadCard |
+| `apps/web/package.json` | 新增 `jszip` 依赖 |
+| `skills/NanoBanana-PPT-Skills/SKILL.md` | 精简 675→55 行 + QA v3 约束 |
+| `packages/shared/src/types/artifact.ts` | `ArtifactType` 新增 `"slideshow"` |
+| `packages/shared/src/types/db.ts` | `ArtifactRow.type` 新增 `"slideshow"` |
+| `packages/shared/src/schemas/artifact.schema.ts` | Zod enum 新增 `"slideshow"` |
+| `packages/shared/src/constants.ts` | `ARTIFACT_TYPES` 新增 `SLIDESHOW` |
+| `packages/shared/src/types/agent-event.ts` | `artifactType` union 新增 `"slideshow"` |
+| `.env`（根目录） | 添加 `GEMINI_API_KEY` |
+| `requirements.txt` | 添加 `python-dotenv` |
+
+### 1.3 删除文件
+
+| 文件 | 原因 |
+|---|---|
+| `skills/NanoBanana-PPT-Skills/README.md` (871 行) | 冗余文档，内容已覆盖 |
+| `skills/NanoBanana-PPT-Skills/prompt_file_reader.py` | 视频辅助脚本，与 PPT 无关 |
+| `skills/NanoBanana-PPT-Skills/templates/video_viewer.html` | 视频模板，与 PPT 无关 |
+| `skills/NanoBanana-PPT-Skills/.env` | 密钥移至根 `.env` |
+| `skills/NanoBanana-PPT-Skills/.env.example` | 密钥说明已合并 |
+
+---
+
+## 二、PPT 生成双路径
+
+Agent 提供两种 PPT 生成方式，system prompt 推荐快速的 pptxgenjs：
+
+| 方式 | 工具 | 速度 | 适用场景 |
+|---|---|---|---|
+| 程序化 PPTX（推荐） | pptxgenjs | 秒级 | 文本演示、常规报告 |
+| AI 图示幻灯片 | Gemini API (`gemini-3-pro-image-preview`) | ~30秒/页 | 发布会、品牌展示 |
+
+### 2.1 pptxgenjs 路径
 
 ```
-用户收到 PPTX artifact
-  → InlineArtifactCard 检测 isPresentation()
-  → PptxViewerCard 挂载
-    → fetch(/api/artifacts/static/{id}/file.pptx)
-    → JSZip.load(arrayBuffer)
-    → 读取 ppt/presentation.xml（幻灯片尺寸）
-    → 读取 ppt/slides/slideN.xml → DOMParser 解析 OOXML
-    → 读取 ppt/slides/_rels/slideN.xml.rels + ppt/media/*（嵌入图片）
-    → 渲染：绝对定位 div 模拟幻灯片布局 + 导航控件
+Agent 用 pptxgenjs 生成 .pptx → 写入 workspace → 系统自动处理后续
 ```
 
-### 12.5 变更
+### 2.2 Gemini AI 路径
 
-| 文件 | 动作 | 说明 |
-|---|---|---|
-| `apps/web/src/lib/pptx-parser.ts` | 新建 | 客户端 PPTX 解析器 |
-| `apps/web/src/components/artifact/PptxViewerCard.tsx` | 新建 | 客户端幻灯片查看器组件 |
-| `apps/web/src/components/chat/InlineArtifactCard.tsx` | 修改 | PPTX 从下载卡片改为路由到 PptxViewerCard |
-| `apps/web/package.json` | 修改 | 新增 jszip 依赖 |
+```
+Agent 创建 slides_plan.json → python generate_ppt.py --plan ... --style ... --resolution 2K
+  → slide-*.png 图片 + index.html → 写入 workspace
+```
 
-**特点**：
-- 零服务端依赖，纯浏览器解析
-- 渲染保持原始幻灯片位置/格式/颜色
-- 支持嵌入图片提取和展示
-- 深色主题播放器，键盘（← → Home End）+ 触摸滑动 + 点击边缘翻页
-- 失败时回退为下载按钮
-
----
-
-## 十三、PPT QA 指令 v2 强化（2026-06-03）
-
-### 13.1 问题
-
-v1 指令虽然禁止了 LibreOffice/COM/子代理审查，但 Agent 仍在生成后自发执行 QA 流程：文本提取 → 导出图片 → 子代理视觉审查 → 修复间距/对比度/对齐 → 再审查 → 生成 QA 表格（如"检查项 | Slide 1 | Slide 2 | ..."），整个过程使 PPT 生成时间翻倍。
-
-### 13.2 根因
-
-v1 指令只列出了"不要做什么"，但：
-- 没有解释"为什么不需要做"（系统已自动生成预览）
-- 没有覆盖 Agent 自创的 QA 模式（文本提取、数学验证、QA 表格等）
-- Agent 担心交付质量差，会用任何可用手段做自我审查
-
-### 13.3 修复：v2 指令
-
-**文件：** `claude-code.adapter.ts`、`codex.adapter.ts`
-
-v2 指令核心变化：
-
-| 维度 | v1 | v2 |
-|---|---|---|
-| 系统能力说明 | 无 | 开篇："系统自动生成 HTML 预览，用户无需下载即可翻页查看" |
-| 角色定位 | Agent 负责生成 + 检查 + 修复 | "你的任务只有两步：生成 → 告知完成" |
-| 禁止项 | 3 条笼统约束 | **7 条具体行为逐一列出**，每条对应实际观察到的 QA 套路 |
-| 正面引导 | 无 | 4 步正确流程 + 结束语模板："PPT 已生成，请查看下方预览。如需调整请告诉我。" |
-
-**7 条明确禁止项**：
-1. ❌ 提取 PPTX 文本检查内容
-2. ❌ 用任何方式导出为图片做视觉审查
-3. ❌ 启动子代理做视觉审查
-4. ❌ 做间距/颜色/对齐/对比度数学验证
-5. ❌ 生成 QA 报告表格
-6. ❌ 说"发现 X 个问题，正在修复"后重新生成
-7. ❌ 任何形式的"先审查再修复"循环
+**slides_plan.json 格式**：
+```json
+{
+  "title": "演示文稿标题",
+  "slides": [
+    { "slide_number": 1, "page_type": "cover", "content": "标题\n副标题" },
+    { "slide_number": 2, "page_type": "content", "content": "要点内容..." },
+    { "slide_number": 3, "page_type": "data", "content": "数据总结" }
+  ]
+}
+```
 
 ---
 
-## 十四、修改文件汇总（更新）
+## 三、幻灯片预览方案（最终形态）
 
-| 文件 | 动作 | 说明 |
+### 3.1 演进历程
+
+| 阶段 | 方案 | 问题 |
 |---|---|---|
-| `AgentHub/ppt/generate_ppt.py` | 新建 | 主 PPT 生成脚本（适配路径解析） |
-| `AgentHub/ppt/pptx_to_preview.py` | 新建 | PPTX → HTML 预览转换器 |
-| `AgentHub/ppt/styles/gradient-glass.md` | 新建 | 渐变毛玻璃风格模板 |
-| `AgentHub/ppt/styles/vector-illustration.md` | 新建 | 矢量插画风格模板 |
-| `AgentHub/ppt/prompts/transition_template.md` | 新建 | 转场提示词模板 |
-| `AgentHub/ppt/templates/viewer.html` | 新建 | HTML 播放器模板 |
-| `AgentHub/ppt/.env.example` | 新建 | 环境变量参考 |
-| `apps/server/src/services/agent-runtime.service.ts` | 修改 | MIME 映射 + shouldSkipFile（slide 图片过滤增强）+ PPTX 预览生成 |
-| `apps/server/src/adapters/claude-code.adapter.ts` | 修改 | 中文指令 + PPT 能力注入 + PPT QA 行为约束 v2（7 条明确禁止） |
-| `apps/server/src/adapters/codex.adapter.ts` | 修改 | 中文指令 + PPT 能力注入 + PPT QA 行为约束 v2（7 条明确禁止） |
-| `apps/web/src/lib/pptx-parser.ts` | 新建 | 客户端 PPTX 解析器（JSZip + DOMParser） |
-| `apps/web/src/components/artifact/PptxViewerCard.tsx` | 新建 | 客户端幻灯片查看器（键盘/触摸/点击导航） |
-| `apps/web/src/components/chat/InlineArtifactCard.tsx` | 修改 | isPresentation() + PPT 下载卡片 |
-| `skills/NanoBanana-PPT-Skills/SKILL.md` | 修改 | 精简 675→105 行 |
-| `skills/NanoBanana-PPT-Skills/README.md` | 删除 | 无用文档 |
-| `skills/NanoBanana-PPT-Skills/prompt_file_reader.py` | 删除 | 视频功能脚本 |
-| `skills/NanoBanana-PPT-Skills/templates/video_viewer.html` | 删除 | 视频播放器模板 |
-| `skills/NanoBanana-PPT-Skills/.env` | 删除 | 密钥已合并到根目录 |
-| `skills/NanoBanana-PPT-Skills/.env.example` | 删除 | 密钥说明已合并 |
-| `.env`（根目录） | 修改 | 添加 GEMINI_API_KEY + Kling 占位 |
-| `requirements.txt` | 修改 | 添加 python-dotenv |
-| `package.json` | 修改 | 添加 pptxgenjs 依赖 |
+| v1 | WebPreviewCard iframe（pptx_to_preview.py 生成的 HTML） | 依赖服务端 Python，内联预览不稳定 |
+| v2 | 客户端 PptxViewerCard（JSZip + DOMParser OOXML 解析） | 命名空间 bug（`txBody` 用错 `NS_A`）、形状填充/边框/背景图未渲染 |
+| v3 | **ImageSlideshowCard**（slide 图片直接轮播） | ✅ 当前方案 |
+
+### 3.2 当前架构
+
+```
+Agent 生成 PPTX + slide-*.png
+  ↓
+shouldSkipFile 过滤 slide-*.png（不单独广播/创建 artifact）
+  ↓
+服务端检测 2+ 张 slide 图片 → 排序 → 复制到 data/artifacts/{id}/
+  → 创建 type: "slideshow" artifact
+  → metadataJson: { imageUrls: [...], slideCount: N }
+  ↓
+WebSocket broadcast artifact:created
+  ↓
+InlineArtifactCard 检测 type === "slideshow"
+  → 解析 metadataJson.imageUrls
+  → ImageSlideshowCard 渲染
+```
+
+### 3.3 ImageSlideshowCard
+
+翻页 UI 特性：
+- ⬅ ➡ 左右翻页按钮
+- ⏮ ⏭ 首页/末页按钮
+- ●●● 圆点指示器（点击跳转）
+- ⌨ 键盘导航（← → Home End）
+- 👆 触摸滑动（50px 阈值）
+- 🖱 点击左右 20% 边缘翻页
+- ✨ 淡入动画（`pptxFadeIn`）
+- 📥 `.pptx` 文件单独显示为 DownloadCard
+
+### 3.4 shouldSkipFile 过滤规则
+
+```
+✅ 过滤（不广播、不创建 artifact）：
+  - slide-*.png / slide-*.jpg / ...（任意目录）→ 合并为 slideshow
+  - prompts.json / slides_plan.json（PPT 元数据）
+  - *.js（PPT 辅助脚本）
+
+✅ 放行：
+  - .pptx                          → DownloadCard
+  - index.html                     → WebPreviewCard
+```
 
 ---
 
-## 关键架构决策
+## 四、Agent QA 行为约束
+
+### 4.1 问题
+
+Agent 生成 PPT 后自发执行 QA：提取文本 → LibreOffice/PowerShell COM 导出图片 → spawn 子代理视觉审查 → 生成 QA 表格 → 修复后重新生成。整个过程使 PPT 生成时间翻倍。
+
+### 4.2 迭代
+
+| 版本 | 策略 | 效果 |
+|---|---|---|
+| v1 | 3 条笼统禁止（LibreOffice/COM/子代理） | ❌ Agent 绕过，自创文本提取、数学验证、QA 表格 |
+| v2 | 7 条 ❌ 负面清单逐一列出观察到的 QA 套路 | ❌ 清单 = 操作建议，模型注意力被导向 QA 行为 |
+| **v3** | **1 句正面约束 + 无条件注入 + system prompt 最开头** | ✅ 当前方案 |
+
+### 4.3 v3 指令
+
+**位置**：system prompt 第 1 行，在所有内容之前（含 history/cwd/agentConfig）
+
+**内容**（1 句，无清单）：
+
+```
+⚠️ 核心规则：你的工作在文件写入磁盘的瞬间结束。不要读取、审查、检查、
+验证或预览你生成的任何文件。系统会自动接管后续所有处理。审查文件 = 打断
+系统流水线 = 浪费时间。生成 → 告知完成 → 停止。
+```
+
+**注入位置**：`claude-code.adapter.ts:89` / `codex.adapter.ts:84` — `CRITICAL_RULE` 常量，无条件注入（不依赖 `ppt/` 目录存在）
+
+### 4.4 覆盖入口
+
+| 入口 | 文件 | QA 约束 |
+|---|---|---|
+| 直接对话 → adapter | `claude-code.adapter.ts` | ✅ v3 |
+| 直接对话 → adapter | `codex.adapter.ts` | ✅ v3 |
+| `/NanoBanana-PPT-Skills` 技能 | `SKILL.md` | ✅ v3 |
+
+---
+
+## 五、PPTX 客户端解析器（备用）
+
+### 5.1 pptx-parser.ts
+
+`apps/web/src/lib/pptx-parser.ts` — JSZip + DOMParser 纯浏览器 OOXML 解析。
+
+**能力**：
+- PPTX ZIP 解压 → 读取 `ppt/presentation.xml`（幻灯片尺寸）→ 遍历 `ppt/slides/slideN.xml`
+- 文本形状：提取 `<a:r>` → `<a:t>` 文本，`<a:rPr>` 格式（bold/italic/size/color）
+- 嵌入图片：`<p:blipFill>` → `<a:blip r:embed>` → rels 文件 → `ppt/media/*` → Blob URL
+- 表格：`<a:tbl>` → `<a:tr>` → `<a:tc>` → `<a:t>` 文本
+- 形状填充/边框：`<a:solidFill>` → fillColor，`<a:ln>` → borderColor/borderWidth
+- 幻灯片背景：`<p:bg>` → `<p:bgPr>` → `<a:blipFill>` → Blob URL
+- 命名空间自适应：`NS_P` / `NS_A` 双检查（`txBody` 等元素兼容两种 namespace）
+- `getAttributeNS` 回退 `getAttribute("r:embed")`（`attrNS()` 辅助函数）
+
+**已知限制**：部分 pptxgenjs 生成的复杂布局（嵌套组形状、渐变填充）渲染不完全。
+
+### 5.2 PptxViewerCard.tsx
+
+`apps/web/src/components/artifact/PptxViewerCard.tsx` — 已弃用但保留。`InlineArtifactCard` 不再路由到此组件（PPTX 直接走 DownloadCard）。
+
+---
+
+## 六、关键架构决策
 
 | 决策 | 说明 |
 |---|---|
-| Agent 自主执行 PPT 生成 | 无需新增 API/WS 事件，复用现有 artifact pipeline |
-| PPTX 服务端转 HTML 预览 | 前端无需支持 PPTX 渲染，复用 WebPreviewCard iframe |
-| shouldSkipFile 过滤 | 幻灯片图片（任意目录）、元数据 JSON、JS 脚本不触发广播和 artifact |
-| PPT 生成脚本放置于 AgentHub/ppt/ | 作为服务端永久资源，Agent 通过 CLI 调用 |
-| 客户端 PPTX 渲染 | JSZip + DOMParser 纯浏览器解析，不依赖服务端 Python（pptx_to_preview.py 保留为备用） |
-| 禁止 Agent 自审查 | PPT 指令 v2：7 条具体禁止项，覆盖文本提取/图片导出/子代理审查/数学验证/QA 表格等所有观察到的 QA 套路 |
-| 生成→告知模式 | Agent 任务简化为"生成 PPTX → 验证存在 → 告知用户"，系统自动生成预览 |
-| 精简 SKILL.md | 从 675 行砍至 105 行，核心生成功能 + 必要美观度 |
-| 环境变量集中管理 | 根目录 .env 统一管理所有 API 密钥 |
+| Agent 自主执行生成 | 无需新 API/WS 事件，复用 artifact pipeline |
+| PPT 脚本放在 `AgentHub/ppt/` | 服务端永久资源，Agent 通过 CLI 调用 |
+| 幻灯片预览 = slide 图片轮播 | 服务端合并为单 artifact，前端 ImageSlideshowCard，避免 PPTX 解析复杂度 |
+| `shouldSkipFile` 过滤 + 合并 | slide 图片不单独广播，合并为 slideshow artifact |
+| Agent 禁止自审查 | v3 正面约束：1 句无条件注入在最开头，不列负面清单 |
+| 环境变量集中管理 | 根 `.env` 统一管理 `GEMINI_API_KEY` |
+| SKILL.md 精简 | 675→55 行，仅保留核心生成功能 |
+| 新增 `slideshow` artifact 类型 | shared 包 5 处类型定义同步更新 |
 
 ---
 
-## 验证结果
+## 七、验证结果
 
-- `python AgentHub/ppt/generate_ppt.py --help` ✅ 正常输出帮助
-- `python AgentHub/ppt/pptx_to_preview.py --help` ✅ 正常输出帮助
-- Agent system prompt 包含中文指令 ✅ （两个 adapter 均已注入）
-- Agent system prompt 包含 PPT 生成能力说明 ✅
-- `.pptx` MIME type 映射正确 ✅
-- `shouldSkipFile` 过滤生效 ✅ （幻灯片图片 + metadata JSON + JS 脚本）
-- slide 图片过滤增强 ✅ （根目录 `slide.jpg`、`slide-1.png` 等均可拦截）
-- Agent PPT 指令含 LibreOffice/COM/子代理审查禁止 ✅
-- `InlineArtifactCard` PPT 路由到 PptxViewerCard 客户端渲染 ✅
-- PptxViewerCard 键盘/触摸/点击导航 + 圆点指示器 ✅
-- pptx-parser 提取文本（位置/格式/颜色）+ 图片（Blob URL）+ 表格 ✅
-- PPT QA 指令 v2：7 条禁止项覆盖所有观察到的 QA 套路 ✅
-- SKILL.md 精简完成 ✅ （675→105 行）
-- skills/ 目录清理完成 ✅ （仅保留 6 个核心文件）
-- GEMINI_API_KEY 已配置到根 .env ✅
-- TypeScript 编译：server ✅ / web ✅
+| 验证项 | 状态 |
+|---|---|
+| `python AgentHub/ppt/generate_ppt.py --help` | ✅ |
+| `python AgentHub/ppt/pptx_to_preview.py --help` | ✅ |
+| `.pptx` MIME type 映射 `application/vnd.openxmlformats-officedocument.presentationml.presentation` | ✅ |
+| `shouldSkipFile` 过滤 slide 图片/metadata/JS | ✅ |
+| Agent system prompt 中文输出注入 | ✅ |
+| Agent system prompt PPT 生成指令 | ✅ |
+| Agent QA v3 指令（无条件 + 开头注入） | ✅ |
+| SKILL.md QA v3 同步 | ✅ |
+| 服务端 slideshow artifact 合并逻辑 | ✅ |
+| ImageSlideshowCard 翻页 UI（键盘/触摸/点击/圆点） | ✅ |
+| InlineArtifactCard `type === "slideshow"` 路由 | ✅ |
+| shared 类型 `"slideshow"` 5 处同步 | ✅ |
+| TypeScript 编译 server + web | ✅ |
+| 端到端 PPT 预览 | ⏳ 待验证 |
 
 ---
 
-## Git 提交记录
+## 八、Git 提交记录
 
 | Commit | 说明 |
 |---|---|
@@ -470,5 +264,8 @@ v2 指令核心变化：
 | `1162437` | Docs: add pptx_to_preview.py + Phase 5 completion doc + update todo |
 | `c5887a4` | Chore: condense SKILL.md (675→105) + remove useless skill files |
 | `ca9ac66` | Docs: merge Timeline into WorkOverview, rename to OVERVIEW.md |
-
-后续客户端 PPTX 渲染 + QA 指令 v2 尚未提交。
+| `27fe170` | Feat: client-side PPTX viewer using JSZip + DOMParser |
+| `9880eb3` | Fix: PPT QA instructions v2 — 7 explicit prohibitions |
+| `5e3cb90` | Docs: update Phase 5 completion + prune todo |
+| *未提交* | Fix: txBody namespace (NS_A→NS_P) + shape fill/border/bg parsing |
+| *未提交* | Feat: ImageSlideshowCard + slideshow artifact + QA v3 + shared types |

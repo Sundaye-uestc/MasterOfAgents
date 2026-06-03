@@ -10,9 +10,9 @@
 
 ---
 
-## 🐛 遗留 Bug
+## PPT 预览
 
-- [ ] **前端 artifact 跨 Agent 冗余展示** — 群聊中 A 模型的消息下方也展示了 B 模型生成的文件预览（artifact/TextPreviewCard 等），原因是 artifact:created WS 广播未按 runId 隔离。解决思路：仅在前端 `runArtifacts` 缓存写入时做 `(path, name)` 去重，跳过已在其他 run 中展示过的 artifact。
+- [ ] PPT 预览待验证 — ImageSlideshowCard 轮播组件 + slideshow artifact 合并逻辑端到端测试（2026-06-03）
 
 ---
 
