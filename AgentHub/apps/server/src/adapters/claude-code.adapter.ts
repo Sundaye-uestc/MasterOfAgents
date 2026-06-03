@@ -12,6 +12,7 @@ import type { AgentEvent, AgentConfig } from "@agenthub/shared";
 import type { AgentPlatformAdapter, RunInput } from "./base.js";
 import { parseStreamLine, isStreamComplete } from "../runtime/stream-json-parser.js";
 import { ProcessSupervisor } from "../runtime/process-supervisor.js";
+import { crashLog } from "../lib/crash-log.js";
 
 export class ClaudeCodeAdapter implements AgentPlatformAdapter {
   readonly platform = "claude-code";
@@ -70,16 +71,25 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
     const { runId, agentId, prompt, systemPrompt, messageHistory, workingDir, signal } = input;
     this.activeRunIds.add(runId);
 
+    crashLog(`[claude] run() entered, about to yield run_started`);
     const ts = Date.now();
     yield { type: "run_started", runId, agentId, timestamp: ts };
+    crashLog(`[claude] run_started yielded, building args...`);
 
     // Build effective system prompt: inject conversation history for short-term memory
     let effectiveSystemPrompt = systemPrompt ?? this.agentConfig.systemPrompt ?? "";
+
+    // Explicitly tell the agent its working directory so it doesn't forget
+    const cwd = workingDir ?? process.cwd();
+    const cwdBlock = `\n当前工作目录: ${cwd}\n请将所有新建/修改的文件放在此目录下，除非用户明确指定了其他路径。`;
+
     if (messageHistory && messageHistory.length > 0) {
       const historyBlock = messageHistory
         .map((m) => `[${m.role === "user" ? "用户" : m.role === "agent" ? "AI助手" : "系统"}]: ${m.content}`)
         .join("\n\n");
-      effectiveSystemPrompt = `以下是本次对话的历史记录（按时间顺序）：\n\n${historyBlock}\n\n---\n以上是对话历史。现在请根据以下用户的最新消息进行回复。\n${effectiveSystemPrompt}`;
+      effectiveSystemPrompt = `以下是本次对话的历史记录（按时间顺序）：\n\n${historyBlock}\n\n---\n以上是对话历史。现在请根据以下用户的最新消息进行回复。${cwdBlock}\n${effectiveSystemPrompt}`;
+    } else {
+      effectiveSystemPrompt = effectiveSystemPrompt + cwdBlock;
     }
 
     const args = [
@@ -107,7 +117,9 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
 
     try {
       this.activeSupervisors.set(runId, sup);
+      crashLog(`[claude] Calling runViaEventEmitter...`);
       const events = this.runViaEventEmitter(sup, processId, args, workingDir, runId, agentId, signal);
+      crashLog(`[claude] runViaEventEmitter created, entering for-await...`);
       for await (const event of events) {
         yield event;
       }
@@ -119,9 +131,11 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
         timestamp: Date.now(),
       };
     } finally {
+      crashLog(`[claude] run() finally — disposing supervisor`);
       this.activeRunIds.delete(runId);
       this.activeSupervisors.delete(runId);
       await sup.dispose();
+      crashLog(`[claude] run() finally — supervisor disposed`);
     }
   }
 
@@ -145,18 +159,32 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
     const queue: QueuedEvent[] = [];
     let resolveWait: (() => void) | null = null;
     let finished = false;
+    let lastActivity = Date.now();
+    const IDLE_KILL_MS = 3 * 60 * 1000; // kill if no output for 3 minutes
+    const WAKEUP_INTERVAL_MS = 30_000;  // re-check every 30 seconds
+
+    const wake = () => {
+      lastActivity = Date.now();
+      resolveWait?.();
+    };
 
     const push = (ev: QueuedEvent) => {
       queue.push(ev);
-      resolveWait?.();
+      wake();
     };
 
     sup.on("stdout", (data) => push({ kind: "stdout", line: data.line }));
     sup.on("stderr", (data) => push({ kind: "stderr", line: data.line }));
-    sup.on("exit", (data) => { push({ kind: "exit", code: data.code }); finished = true; resolveWait?.(); });
-    sup.on("timeout", () => { push({ kind: "error", error: "Process timed out" }); finished = true; resolveWait?.(); });
-    sup.on("error", (data) => { push({ kind: "error", error: data.error }); finished = true; resolveWait?.(); });
+    sup.on("exit", (data) => { push({ kind: "exit", code: data.code }); finished = true; wake(); });
+    sup.on("timeout", () => { push({ kind: "error", error: "Process timed out" }); finished = true; wake(); });
+    sup.on("error", (data) => { push({ kind: "error", error: data.error }); finished = true; wake(); });
 
+    // Also wake when the abort signal fires, so the loop detects it
+    if (signal) {
+      signal.addEventListener("abort", wake, { once: true });
+    }
+
+    crashLog(`[claude] Calling sup.start() with command="claude" cwd=${workingDir || "default"}`);
     sup.start({
       processId,
       command: "claude",
@@ -165,18 +193,28 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
       timeoutMs: 10 * 60 * 1000,
       signal,
     });
+    crashLog(`[claude] sup.start() returned, entering event loop`);
 
     while (true) {
       // Drain queue
       while (queue.length > 0) {
         const ev = queue.shift()!;
+        crashLog(`[claude] Dequeued event kind=${ev.kind} queueRemaining=${queue.length}`);
         switch (ev.kind) {
           case "stdout": {
+            crashLog(`[claude] Parsing stdout: ${ev.line.slice(0, 120)}`);
             const parsed = parseStreamLine(ev.line, runId, agentId);
+            crashLog(`[claude] Parsed result: ${parsed ? parsed.type : 'null'}`);
             if (parsed) {
+              if (parsed.type === "run_completed") {
+                crashLog(`[adapter] 🏁 YIELD run_completed (from stream-json ${'result'} type)`);
+              }
+              crashLog(`[claude] About to yield ${parsed.type}`);
               yield parsed;
+              crashLog(`[claude] Yielded ${parsed.type} — back in adapter loop`);
               if (isStreamComplete(ev.line)) {
-                return; // stream-json "result" type — done
+                crashLog(`[claude] isStreamComplete=true — generator RETURN`);
+                return;
               }
             }
             break;
@@ -200,6 +238,7 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
             yield { type: "run_failed", runId, error: ev.error, timestamp: Date.now() };
             return;
           case "exit": {
+            crashLog(`[claude] Process exited code=${ev.code} — returning from generator`);
             if (ev.code === 0) {
               yield { type: "run_completed", runId, summary: "Claude Code run completed", timestamp: Date.now() };
             } else {
@@ -212,14 +251,34 @@ export class ClaudeCodeAdapter implements AgentPlatformAdapter {
 
       if (finished && queue.length === 0) return;
 
+      // Idle watchdog: if the process hasn't produced any output for 3 minutes,
+      // kill it — prevents "thinking forever" when the CLI hangs.
+      const idle = Date.now() - lastActivity;
+      if (idle > IDLE_KILL_MS) {
+        console.warn(`[adapter] ${processId}: idle ${idle}ms — killing hung process`);
+        sup.stop(processId);
+        finished = true;
+        queue.push({ kind: "error", error: `Process killed after ${Math.round(idle / 1000)}s idle` });
+        continue; // drain the error event
+      }
+
       // Check abort
       if (signal?.aborted) {
         sup.stop(processId);
         return;
       }
 
-      // Wait for more events
-      await new Promise<void>((resolve) => { resolveWait = resolve; });
+      // Wait for more events with a 30s wake-up to re-check idle/abort.
+      // Resolves when: (a) a new event arrives, (b) signal is aborted,
+      // or (c) 30 seconds pass so we can re-check the idle watchdog.
+      crashLog(`[claude] Waiting for events (queue=${queue.length} finished=${finished})`);
+      while (queue.length === 0 && !finished && !signal?.aborted) {
+        await Promise.race([
+          new Promise<void>((resolve) => { resolveWait = resolve; }),
+          new Promise<void>((resolve) => setTimeout(resolve, WAKEUP_INTERVAL_MS)),
+        ]);
+        crashLog(`[claude] Woke from wait (queue=${queue.length} finished=${finished} idle=${Date.now() - lastActivity}ms)`);
+      }
     }
   }
 

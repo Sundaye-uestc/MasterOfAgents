@@ -241,21 +241,27 @@ export class WorkspaceService {
   /** Recursively build a FileNode tree from a directory on disk */
   buildFileTree(rootPath: string): FileNode[] {
     if (!fs.existsSync(rootPath)) return [];
-    return this._buildTree(rootPath, rootPath);
+    return this._buildTree(rootPath, rootPath, 0);
   }
 
-  private _buildTree(basePath: string, currentPath: string): FileNode[] {
+  private _buildTree(basePath: string, currentPath: string, depth: number): FileNode[] {
+    // Safety: prevent stack overflow from deeply nested (possibly corrupted) directories
+    if (depth > 20) return [];
     const result: FileNode[] = [];
     const entries = fs.readdirSync(currentPath, { withFileTypes: true });
 
     for (const entry of entries) {
       if (entry.name.startsWith(".")) continue;
+      // Skip large / dangerous directories
+      if (entry.isDirectory() && (entry.name === "node_modules" || entry.name === "data" || entry.name === ".git")) {
+        continue;
+      }
 
       const fullPath = path.join(currentPath, entry.name);
       const relativePath = path.relative(basePath, fullPath).replace(/\\/g, "/");
 
       if (entry.isDirectory()) {
-        const children = this._buildTree(basePath, fullPath);
+        const children = this._buildTree(basePath, fullPath, depth + 1);
         result.push({
           name: entry.name,
           path: relativePath,
@@ -329,6 +335,22 @@ export class WorkspaceService {
         console.log(`[workspace]   ✏️  modify: ${filePath} (${before.hash.slice(0,8)} → ${after.hash.slice(0,8)})`);
       } else {
         continue; // unchanged
+      }
+
+      // Dedup: skip if a FileChange with the same (runId, path, changeType) already exists.
+      // This prevents duplicate entries when multiple runs operate on the same workspace.
+      const existing = db
+        .select()
+        .from(schema.fileChanges)
+        .where(eq(schema.fileChanges.runId, runId))
+        .all()
+        .filter((r: any) => r.path === filePath && r.changeType === changeType);
+
+      if (existing.length > 0) {
+        console.log(`[workspace]   ⏭️  skip duplicate: ${changeType}:${filePath} (already in DB)`);
+        // Return the existing row so the caller still broadcasts it
+        changes.push(existing[0] as FileChangeRow);
+        continue;
       }
 
       const row: FileChangeRow = {
@@ -415,11 +437,22 @@ export class WorkspaceService {
       .get() as any;
   }
 
-  /** Recursively copy a directory (skipping hidden files/dirs) */
+  /** Recursively copy a directory (skipping hidden/system/dangerous dirs) */
   private _copyDir(src: string, dest: string): void {
+    // Guard: prevent dest-from-src recursion (e.g. copying workspace into its own data/ subdirectory)
+    const resolvedDest = path.resolve(dest);
+    const resolvedSrc = path.resolve(src);
+    if (resolvedDest.startsWith(resolvedSrc + path.sep) || resolvedDest === resolvedSrc) {
+      return; // destination is inside source — would cause infinite recursion
+    }
+
     const entries = fs.readdirSync(src, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.name.startsWith(".")) continue;
+      // Skip large / dangerous directories that should never be snapshotted
+      if (entry.isDirectory() && (entry.name === "node_modules" || entry.name === "data" || entry.name === ".git")) {
+        continue;
+      }
       const srcPath = path.join(src, entry.name);
       const destPath = path.join(dest, entry.name);
       if (entry.isDirectory()) {

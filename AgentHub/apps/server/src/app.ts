@@ -17,6 +17,7 @@ import { initDb, saveDb } from "./db/index.js";
 import { seedAgents } from "./db/seed.js";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { crashLog } from "./lib/crash-log.js";
 
 // Ensure data directory exists
 const DATA_DIR = resolve(process.cwd(), "data");
@@ -72,6 +73,38 @@ async function main() {
     server.close();
     process.exit(0);
   }
+
+  // Prevent EPIPE errors from crashing the process when the parent
+  // (Python launcher or tsx) closes the pipe.
+  process.stdout.on("error", (err) => {
+    if ((err as any)?.code === "EPIPE") return;
+    crashLog(`stdout error: ${(err as any)?.message || String(err)}`);
+  });
+  process.stderr.on("error", (err) => {
+    if ((err as any)?.code === "EPIPE") return;
+    crashLog(`stderr error: ${(err as any)?.message || String(err)}`);
+  });
+
+  // Global error handlers — prevent crashes from unhandled async errors
+  process.on("uncaughtException", (err) => {
+    crashLog(`FATAL uncaughtException: ${err?.message || String(err)}`);
+    console.error(`[FATAL] Uncaught exception:`, err);
+  });
+  process.on("unhandledRejection", (reason: any) => {
+    crashLog(`FATAL unhandledRejection: ${reason?.message || String(reason)}`);
+    console.error(`[FATAL] Unhandled rejection:`, reason);
+  });
+
+  // Track process exit
+  process.on("exit", (code) => {
+    // Use synchronous write directly here since crashLog might not work during exit
+    crashLog(`PROCESS EXIT code=${code}`);
+  });
+  process.on("beforeExit", (code) => {
+    crashLog(`PROCESS beforeExit code=${code}`);
+  });
+
+  crashLog(`Server starting on port ${PORT} [PID=${process.pid}]`);
 
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));

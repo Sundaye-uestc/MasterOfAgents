@@ -6,20 +6,18 @@
 
 ## ⚠️ 当前已知问题
 
-### 🔴 文件更改提示待完善（高优先级）
+### 🟡 群聊多 Agent 文件变更重复播报
 
-Agent 回复完毕后，对话流中的 **文件变更（FileChangeList）提示不稳定**：
-- **现象**：Agent 完成后不显示文件变更提示，刷新页面后也不出现
-- **根因**：`run_completed` 事件在 `diffSnapshots`（快照对比生成 FileChange 记录）之前广播，前端 HTTP 请求可能到达时 DB 尚未写入
-- **已做修复**（2026-06-02）：
-  - Server：延迟 `run_completed` 广播，确保 `diffSnapshots` 先于前端 `load()` 执行
-  - Server：`diffSnapshots` 完成后广播 `file:changed` WS 事件
-  - Frontend：`updateFileChange` 改为 upsert（支持新增 + 更新）
-  - Frontend：`load()` 同对话内合并、切换对话时清空（防串味）
-- **验证结果**：❌ **未通过（2026-06-02 手动验证）** — Agent 回复完毕后文件变更提示仍不出现，事件重排 + WS 广播双保险未生效，需进一步排查
-- **相关文件**：`agent-runtime.service.ts`、`workspace.store.ts`、`ChatArea.tsx`
+Agent 回复完毕后，对话流中的 **文件变更（FileChangeList）提示可正常显示**（✅ 已修复）。
 
-### 🟡 多 Agent 编排任务 ID 冲突（已修复）
+当前 BUG：**群聊模式下，同一文件的同一操作出现重复播报**。
+
+- **触发条件**：≥2 个 Agent 均执行了文件操作
+- **不受影响**：单聊模式、群聊中只有 1 个 Agent 执行文件操作
+- **可能原因**：多个 Agent 各自触发 `file_change` 事件 + `diffSnapshots` 重复写入，或群聊路径下 FileChange 去重逻辑缺失
+- **相关文件**：`agent-runtime.service.ts`、`orchestrator.service.ts`、`workspace.service.ts`
+
+### 🟢 多 Agent 编排任务 ID 冲突（已修复）
 
 - Planner 生成固定 ID（task-1/task-2）导致二次运行 UNIQUE constraint 失败
 - **已修复**：UUID 映射（`orchestrator.service.ts`）
@@ -89,12 +87,12 @@ Agent 消息中的 `` ```diff `` 代码块使用 DiffBlock 组件渲染（彩色
 - [x] 事件重排修复 — `run_completed` 延迟到 `diffSnapshots` 之后广播，消除竞态条件
 - [x] 对话隔离 — `activeConversationId` 追踪，切换对话时清空旧 `fileChanges`
 - [x] Store upsert — `updateFileChange` 支持新增条目（不仅是更新已有条目）
-- [ ] **🔴 文件更改实时提示 — ❌ 验证未通过** — 事件重排 + WS 广播修复后手动测试，Agent 完成后变更提示仍不出现，需进一步排查根因
-- [ ] 实时同步不完整 — WS `file:changed` 已接入 store，但多连接场景下的时序问题待验证
+- [x] **文件更改实时提示 — ✅ 已验证通过** — 事件重排 + WS 广播修复后，Agent 完成后变更提示正常出现
+- [ ] **🟡 群聊多 Agent 文件变更重复播报** — ≥2 个 Agent 执行文件操作时，同一文件的同一操作出现多条重复记录；单聊、群聊单 Agent 均无此问题
 - [ ] 后端确保 manifest 数据正确生成 — workspace 的 manifest/snapshots 链路需端到端验证
 
 ### 当前行为
-WorkspacePanel 渲染在右侧（可拖拽调整宽度），文件 Tab 显示工作区目录树（带展开/折叠），快照 Tab 显示快照时间线（支持回滚），变更 Tab 展示 file_changes 数据（DiffBlock 彩色渲染、新增文件可直接查看内容）。面板可通过 ✕ 按钮关闭、折叠按钮展开。默认工作目录为 `Test/`，新建对话时可指定自定义目录。`workspace.store` 作为文件树/快照/变更的唯一数据源。Agent 在 workspace 目录下运行，修改的文件正确反映在面板中。**文件变更提示依赖事件重排 + WS 广播双保险，待端到端验证。**
+WorkspacePanel 渲染在右侧（可拖拽调整宽度），文件 Tab 显示工作区目录树（带展开/折叠），快照 Tab 显示快照时间线（支持回滚），变更 Tab 展示 file_changes 数据（DiffBlock 彩色渲染、新增文件可直接查看内容）。面板可通过 ✕ 按钮关闭、折叠按钮展开。默认工作目录为 `Test/`，新建对话时可指定自定义目录。`workspace.store` 作为文件树/快照/变更的唯一数据源。Agent 在 workspace 目录下运行，修改的文件正确反映在面板中。**文件变更提示已可正常显示；群聊多 Agent 场景下存在重复播报待修复。**
 
 ---
 
