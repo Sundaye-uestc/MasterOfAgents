@@ -485,8 +485,6 @@ export class WorkspaceService {
 
   async listFileChangesByConversation(conversationId: string): Promise<FileChangeRow[]> {
     const db = getDb();
-    // Join through runs to find file changes for a conversation
-    // Using a simpler approach: get all runs for the conversation, then all file changes
     const runRows = db
       .select({ id: schema.runs.id })
       .from(schema.runs)
@@ -502,6 +500,26 @@ export class WorkspaceService {
       const changes = await this.listFileChangesByRun(runId);
       allChanges.push(...changes);
     }
+
+    // Filter out stale changes: when two conversations share the same workspace
+    // directory, a file created by A may have been deleted by B. A's "create"
+    // change is no longer actionable since the file doesn't exist anymore.
+    const ws = await this.getWorkspaceByConversation(conversationId);
+    if (ws && fs.existsSync(ws.rootPath)) {
+      const active = allChanges.filter((c) => {
+        const absPath = path.resolve(ws.rootPath, c.path);
+        const fileExists = fs.existsSync(absPath);
+        if (c.changeType === "create" || c.changeType === "modify") {
+          return fileExists; // keep only if file still exists
+        }
+        if (c.changeType === "delete") {
+          return !fileExists; // keep only if file is still gone
+        }
+        return true;
+      });
+      return active.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    }
+
     return allChanges.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
