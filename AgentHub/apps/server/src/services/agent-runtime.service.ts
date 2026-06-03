@@ -203,8 +203,24 @@ export class AgentRuntimeService {
             crashLog(`Diffing snapshots before=${beforeSnapshotId.slice(0,8)} after=${afterSnap.id.slice(0,8)}`);
             const changes = await workspaceSvc.diffSnapshots(beforeSnapshotId, afterSnap.id);
             crashLog(`diffSnapshots: ${changes.length} changes: ${changes.map(c => `${c.changeType}:${c.path}`).join(', ') || '(none)'}`);
+
+            // Helper: check if a path is a PPT output internal file
+            // (slide images, prompts.json, slides_plan.json, etc.)
+            // These are already represented by the index.html viewer or .pptx file,
+            // so we skip them to avoid flooding the chat UI.
+            const isPptInternal = (filePath: string): boolean => {
+              const normalized = filePath.replace(/\\/g, "/");
+              if (/\/images\/slide-\d+\.(png|jpg|jpeg|webp)$/i.test(normalized)) return true;
+              if (/\/(prompts|slides_plan)\.json$/i.test(normalized)) return true;
+              return false;
+            };
+
             // Broadcast each file change so the frontend updates in real-time
             for (const fc of changes) {
+              if (isPptInternal(fc.path)) {
+                crashLog(`file:changed skipped (PPT internal): ${fc.path}`);
+                continue;
+              }
               crashLog(`Broadcast file:changed ${fc.changeType}:${fc.path}`);
               broadcastToConversation(conversationId, {
                 type: "file:changed",
@@ -216,8 +232,14 @@ export class AgentRuntimeService {
             // --- Create artifacts from file changes for inline display ---
             if (changes.length > 0) {
               const artifactSvc = new ArtifactService();
+
               for (const fc of changes) {
                 if (fc.changeType === "delete") continue;
+                // Skip PPT internal files — the index.html viewer covers the slides
+                if (isPptInternal(fc.path)) {
+                  crashLog(`Artifact skipped (PPT internal): ${fc.path}`);
+                  continue;
+                }
                 const ext = path.extname(fc.path).toLowerCase();
                 let artifactType: "file" | "webpage" | "diff" | "archive" = "file";
                 let mimeType = "application/octet-stream";
@@ -273,6 +295,8 @@ export class AgentRuntimeService {
                   mimeType = "text/plain";
                 } else if ([".vue", ".svelte"].includes(ext)) {
                   mimeType = "text/html";
+                } else if ([".pptx", ".ppt"].includes(ext)) {
+                  mimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
                 } else {
                   // Fallback: treat unrecognized extensions as plain text
                   // (agent-created files are virtually always text-based)
