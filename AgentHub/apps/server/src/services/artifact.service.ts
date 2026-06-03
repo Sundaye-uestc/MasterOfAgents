@@ -77,7 +77,7 @@ export class ArtifactService {
         fs.mkdirSync(cacheDir, { recursive: true });
         const destName = path.basename(input.filePath);
         fs.copyFileSync(fullPath, path.join(cacheDir, destName));
-        previewUrl = `/artifacts/${id}/${destName}`;
+        previewUrl = `/artifacts/static/${id}/${destName}`;
         resolvedPath = `artifacts/${id}/${destName}`;
 
         input.size = size;

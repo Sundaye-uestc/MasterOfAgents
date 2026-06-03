@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import type { MessageRow, FileChangeRow } from "@agenthub/shared";
-import { listMessages, sendMessage, stopRun, deleteMessage, pinMessage, getPinnedMessages, retryMessage, listMembers, listAgents } from "../../lib/api.js";
+import type { MessageRow, FileChangeRow, ArtifactRow } from "@agenthub/shared";
+import { listMessages, sendMessage, stopRun, deleteMessage, pinMessage, getPinnedMessages, retryMessage, listMembers, listAgents, listArtifactsByConversation } from "../../lib/api.js";
 import { useWebSocket } from "../../hooks/useWebSocket.js";
 import type { WsServerEvent } from "../../hooks/useWebSocket.js";
 import { useOrchestrationState } from "../../hooks/useOrchestrationState.js";
@@ -12,7 +12,8 @@ import { ToolInvocationCard } from "./ToolInvocationCard.js";
 import { MarkdownContent } from "./MarkdownContent.js";
 import { ReplyPreviewCard } from "./ReplyPreviewCard.js";
 import { PinnedMessageBar } from "./PinnedMessageBar.js";
-import { FileChangeList } from "../workspace/FileChangeList.js";
+import { InlineDiffCard } from "./InlineDiffCard.js";
+import { InlineArtifactCard } from "./InlineArtifactCard.js";
 import { useWorkspaceStore } from "../../stores/workspace.store.js";
 
 interface ToolInvocation {
@@ -64,10 +65,12 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
   } | null>(null);
   const [pinnedMessages, setPinnedMessages] = useState<MessageRow[]>([]);
   const [showPinnedBar, setShowPinnedBar] = useState(true);
+  // Per-run caches for inline card display
+  const [runFileChanges, setRunFileChanges] = useState<Record<string, FileChangeRow[]>>({});
+  const [runArtifacts, setRunArtifacts] = useState<Record<string, ArtifactRow[]>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Workspace store for file changes (single source of truth)
-  const workspaceFileChanges = useWorkspaceStore((s) => s.fileChanges);
+  // Workspace store for file changes
   const workspaceUpdateFileChange = useWorkspaceStore((s) => s.updateFileChange);
 
   const { state: orch, handleWsEvent: handleOrchEvent, reset: resetOrch } = useOrchestrationState();
@@ -114,6 +117,8 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
     setToolInvocations({});
     setPinnedMessages([]);
     setShowPinnedBar(true);
+    setRunFileChanges({});
+    setRunArtifacts({});
     listMessages(conversationId)
       .then((msgs) => {
         setMessages(msgs);
@@ -123,6 +128,17 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
       .catch(() => setLoading(false));
     getPinnedMessages(conversationId)
       .then(setPinnedMessages)
+      .catch(() => {});
+    listArtifactsByConversation(conversationId)
+      .then((arts) => {
+        const grouped: Record<string, ArtifactRow[]> = {};
+        for (const art of arts) {
+          const rid = art.runId ?? "";
+          if (!grouped[rid]) grouped[rid] = [];
+          grouped[rid].push(art);
+        }
+        setRunArtifacts(grouped);
+      })
       .catch(() => {});
   }, [conversationId]);
 
@@ -237,6 +253,43 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           if (wsEventConvId && wsEventConvId !== conversationId) break;
           console.log(`[ChatArea] 📥 WS file:changed — ${fc.changeType}:${fc.path} (id=${fc.id})`);
           workspaceUpdateFileChange(fc);
+          // Also cache per-run for inline display
+          // Cross-run dedup: if the same (path, changeType) already exists in
+          // ANOTHER run's group, skip — this file was changed by a different agent
+          // that finished earlier on the same workspace.
+          setRunFileChanges((prev) => {
+            const runId = fc.runId;
+            const existing = prev[runId] ?? [];
+            const idx = existing.findIndex((c) => c.id === fc.id);
+            if (idx >= 0) {
+              const updated = [...existing];
+              updated[idx] = fc;
+              return { ...prev, [runId]: updated };
+            }
+            // Intra-run dedup
+            const sameKey = existing.find((c) => c.path === fc.path && c.changeType === fc.changeType);
+            if (sameKey) return prev;
+            // Cross-run dedup: check ALL other runs for the same (path, changeType)
+            for (const otherRunId of Object.keys(prev)) {
+              if (otherRunId === runId) continue;
+              const other = prev[otherRunId] ?? [];
+              if (other.some((c) => c.path === fc.path && c.changeType === fc.changeType)) {
+                return prev; // belongs to another agent's run — skip
+              }
+            }
+            return { ...prev, [runId]: [fc, ...existing] };
+          });
+          break;
+        }
+        case "artifact:created": {
+          const art = (event as any).artifact as ArtifactRow;
+          if (!art) break;
+          setRunArtifacts((prev) => {
+            const runId = art.runId ?? "";
+            const existing = prev[runId] ?? [];
+            if (existing.some((a) => a.id === art.id)) return prev;
+            return { ...prev, [runId]: [art, ...existing] };
+          });
           break;
         }
         case "orchestrator:plan_created":
@@ -389,10 +442,6 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
     setPermRequest(null);
   }, [permRequest, wsSend]);
 
-  const handleFileChangeUpdate = useCallback((updated: FileChangeRow) => {
-    workspaceUpdateFileChange(updated);
-  }, [workspaceUpdateFileChange]);
-
   // Multi-agent color mapping for messages
   const agentColor = (adapterKind: string) => {
     const colors: Record<string, string> = {
@@ -527,9 +576,6 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
         />
       )}
 
-      {/* File changes */}
-      <FileChangeList changes={workspaceFileChanges} onUpdate={handleFileChangeUpdate} />
-
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
         {loading && (
@@ -608,6 +654,35 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
                     </div>
                   );
                 })()}
+                {/* Inline file changes (per-run, below agent message) */}
+                {isAgent && msg.runId && runFileChanges[msg.runId] && runFileChanges[msg.runId]!.length > 0 && (
+                  <div className="mt-1.5 space-y-1">
+                    {runFileChanges[msg.runId]!.map((change) => (
+                      <InlineDiffCard
+                        key={change.id}
+                        change={change}
+                        onUpdate={(updated) => {
+                          workspaceUpdateFileChange(updated);
+                          setRunFileChanges((prev) => {
+                            const list = prev[msg.runId!] ?? [];
+                            return {
+                              ...prev,
+                              [msg.runId!]: list.map((c) => c.id === updated.id ? updated : c),
+                            };
+                          });
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+                {/* Inline artifact cards (per-run, below agent message) */}
+                {isAgent && msg.runId && runArtifacts[msg.runId] && runArtifacts[msg.runId]!.length > 0 && (
+                  <div className="mt-1.5 space-y-1">
+                    {runArtifacts[msg.runId]!.map((art) => (
+                      <InlineArtifactCard key={art.id} artifact={art} />
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* User avatar on the RIGHT */}

@@ -11,8 +11,10 @@ import { eq } from "drizzle-orm";
 import { newId, nowISO } from "../lib/ids.js";
 import type { ChatService } from "./chat.service.js";
 import { WorkspaceService } from "./workspace.service.js";
+import { ArtifactService } from "./artifact.service.js";
 import { broadcastToConversation } from "../ws/gateway.js";
 import { crashLog } from "../lib/crash-log.js";
+import * as path from "node:path";
 
 let singleton: AgentRuntimeService | null = null;
 
@@ -209,6 +211,58 @@ export class AgentRuntimeService {
                 change: fc,
                 conversationId,
               });
+            }
+
+            // --- Create artifacts from file changes for inline display ---
+            if (changes.length > 0) {
+              const artifactSvc = new ArtifactService();
+              for (const fc of changes) {
+                if (fc.changeType === "delete") continue;
+                const ext = path.extname(fc.path).toLowerCase();
+                let artifactType: "file" | "webpage" | "diff" | "archive" = "file";
+                let mimeType = "application/octet-stream";
+
+                if (ext === ".html" || ext === ".htm") {
+                  artifactType = "webpage";
+                  mimeType = "text/html";
+                } else if (ext === ".css") {
+                  mimeType = "text/css";
+                } else if ([".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx"].includes(ext)) {
+                  mimeType = ext === ".ts" || ext === ".tsx" ? "text/typescript" : "application/javascript";
+                } else if (ext === ".json") {
+                  mimeType = "application/json";
+                } else if ([".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"].includes(ext)) {
+                  mimeType = `image/${ext === ".jpg" ? "jpeg" : ext === ".svg" ? "svg+xml" : ext.slice(1)}`;
+                } else if (ext === ".pdf") {
+                  mimeType = "application/pdf";
+                } else if ([".md", ".txt", ".xml", ".yaml", ".yml", ".csv"].includes(ext)) {
+                  mimeType = "text/plain";
+                } else {
+                  continue; // skip files with unregistered extensions
+                }
+
+                try {
+                  const art = await artifactSvc.createArtifact({
+                    runId,
+                    messageId: agentMsg.id,
+                    type: artifactType,
+                    name: fc.path.split("/").pop() || fc.path,
+                    filePath: fc.path,
+                    mimeType,
+                    rootPath: ws.rootPath,
+                    metadata: { changeType: fc.changeType },
+                  });
+
+                  broadcastToConversation(conversationId, {
+                    type: "artifact:created",
+                    artifact: art,
+                  } as any);
+
+                  crashLog(`Artifact created: ${art.id.slice(0, 8)} ${artifactType}:${fc.path}`);
+                } catch (artErr) {
+                  crashLog(`Artifact creation FAILED for ${fc.path}: ${(artErr as Error).message}`);
+                }
+              }
             }
           } else {
             crashLog(`No beforeSnapshotId — skipping diffSnapshots`);
