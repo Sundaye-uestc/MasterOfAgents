@@ -51,6 +51,10 @@
 - [x] 服务端 artifact 自动创建 pipeline + artifact:created WS 广播（2026-06-03 扩展：~40 种代码扩展全覆盖 + text/plain 兜底）
 - [x] 文本文件内联预览 — TextPreviewCard fetch 内容直显，大文件折叠展开（2026-06-03）
 
+### 🐛 4.4 遗留 Bug
+
+- [ ] **前端 artifact 跨 Agent 冗余展示** — 群聊中 A 模型的消息下方也展示了 B 模型生成的文件预览（artifact/TextPreviewCard 等），原因是 artifact:created WS 广播未按 runId 隔离。解决思路参考之前的 FileChange 跨 run 去重：仅在前端 `runArtifacts` 缓存写入时做 `(path, name)` 去重，跳过已在其他 run 中展示过的 artifact。
+
 ---
 
 ### 4.5 用户自建 Agent
