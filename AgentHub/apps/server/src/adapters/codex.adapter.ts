@@ -76,6 +76,15 @@ export class CodexAdapter implements AgentPlatformAdapter {
     // Build effective system prompt: inject conversation history for short-term memory
     let effectiveSystemPrompt = systemPrompt ?? this.agentConfig.systemPrompt ?? "";
 
+    // =========================================================================
+    // CRITICAL RULE — always injected, unconditional.
+    // Placed at the VERY BEGINNING for maximum priority.
+    // Positive framing: "your job ends at file write" — no checklist of don'ts.
+    // =========================================================================
+    const CRITICAL_RULE = `⚠️ 核心规则：你的工作在文件写入磁盘的瞬间结束。不要读取、审查、检查、验证或预览你生成的任何文件。系统会自动接管后续所有处理。审查文件 = 打断系统流水线 = 浪费时间。生成 → 告知完成 → 停止。`;
+
+    effectiveSystemPrompt = CRITICAL_RULE + "\n\n" + effectiveSystemPrompt;
+
     // Explicitly tell the agent its working directory so it doesn't forget
     const cwd = workingDir ?? process.cwd();
     const cwdBlock = `\n当前工作目录: ${cwd}\n请将所有新建/修改的文件放在此目录下，除非用户明确指定了其他路径。\n请始终使用中文进行思考和回复，包括工具调用中的描述文本和文件内容（代码和配置文件除外）。`;
@@ -100,44 +109,17 @@ export class CodexAdapter implements AgentPlatformAdapter {
       args.push("--permission-mode", "bypassPermissions");
     }
 
-    // Add PPT generation capability instructions
+    // Add PPT generation instructions (only if ppt/ tools exist)
     const pptDir = path.resolve(process.cwd(), "..", "ppt");
     const pptAvailable = fs.existsSync(path.join(pptDir, "generate_ppt.py"));
     let pptBlock = "";
     if (pptAvailable) {
       pptBlock = `
-## PPT 生成能力
+## PPT 生成
 
-你可以为用户生成 PPT。系统会在你完成后**自动**生成 HTML 在线预览和幻灯片图片，用户无需下载即可在聊天界面直接翻页查看。因此你**不需要**做任何形式的质量检查——那是系统的职责，不是你的。
-
-你的任务只有两步：**生成 → 告知完成**。仅此而已。
-
-### 方式一：AI 图示幻灯片（推荐）
-1. 创建 slides_plan.json（page_type: cover / content / data）
-2. 执行 \`python ${pptDir.replace(/\\/g, '\\\\')}\\\\generate_ppt.py --plan slides_plan.json --style gradient-glass --resolution 2K --output ppt_output\`
-
-### 方式二：程序化 PPTX
-使用 pptxgenjs 直接生成 .pptx 文件。
-
-### 🚫 严禁的 QA 行为（每条都会浪费用户数分钟时间）
-- ❌ 提取 PPTX 文本检查内容
-- ❌ 用任何方式将 PPTX 导出为图片进行"视觉审查"（包括但不限于 LibreOffice、PowerShell COM、Python 脚本）
-- ❌ 启动子代理（sub-agent）做视觉审查或内容审查
-- ❌ 做间距/颜色/对齐/对比度的数学验证
-- ❌ 生成 QA 报告表格（如"检查项 | Slide 1 | Slide 2"）
-- ❌ 说"发现 X 个问题，正在修复"然后重新生成
-- ❌ 任何形式的"先审查再修复"循环
-
-### ✅ 正确的完成流程
-1. 生成 PPTX 文件
-2. 验证文件存在且 >1KB
-3. 告诉用户："PPT 已生成，请查看下方预览。如需调整请告诉我。"
-4. 结束。不要做任何额外步骤。
-
-### 其他参数
-- 风格: gradient-glass (科技商务), vector-illustration (教育培训)
-- 分辨率: 2K (推荐), 4K
-- 每页约 30 秒，默认 5-7 页
+快速方式（推荐）：pptxgenjs 直接生成 .pptx，秒级完成。
+视觉方式：\`python ${pptDir.replace(/\\/g, '\\\\')}\\\\generate_ppt.py --plan slides_plan.json --style gradient-glass --resolution 2K --output ppt_output\`
+风格: gradient-glass (科技商务), vector-illustration (教育培训)
 `;
     }
     effectiveSystemPrompt = effectiveSystemPrompt + pptBlock;
