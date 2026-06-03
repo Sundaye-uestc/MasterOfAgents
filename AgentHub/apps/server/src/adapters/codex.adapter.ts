@@ -108,36 +108,29 @@ export class CodexAdapter implements AgentPlatformAdapter {
       pptBlock = `
 ## PPT 生成能力
 
-你可以为用户生成高质量 PPT。工作流程：
+你可以为用户生成 PPT。有两种方式，根据需求选择：
 
-1. **规划内容**: 分析用户需求，在 workspace 中创建 slides_plan.json：
-\`\`\`json
-{
-  "title": "演示文稿标题",
-  "slides": [
-    { "slide_number": 1, "page_type": "cover", "content": "标题\\n副标题" },
-    { "slide_number": 2, "page_type": "content", "content": "要点1: ...\\n要点2: ..." },
-    { "slide_number": 3, "page_type": "data", "content": "数据展示内容" },
-    { "slide_number": 4, "page_type": "content", "content": "总结内容" }
-  ]
-}
-\`\`\`
-page_type 可选: cover(封面)、content(内容页)、data(数据/总结页)
+### 方式一：AI 图示幻灯片（推荐用于演示/汇报）
+使用 NanoBanana (Gemini) 生成带 AI 图示的高质量 16:9 幻灯片图片：
 
-2. **生成 PPT**: 执行命令生成图示幻灯片：
-\`\`\`bash
-python ${pptDir.replace(/\\/g, '\\\\')}\\\\generate_ppt.py --plan slides_plan.json --style gradient-glass --resolution 2K --output ppt_output
-\`\`\`
-可选风格: gradient-glass (科技商务风格，推荐), vector-illustration (教育培训风格)
-可选分辨率: 2K (快速，推荐), 4K (高清，适合打印)
+1. **规划**: 创建 slides_plan.json（cover/content/data 页面类型）
+2. **生成**: \`python ${pptDir.replace(/\\/g, '\\\\')}\\\\generate_ppt.py --plan slides_plan.json --style gradient-glass --resolution 2K --output ppt_output\`
+3. 结果：ppt_output/index.html（播放器）+ ppt_output/images/（幻灯片图片）
 
-3. **检查结果**: 生成完成后，HTML 预览查看器位于 ppt_output/index.html，图片在 ppt_output/images/。
-   请告知用户生成结果并指引他们查看预览。
+### 方式二：程序化 PPTX（推荐用于简单文字/表格 PPT）
+使用 pptxgenjs Node.js 库直接生成 .pptx 文件。生成后系统会自动创建 HTML 内联预览。
 
-注意事项:
-- 生成每页大约需要 30 秒，请提前告知用户等待
-- slides_plan.json 必须放在 workspace（当前工作目录）下
-- 如果用户没有指定页数，默认生成 5-7 页
+### ⚠️ 重要约束
+- **绝对禁止**尝试安装或使用 LibreOffice、PowerShell COM 对象、或其他工具将 PPTX 导出为图片来做"视觉审查"
+- **绝对禁止**生成后做子代理视觉审查（sub-agent review）——系统已自动生成 HTML 预览给用户
+- 生成完成后只需验证文件存在且大小合理（>1KB），然后直接告知用户结果
+- 如果有小问题用户会自行反馈，无需预先修复
+
+其他参数:
+- 风格: gradient-glass (科技商务), vector-illustration (教育培训)
+- 分辨率: 2K (推荐，快速), 4K (高清打印)
+- 生成约 30 秒/页，请提前告知用户
+- 默认 5-7 页
 `;
     }
     effectiveSystemPrompt = effectiveSystemPrompt + pptBlock;

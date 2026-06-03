@@ -15,6 +15,8 @@ import { ArtifactService } from "./artifact.service.js";
 import { broadcastToConversation } from "../ws/gateway.js";
 import { crashLog } from "../lib/crash-log.js";
 import * as path from "node:path";
+import * as fs from "node:fs";
+import { execSync } from "node:child_process";
 
 let singleton: AgentRuntimeService | null = null;
 
@@ -204,21 +206,24 @@ export class AgentRuntimeService {
             const changes = await workspaceSvc.diffSnapshots(beforeSnapshotId, afterSnap.id);
             crashLog(`diffSnapshots: ${changes.length} changes: ${changes.map(c => `${c.changeType}:${c.path}`).join(', ') || '(none)'}`);
 
-            // Helper: check if a path is a PPT output internal file
-            // (slide images, prompts.json, slides_plan.json, etc.)
-            // These are already represented by the index.html viewer or .pptx file,
-            // so we skip them to avoid flooding the chat UI.
-            const isPptInternal = (filePath: string): boolean => {
+            // Helper: check if a path should be hidden from chat UI.
+            // PPT internal files (slide images, metadata) are covered by the
+            // index.html viewer; JS scripts generated alongside PPT are noise.
+            const shouldSkipFile = (filePath: string): boolean => {
               const normalized = filePath.replace(/\\/g, "/");
-              if (/\/images\/slide-\d+\.(png|jpg|jpeg|webp)$/i.test(normalized)) return true;
+              // PPT slide images — anywhere (images/ folder, root, etc.)
+              if (/(^|\/)slide-?\d*\.(png|jpg|jpeg|webp)$/i.test(normalized)) return true;
+              // PPT metadata / input plans
               if (/\/(prompts|slides_plan)\.json$/i.test(normalized)) return true;
+              // JS scripts generated during PPT work
+              if (/\.js$/i.test(normalized)) return true;
               return false;
             };
 
             // Broadcast each file change so the frontend updates in real-time
             for (const fc of changes) {
-              if (isPptInternal(fc.path)) {
-                crashLog(`file:changed skipped (PPT internal): ${fc.path}`);
+              if (shouldSkipFile(fc.path)) {
+                crashLog(`file:changed skipped (hidden): ${fc.path}`);
                 continue;
               }
               crashLog(`Broadcast file:changed ${fc.changeType}:${fc.path}`);
@@ -236,8 +241,8 @@ export class AgentRuntimeService {
               for (const fc of changes) {
                 if (fc.changeType === "delete") continue;
                 // Skip PPT internal files — the index.html viewer covers the slides
-                if (isPptInternal(fc.path)) {
-                  crashLog(`Artifact skipped (PPT internal): ${fc.path}`);
+                if (shouldSkipFile(fc.path)) {
+                  crashLog(`Artifact skipped (hidden): ${fc.path}`);
                   continue;
                 }
                 const ext = path.extname(fc.path).toLowerCase();
@@ -324,6 +329,87 @@ export class AgentRuntimeService {
                 } catch (artErr) {
                   crashLog(`Artifact creation FAILED for ${fc.path}: ${(artErr as Error).message}`);
                 }
+              }
+            }
+            // --- Generate PPTX previews ---
+            // For each .pptx file, run pptx_to_preview.py to create an HTML
+            // slide viewer. Stored as a "webpage" artifact for inline display.
+            const pptxChanges = changes.filter((c) => {
+              const ext = path.extname(c.path).toLowerCase();
+              return [".pptx", ".ppt"].includes(ext) && c.changeType !== "delete";
+            });
+
+            for (const fc of pptxChanges) {
+              try {
+                const pptxFullPath = path.resolve(ws.rootPath, fc.path);
+                const previewDirName = path.basename(fc.path, path.extname(fc.path)) + "_preview";
+                const previewRelPath = path.join(path.dirname(fc.path), previewDirName);
+                const previewFullPath = path.resolve(ws.rootPath, previewRelPath);
+
+                const pptScriptDir = path.resolve(process.cwd(), "..", "ppt");
+                const converterScript = path.join(pptScriptDir, "pptx_to_preview.py");
+
+                if (fs.existsSync(converterScript) && fs.existsSync(pptxFullPath)) {
+                  crashLog(`Generating PPTX preview: ${fc.path}`);
+                  execSync(
+                    `python "${converterScript}" --input "${pptxFullPath}" --output "${previewFullPath}"`,
+                    { timeout: 60_000, encoding: "utf-8", stdio: "pipe" },
+                  );
+
+                  // Create webpage artifact for the generated viewer
+                  const previewId = newId();
+                  const artifactDir = path.resolve(process.cwd(), "data", "artifacts", previewId);
+
+                  // Copy entire preview directory (index.html + images/) to artifact cache
+                  fs.mkdirSync(artifactDir, { recursive: true });
+                  for (const entry of fs.readdirSync(previewFullPath, { withFileTypes: true })) {
+                    const src2 = path.join(previewFullPath, entry.name);
+                    const dest = path.join(artifactDir, entry.name);
+                    if (entry.isDirectory()) {
+                      fs.cpSync(src2, dest, { recursive: true });
+                    } else {
+                      fs.copyFileSync(src2, dest);
+                    }
+                  }
+
+                  const indexStat = fs.statSync(path.join(artifactDir, "index.html"));
+                  const artRow = {
+                    id: previewId,
+                    runId,
+                    messageId: agentMsg.id,
+                    type: "webpage" as const,
+                    name: `${path.basename(fc.path, path.extname(fc.path))} 预览`,
+                    path: `artifacts/${previewId}/index.html`,
+                    mimeType: "text/html",
+                    size: indexStat.size,
+                    previewUrl: `/artifacts/static/${previewId}/index.html`,
+                    metadataJson: JSON.stringify({ originalPptx: fc.path, previewType: "pptx_converted" }),
+                    createdAt: nowISO(),
+                  } as any;
+
+                  db.insert(schema.artifacts).values({
+                    id: artRow.id,
+                    runId: artRow.runId,
+                    messageId: artRow.messageId,
+                    type: artRow.type,
+                    name: artRow.name,
+                    path: artRow.path,
+                    mimeType: artRow.mimeType,
+                    size: artRow.size,
+                    previewUrl: artRow.previewUrl,
+                    metadataJson: artRow.metadataJson,
+                    createdAt: artRow.createdAt,
+                  }).run();
+
+                  broadcastToConversation(conversationId, {
+                    type: "artifact:created",
+                    artifact: artRow,
+                  } as any);
+
+                  crashLog(`PPTX preview artifact: ${previewId.slice(0, 8)} webpage:${previewRelPath}/index.html`);
+                }
+              } catch (pptxErr) {
+                crashLog(`PPTX preview FAILED for ${fc.path}: ${(pptxErr as Error).message}`);
               }
             }
           } else {
