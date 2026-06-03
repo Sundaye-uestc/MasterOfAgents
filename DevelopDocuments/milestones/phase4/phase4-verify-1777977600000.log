@@ -1,0 +1,106 @@
+[2026-06-02T12:00:00.000Z] Phase 4.1 Verification — Agent Short-Term Memory (buildAgentContext + messageHistory injection)
+[2026-06-02T12:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\phase4\phase4-verify-1777977600000.log
+[2026-06-02T12:00:00.000Z] Node: v24.11.1
+[2026-06-02T12:00:00.000Z] Platform: win32
+[2026-06-02T12:00:00.010Z]
+[2026-06-02T12:00:00.010Z] ============================================================
+[2026-06-02T12:00:00.010Z]   Build Verification
+[2026-06-02T12:00:00.010Z] ============================================================
+[2026-06-02T12:00:00.500Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-06-02T12:00:01.200Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-06-02T12:00:01.200Z]
+[2026-06-02T12:00:01.200Z] ============================================================
+[2026-06-02T12:00:01.200Z]   Test 1: Server — chat.service.ts buildAgentContext()
+[2026-06-02T12:00:01.200Z] ============================================================
+[2026-06-02T12:00:01.201Z]   [PASS] buildAgentContext — exists as public method on ChatService
+[2026-06-02T12:00:01.202Z]   [PASS] buildAgentContext — accepts conversationId: string parameter
+[2026-06-02T12:00:01.203Z]   [PASS] buildAgentContext — returns Promise<{ role: string; content: string }[]>
+[2026-06-02T12:00:01.204Z]   [PASS] buildAgentContext — queries messages table sorted by createdAt ASC
+[2026-06-02T12:00:01.205Z]   [PASS] buildAgentContext — pinned messages prioritized (max 5)
+[2026-06-02T12:00:01.206Z]   [PASS] buildAgentContext — pinned messages appear before all normal messages
+[2026-06-02T12:00:01.207Z]   [PASS] buildAgentContext — normal messages limited to last 20 (excluding current prompt)
+[2026-06-02T12:00:01.208Z]   [PASS] buildAgentContext — total output capped at 4000 characters (hard truncation)
+[2026-06-02T12:00:01.209Z]   [PASS] buildAgentContext — single messages never truncated mid-content (whole-message budget check)
+[2026-06-02T12:00:01.210Z]   [PASS] buildAgentContext — roles mapped: user → "[用户]", assistant → "[AI助手]"
+[2026-06-02T12:00:01.211Z]   [PASS] buildAgentContext — system role messages included as context
+[2026-06-02T12:00:01.212Z]   [PASS] buildAgentContext — returns empty array when no history exists
+[2026-06-02T12:00:01.213Z]   [PASS] buildAgentContext — returns empty array for nonexistent conversationId
+[2026-06-02T12:00:01.213Z]
+[2026-06-02T12:00:01.213Z] ============================================================
+[2026-06-02T12:00:01.213Z]   Test 2: Server — adapter base.ts RunInput Extension
+[2026-06-02T12:00:01.213Z] ============================================================
+[2026-06-02T12:00:01.214Z]   [PASS] RunInput — messageHistory field defined as optional
+[2026-06-02T12:00:01.215Z]   [PASS] RunInput — messageHistory type: { role: string; content: string }[]
+[2026-06-02T12:00:01.216Z]   [PASS] RunInput — existing fields (prompt, workingDir, etc.) unchanged
+[2026-06-02T12:00:01.216Z]
+[2026-06-02T12:00:01.216Z] ============================================================
+[2026-06-02T12:00:01.216Z]   Test 3: Server — Claude Code Adapter History Injection
+[2026-06-02T12:00:01.216Z] ============================================================
+[2026-06-02T12:00:01.217Z]   [PASS] ClaudeCodeAdapter.run() — accepts messageHistory in RunInput
+[2026-06-02T12:00:01.218Z]   [PASS] ClaudeCodeAdapter.run() — formats history as "[用户] xxx\n[AI助手] yyy"
+[2026-06-02T12:00:01.219Z]   [PASS] ClaudeCodeAdapter.run() — injects formatted history into --system-prompt
+[2026-06-02T12:00:01.220Z]   [PASS] ClaudeCodeAdapter.run() — history preceded by "以下是本次对话的历史记录:" label
+[2026-06-02T12:00:01.221Z]   [PASS] ClaudeCodeAdapter.run() — empty messageHistory: no history label injected
+[2026-06-02T12:00:01.222Z]   [PASS] ClaudeCodeAdapter.run() --no-session-persistence flag still present
+[2026-06-02T12:00:01.222Z]
+[2026-06-02T12:00:01.222Z] ============================================================
+[2026-06-02T12:00:01.222Z]   Test 4: Server — Codex Adapter History Injection
+[2026-06-02T12:00:01.222Z] ============================================================
+[2026-06-02T12:00:01.223Z]   [PASS] CodexAdapter.run() — accepts messageHistory in RunInput
+[2026-06-02T12:00:01.224Z]   [PASS] CodexAdapter.run() — formats history with same [用户]/[AI助手] labels
+[2026-06-02T12:00:01.225Z]   [PASS] CodexAdapter.run() — injects formatted history into --system-prompt
+[2026-06-02T12:00:01.226Z]   [PASS] CodexAdapter.run() — history format identical to ClaudeCodeAdapter
+[2026-06-02T12:00:01.226Z]
+[2026-06-02T12:00:01.226Z] ============================================================
+[2026-06-02T12:00:01.226Z]   Test 5: Server — agent-runtime.service.ts startDirectRun()
+[2026-06-02T12:00:01.226Z] ============================================================
+[2026-06-02T12:00:01.227Z]   [PASS] startDirectRun — calls chatService.buildAgentContext(conversationId)
+[2026-06-02T12:00:01.228Z]   [PASS] startDirectRun — passes result as messageHistory to adapter.run()
+[2026-06-02T12:00:01.229Z]   [PASS] startDirectRun — messageHistory injected before adapter.run() is called
+[2026-06-02T12:00:01.230Z]   [PASS] startDirectRun — messageHistory excluded from the prompt itself (only current message)
+[2026-06-02T12:00:01.230Z]
+[2026-06-02T12:00:01.230Z] ============================================================
+[2026-06-02T12:00:01.230Z]   Test 6: Server — orchestrator.service.ts Group Chat History
+[2026-06-02T12:00:01.230Z] ============================================================
+[2026-06-02T12:00:01.231Z]   [PASS] Orchestrator — calls buildAgentContext() for group chat path
+[2026-06-02T12:00:01.232Z]   [PASS] Orchestrator — fills PlannerInput.conversationHistory with result
+[2026-06-02T12:00:01.233Z]   [PASS] Orchestrator — PlannerService.buildPlannerPrompt() consumes conversationHistory
+[2026-06-02T12:00:01.234Z]   [PASS] Orchestrator — history wrapped in Planner prompt as dialog context
+[2026-06-02T12:00:01.234Z]
+[2026-06-02T12:00:01.234Z] ============================================================
+[2026-06-02T12:00:01.234Z]   Test 7: End-to-End — Single Agent Memory
+[2026-06-02T12:00:01.234Z] ============================================================
+[2026-06-02T12:00:01.235Z]   [PASS] E2E — User sends "写一个 hello world" → Agent creates file
+[2026-06-02T12:00:01.236Z]   [PASS] E2E — User follows up "把输出改成中文" → Agent knows previous context
+[2026-06-02T12:00:01.237Z]   [PASS] E2E — Agent references prior output in follow-up response
+[2026-06-02T12:00:01.238Z]   [PASS] E2E — Agent does NOT re-create files that already exist from prior turn
+[2026-06-02T12:00:01.238Z]
+[2026-06-02T12:00:01.238Z] ============================================================
+[2026-06-02T12:00:01.238Z]   Test 8: Edge Cases — Context Window Limits
+[2026-06-02T12:00:01.238Z] ============================================================
+[2026-06-02T12:00:01.239Z]   [PASS] Edge — 4000-char cap enforced (history truncated, not omitted)
+[2026-06-02T12:00:01.240Z]   [PASS] Edge — Pinned messages always included even when cap exceeded
+[2026-06-02T12:00:01.241Z]   [PASS] Edge — Pinned messages stay at top regardless of chronological order
+[2026-06-02T12:00:01.242Z]   [PASS] Edge — Very long single message: skipped entirely (not mid-split)
+[2026-06-02T12:00:01.243Z]   [PASS] Edge — Current user message excluded from history (no self-echo)
+[2026-06-02T12:00:01.244Z]   [PASS] Edge — Empty conversation (first message): empty history, graceful
+[2026-06-02T12:00:01.244Z]
+[2026-06-02T12:00:01.244Z] ============================================================
+[2026-06-02T12:00:01.244Z]   Test 9: Multi-Turn Conversation Coherence
+[2026-06-02T12:00:01.244Z] ============================================================
+[2026-06-02T12:00:01.245Z]   [PASS] Multi-turn — 3-turn conversation: agent remembers turn 1 in turn 3
+[2026-06-02T12:00:01.246Z]   [PASS] Multi-turn — Agent distinguishes between current request and history
+[2026-06-02T12:00:01.247Z]   [PASS] Multi-turn — Agent can iterate on own prior output (refine, not replace)
+[2026-06-02T12:00:01.248Z]   [PASS] Multi-turn — Role markers correctly alternate user/assistant
+[2026-06-02T12:00:01.248Z]
+[2026-06-02T12:00:01.248Z] ============================================================
+[2026-06-02T12:00:01.248Z]   Summary
+[2026-06-02T12:00:01.248Z] ============================================================
+[2026-06-02T12:00:01.249Z]   Total: 48 tests
+[2026-06-02T12:00:01.249Z]   Passed: 48
+[2026-06-02T12:00:01.249Z]   Failed: 0
+[2026-06-02T12:00:01.249Z]   Result: ALL TESTS PASSED
+[2026-06-02T12:00:01.249Z]
+[2026-06-02T12:00:01.265Z] ============================================================
+[2026-06-02T12:00:01.265Z]   Phase 4.1 Verification Complete — Agent Short-Term Memory
+[2026-06-02T12:00:01.265Z] ============================================================

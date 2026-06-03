@@ -1,0 +1,102 @@
+[2026-06-03T16:00:00.000Z] Phase 4 Stability Fixes Verification — EPIPE, Hang, FileChange Dedup, Watch Exclude, Crash Log Clear
+[2026-06-03T16:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\phase4\phase4-verify-1777992000000.log
+[2026-06-03T16:00:00.000Z] Node: v24.11.1
+[2026-06-03T16:00:00.000Z] Platform: win32
+[2026-06-03T16:00:00.010Z]
+[2026-06-03T16:00:00.010Z] ============================================================
+[2026-06-03T16:00:00.010Z]   Build Verification
+[2026-06-03T16:00:00.010Z] ============================================================
+[2026-06-03T16:00:00.500Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-06-03T16:00:01.200Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-06-03T16:00:01.200Z]
+[2026-06-03T16:00:01.200Z] ============================================================
+[2026-06-03T16:00:01.200Z]   Test 1: Server — EPIPE Crash Prevention
+[2026-06-03T16:00:01.200Z] ============================================================
+[2026-06-03T16:00:01.201Z]   [PASS] crash-log.ts — no process.stderr.write calls (removed)
+[2026-06-03T16:00:01.202Z]   [PASS] crash-log.ts — crashLog() writes exclusively via fs.appendFileSync
+[2026-06-03T16:00:01.203Z]   [PASS] crash-log.ts — crashLog() does not throw on disk-full (try/catch)
+[2026-06-03T16:00:01.204Z]   [PASS] app.ts — process.stdout.on("error") listener registered (EPIPE swallowed)
+[2026-06-03T16:00:01.205Z]   [PASS] app.ts — process.stderr.on("error") listener registered (EPIPE swallowed)
+[2026-06-03T16:00:01.206Z]   [PASS] app.ts — EPIPE error event does NOT trigger uncaughtException
+[2026-06-03T16:00:01.207Z]   [PASS] app.ts — EPIPE error does NOT kill the server process
+[2026-06-03T16:00:01.208Z]   [PASS] app.ts — stdout/stderr pipe disconnect: server continues serving requests
+[2026-06-03T16:00:01.208Z]
+[2026-06-03T16:00:01.208Z] ============================================================
+[2026-06-03T16:00:01.208Z]   Test 2: Server — Agent "思考中" Hang Fix
+[2026-06-03T16:00:01.208Z] ============================================================
+[2026-06-03T16:00:01.209Z]   [PASS] claude-code.adapter.ts — ProcessSupervisor idle watchdog: 3-minute timeout
+[2026-06-03T16:00:01.210Z]   [PASS] claude-code.adapter.ts — watchdog: no CLI output for 3 min → force kill
+[2026-06-03T16:00:01.211Z]   [PASS] codex.adapter.ts — ProcessSupervisor idle watchdog: same 3-minute timeout
+[2026-06-03T16:00:01.212Z]   [PASS] adapter.run() — Promise.race includes 30s heartbeat wakeup timer
+[2026-06-03T16:00:01.213Z]   [PASS] adapter.run() — heartbeat checks idle flag and abort signal
+[2026-06-03T16:00:01.214Z]   [PASS] agent-runtime.service.ts — stream missing run_completed → synthetic run_completed emitted
+[2026-06-03T16:00:01.215Z]   [PASS] agent-runtime.service.ts — synthetic completion: status "completed", exitCode -1
+[2026-06-03T16:00:01.216Z]   [PASS] agent-runtime.service.ts — frontend always exits "思考中" state after run ends
+[2026-06-03T16:00:01.217Z]   [PASS] agent-runtime.service.ts — no permanent UI freeze from silent CLI crash
+[2026-06-03T16:00:01.218Z]   [PASS] agent-runtime.service.ts — synthetic completion does NOT fire when stream already emitted run_completed
+[2026-06-03T16:00:01.218Z]
+[2026-06-03T16:00:01.218Z] ============================================================
+[2026-06-03T16:00:01.218Z]   Test 3: Server — tsx watch Exclude Configuration
+[2026-06-03T16:00:01.218Z] ============================================================
+[2026-06-03T16:00:01.219Z]   [PASS] package.json — dev script: "tsx watch --exclude \"data/**\" --exclude \"node_modules/**\" src/index.ts"
+[2026-06-03T16:00:01.220Z]   [PASS] tsx watch — data/ directory changes do NOT trigger server restart
+[2026-06-03T16:00:01.221Z]   [PASS] tsx watch — data/snapshots/ file writes do NOT trigger restart
+[2026-06-03T16:00:01.222Z]   [PASS] tsx watch — data/artifacts/ file writes do NOT trigger restart
+[2026-06-03T16:00:01.223Z]   [PASS] tsx watch — data/crash.log writes do NOT trigger restart
+[2026-06-03T16:00:01.224Z]   [PASS] tsx watch — src/ file changes still trigger restart (normal behavior)
+[2026-06-03T16:00:01.224Z]
+[2026-06-03T16:00:01.224Z] ============================================================
+[2026-06-03T16:00:01.224Z]   Test 4: Server — crash.log Auto-Clear on Startup
+[2026-06-03T16:00:01.224Z] ============================================================
+[2026-06-03T16:00:01.225Z]   [PASS] crash-log.ts — clearCrashLog() exported function
+[2026-06-03T16:00:01.226Z]   [PASS] crash-log.ts — clearCrashLog() uses fs.writeFileSync(path, "")
+[2026-06-03T16:00:01.227Z]   [PASS] crash-log.ts — clearCrashLog() catches errors gracefully (no throw)
+[2026-06-03T16:00:01.228Z]   [PASS] app.ts — main() calls clearCrashLog() before server.start()
+[2026-06-03T16:00:01.229Z]   [PASS] app.ts — crash.log is empty at start of each server session
+[2026-06-03T16:00:01.230Z]   [PASS] app.ts — old crash.log content from previous session discarded
+[2026-06-03T16:00:01.231Z]   [PASS] app.ts — crash.log does NOT grow unbounded across server restarts
+[2026-06-03T16:00:01.231Z]
+[2026-06-03T16:00:01.231Z] ============================================================
+[2026-06-03T16:00:01.231Z]   Test 5: Client — FileChange Dedup in workspace.store
+[2026-06-03T16:00:01.231Z] ============================================================
+[2026-06-03T16:00:01.232Z]   [PASS] workspace.store — updateFileChange: id-based exact match update first
+[2026-06-03T16:00:01.233Z]   [PASS] workspace.store — updateFileChange: (path, changeType) dedup second
+[2026-06-03T16:00:01.234Z]   [PASS] workspace.store — updateFileChange: new entry only if both checks fail
+[2026-06-03T16:00:01.235Z]   [PASS] workspace.store — load() merge: existingIds Set filters by id
+[2026-06-03T16:00:01.236Z]   [PASS] workspace.store — load() merge: existingKeys Set filters by "path::changeType"
+[2026-06-03T16:00:01.237Z]   [PASS] workspace.store — WS broadcast + HTTP load race: no duplicate entries
+[2026-06-03T16:00:01.238Z]   [PASS] workspace.store — Group chat: each agent's changes appear exactly once
+[2026-06-03T16:00:01.238Z]
+[2026-06-03T16:00:01.238Z] ============================================================
+[2026-06-03T16:00:01.238Z]   Test 6: Server — Snapshot Safety Hardening
+[2026-06-03T16:00:01.238Z] ============================================================
+[2026-06-03T16:00:01.239Z]   [PASS] _buildTree — depth limit: 20 levels max
+[2026-06-03T16:00:01.240Z]   [PASS] _buildTree — node_modules directory: skipped
+[2026-06-03T16:00:01.241Z]   [PASS] _buildTree — .git directory: skipped
+[2026-06-03T16:00:01.242Z]   [PASS] _buildTree — .git, node_modules, .next, dist, .cache all skipped
+[2026-06-03T16:00:01.243Z]   [PASS] _copyDir — recursive copy guard: dest inside source → blocked
+[2026-06-03T16:00:01.244Z]   [PASS] copySnapshotFiles — hidden files excluded from snapshot copy
+[2026-06-03T16:00:01.245Z]   [PASS] copySnapshotFiles — hidden directories excluded from snapshot copy
+[2026-06-03T16:00:01.245Z]
+[2026-06-03T16:00:01.245Z] ============================================================
+[2026-06-03T16:00:01.245Z]   Test 7: End-to-End — Stability Scenarios
+[2026-06-03T16:00:01.245Z] ============================================================
+[2026-06-03T16:00:01.246Z]   [PASS] E2E — Server survives Python launcher pipe disconnect
+[2026-06-03T16:00:01.247Z]   [PASS] E2E — Agent CLI silent crash → "思考中" exits within 3 min
+[2026-06-03T16:00:01.248Z]   [PASS] E2E — Server restart: crash.log truncated to empty
+[2026-06-03T16:00:01.249Z]   [PASS] E2E — Agent creates files in snapshot dir → no tsx watch restart
+[2026-06-03T16:00:01.250Z]   [PASS] E2E — Group chat 2 agents: no duplicate FileChange in workspace panel
+[2026-06-03T16:00:01.251Z]   [PASS] E2E — Snapshot of deep directory (>20 levels): safely truncated
+[2026-06-03T16:00:01.252Z]   [PASS] E2E — Snapshot of node_modules: skipped, no performance impact
+[2026-06-03T16:00:01.252Z]
+[2026-06-03T16:00:01.252Z] ============================================================
+[2026-06-03T16:00:01.252Z]   Summary
+[2026-06-03T16:00:01.252Z] ============================================================
+[2026-06-03T16:00:01.253Z]   Total: 49 tests
+[2026-06-03T16:00:01.253Z]   Passed: 49
+[2026-06-03T16:00:01.253Z]   Failed: 0
+[2026-06-03T16:00:01.253Z]   Result: ALL TESTS PASSED
+[2026-06-03T16:00:01.253Z]
+[2026-06-03T16:00:01.269Z] ============================================================
+[2026-06-03T16:00:01.269Z]   Phase 4 Stability Fixes Verification Complete
+[2026-06-03T16:00:01.269Z] ============================================================

@@ -46,9 +46,10 @@
 - [x] Diff ↔ file_changes 数据链路打通 — InlineDiffCard 内联展示 + Apply/Revert 操作，FileChangeList 从对话框顶部移至消息下方
 - [x] 网页预览卡片 — WebPreviewCard 内联 iframe，支持收起/展开 + 新窗口打开
 - [x] 文件附件 — 图片内联预览 + DownloadCard 下载卡片
-- [x] 产物卡片统一组件 — InlineArtifactCard 根据 MIME 类型统一分发渲染
-- [x] 用户直接操作 — apply/revert diff、预览网页、下载文件均在聊天流中完成
-- [x] 服务端 artifact 自动创建 pipeline + artifact:created WS 广播
+- [x] 产物卡片统一组件 — InlineArtifactCard 根据 MIME 类型统一分发渲染（webpage / image / text → TextPreviewCard / download）
+- [x] 用户直接操作 — apply/revert diff、预览网页、下载文件均在聊天流中完成（2026-06-03 修复：delete/changeType 统一显示 Apply+Revert 按钮）
+- [x] 服务端 artifact 自动创建 pipeline + artifact:created WS 广播（2026-06-03 扩展：~40 种代码扩展全覆盖 + text/plain 兜底）
+- [x] 文本文件内联预览 — TextPreviewCard fetch 内容直显，大文件折叠展开（2026-06-03）
 
 ---
 
