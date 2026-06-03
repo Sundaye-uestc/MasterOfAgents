@@ -11,6 +11,8 @@ import { eq } from "drizzle-orm";
 import { newId, nowISO } from "../lib/ids.js";
 import type { ChatService } from "./chat.service.js";
 import { WorkspaceService } from "./workspace.service.js";
+import { broadcastToConversation } from "../ws/gateway.js";
+import { crashLog } from "../lib/crash-log.js";
 
 let singleton: AgentRuntimeService | null = null;
 
@@ -107,6 +109,7 @@ export class AgentRuntimeService {
 
     // Run async — stream events back through callback
     (async () => {
+      crashLog(`IIFE START run=${runId.slice(0, 8)}`);
       let beforeSnapshotId: string | null = null;
 
       // Ensure workspace exists BEFORE the run so we can use it as workingDir
@@ -114,14 +117,19 @@ export class AgentRuntimeService {
       try {
         const ws = await workspaceSvc.ensureWorkspace(conversationId);
         workspaceRoot = ws.rootPath;
+        crashLog(`Workspace ready: ${workspaceRoot}`);
         const beforeManifest = workspaceSvc.generateManifest(ws.rootPath);
+        crashLog(`Manifest: ${Object.keys(beforeManifest).length} files`);
         const beforeSnap = await workspaceSvc.createSnapshot(ws.id, runId, "before", beforeManifest);
         beforeSnapshotId = beforeSnap.id;
+        crashLog(`Before snapshot: ${beforeSnapshotId.slice(0, 8)}`);
       } catch (snapErr) {
-        console.warn(`[runtime] Failed to create before snapshot: ${(snapErr as Error).message}`);
+        crashLog(`Before snapshot FAILED: ${(snapErr as Error).message}`);
+        console.warn(`[runtime] Failed to create before snapshot: ${(snapErr as Error).message}`, snapErr);
       }
 
       try {
+        crashLog(`Calling adapter.run()...`);
         const stream = adapter.run({
           runId,
           agentId,
@@ -133,7 +141,22 @@ export class AgentRuntimeService {
           signal: abortController.signal,
         });
 
+        // Defer run_completed until AFTER diffSnapshots, so the frontend
+        // always sees file changes when it calls load() on run:completed.
+        let deferredCompletedEvent: AgentEvent | null = null;
+        let eventCount = 0;
+
+        crashLog(`Stream loop START`);
         for await (const event of stream) {
+          eventCount++;
+          crashLog(`Event #${eventCount}: type=${event.type}`);
+          // Defer run_completed / run_failed until after snapshot diffing
+          if (event.type === "run_completed" || event.type === "run_failed") {
+            crashLog(`Deferring ${event.type} (count=${eventCount})`);
+            deferredCompletedEvent = event;
+            continue;
+          }
+
           onEvent(event, agentMsg.id);
 
           // Persist tool invocations
@@ -161,19 +184,13 @@ export class AgentRuntimeService {
               .run();
           }
 
-          // Persist file changes
-          if (event.type === "file_change") {
-            db.insert(schema.fileChanges).values({
-              id: newId(),
-              runId,
-              path: event.path,
-              changeType: event.kind,
-              diff: (event as any).diff ?? null,
-              status: "pending",
-              createdAt: nowISO(),
-            }).run();
-          }
+          // file_change events are NOT persisted here — diffSnapshots
+          // (run after the stream completes) is the single source of truth
+          // for FileChange records. This avoids duplicate entries caused by
+          // streaming file_change events + diffSnapshots inserting the same changes.
         }
+
+        crashLog(`Stream loop END (${eventCount} events, deferred=${deferredCompletedEvent ? deferredCompletedEvent.type : 'NONE'})`);
 
         // --- Create after snapshot + diff ---
         try {
@@ -181,19 +198,53 @@ export class AgentRuntimeService {
           const afterManifest = workspaceSvc.generateManifest(ws.rootPath);
           const afterSnap = await workspaceSvc.createSnapshot(ws.id, runId, "after", afterManifest);
           if (beforeSnapshotId) {
-            await workspaceSvc.diffSnapshots(beforeSnapshotId, afterSnap.id);
+            crashLog(`Diffing snapshots before=${beforeSnapshotId.slice(0,8)} after=${afterSnap.id.slice(0,8)}`);
+            const changes = await workspaceSvc.diffSnapshots(beforeSnapshotId, afterSnap.id);
+            crashLog(`diffSnapshots: ${changes.length} changes: ${changes.map(c => `${c.changeType}:${c.path}`).join(', ') || '(none)'}`);
+            // Broadcast each file change so the frontend updates in real-time
+            for (const fc of changes) {
+              crashLog(`Broadcast file:changed ${fc.changeType}:${fc.path}`);
+              broadcastToConversation(conversationId, {
+                type: "file:changed",
+                change: fc,
+              });
+            }
+          } else {
+            crashLog(`No beforeSnapshotId — skipping diffSnapshots`);
           }
         } catch (snapErr) {
-          console.warn(`[runtime] Failed to create after snapshot: ${(snapErr as Error).message}`);
+          crashLog(`After snapshot FAILED: ${(snapErr as Error).message}`);
+        }
+
+        // --- Now emit the completion event ---
+        // This MUST happen after diffSnapshots so the frontend's load() HTTP
+        // request always finds file changes in the DB.
+        //
+        // If the stream never produced a run_completed/run_failed (edge case:
+        // CLI crash, stream-json format change, etc.), emit a synthetic
+        // run_completed so the frontend always transitions out of "thinking".
+        if (deferredCompletedEvent) {
+          crashLog(`Emitting deferred ${deferredCompletedEvent.type}`);
+          onEvent(deferredCompletedEvent, agentMsg.id);
+        } else {
+          crashLog(`No completion event — emitting synthetic`);
+          onEvent({
+            type: "run_completed",
+            runId,
+            summary: "Agent finished (stream ended without explicit completion)",
+            timestamp: Date.now(),
+          } as AgentEvent, agentMsg.id);
         }
 
         // Mark completed only if run was not aborted externally
         if (this.activeRuns.has(runId)) {
+          crashLog(`Marking run completed + updating message status`);
           db.update(schema.runs)
             .set({ status: "completed", completedAt: nowISO() } as any)
             .where(eq(schema.runs.id, runId))
             .run();
           await chatService.updateMessageStatus(agentMsg.id, "sent");
+          crashLog(`Run completed — message status updated`);
         } else {
           // Run was aborted — overwrite content and mark as error
           await chatService.setContent(agentMsg.id, "");
@@ -205,6 +256,8 @@ export class AgentRuntimeService {
           this.abortedRuns.delete(runId);
         }
       } catch (err) {
+        crashLog(`IIFE CATCH: ${err instanceof Error ? err.message : String(err)}`);
+        console.error(`[runtime] ❌ Stream/run error for run=${runId.slice(0, 8)}:`, err);
         const errorMsg = err instanceof Error ? err.message : String(err);
         db.update(schema.runs)
           .set({ status: "failed", errorJson: JSON.stringify({ message: errorMsg }), completedAt: nowISO() } as any)
@@ -213,7 +266,9 @@ export class AgentRuntimeService {
 
         await chatService.updateMessageStatus(agentMsg.id, "error");
       } finally {
+        crashLog(`IIFE FINALLY — deleting active run`);
         this.activeRuns.delete(runId);
+        crashLog(`IIFE END`);
       }
     })();
 

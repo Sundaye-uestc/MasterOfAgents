@@ -91,8 +91,11 @@ export function agentEventToWsEvent(event: AgentEvent): ServerWsEvent | null {
       return { type: "tool:invocation", messageId: "", invocation: event };
     case "tool_result":
       return { type: "tool:invocation", messageId: "", invocation: event };
+    // file_change events are not forwarded to clients here.
+    // Instead, diffSnapshots sends properly-formed file:changed events
+    // (with DB ids) after the run completes — the single source of truth.
     case "file_change":
-      return { type: "file:changed", change: event };
+      return null;
     case "artifact_created":
       return { type: "artifact:created", artifact: event };
     case "permission_request":

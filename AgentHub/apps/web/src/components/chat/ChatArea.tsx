@@ -172,6 +172,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           useWorkspaceStore.getState().load(conversationId);
           break;
         case "run:completed":
+          console.log(`[ChatArea] 📥 WS run:completed — runId=${(event as any).runId}, triggering load()`);
           setRunning(false);
           setStreamingMsgId(null);
           setCurrentRunId(null);
@@ -232,6 +233,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
         case "file:changed": {
           const fc = (event as any).change as FileChangeRow;
           if (!fc) break;
+          console.log(`[ChatArea] 📥 WS file:changed — ${fc.changeType}:${fc.path} (id=${fc.id})`);
           workspaceUpdateFileChange(fc);
           break;
         }

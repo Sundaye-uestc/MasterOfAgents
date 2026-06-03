@@ -1,12 +1,12 @@
 # Phase 4 开发完成文档
 
-**完成日期：** 2026-05-31（更新于 2026-06-02）
+**完成日期：** 2026-05-31（更新于 2026-06-03：稳定性修复 + 前端去重 + 4.1 记忆能力验证通过）
 
 ---
 
 ## 概述
 
-完成 Phase 3 遗留基础设施模块 + Phase 4.2 Diff 展示完善 + Phase 4.3 WorkspacePanel 集成完善。打通了从服务端 workspace → store → UI 的完整数据链路，并新增快照回滚、文件内容查看、面板拖拽、工作目录管理等功能。
+完成 Phase 3 遗留基础设施模块 + Phase 4.1 Agent 短期记忆修复 + Phase 4.2 Diff 展示完善 + Phase 4.3 WorkspacePanel 集成完善。打通了从服务端 workspace → store → UI 的完整数据链路，新增快照回滚、文件内容查看、面板拖拽、工作目录管理等功能，并修复了 Agent 无法感知对话上下文的严重缺陷。
 
 ---
 
@@ -28,7 +28,69 @@
 
 ---
 
-## 二、Phase 4.2 对话中 Diff 展示完善
+## 二、Phase 4.1 Agent 短期记忆修复（2026-06-02）
+
+### 2.1 缺陷现象
+
+Agent 每次收到新消息时，只看到当前消息本身，完全不知道对话历史。例如用户先问"写一个 hello world"，再问"把输出改成中文"，Agent 不知道前面写过什么。
+
+### 2.2 根因分析
+
+1. `chat.service.ts` / `agent-runtime.service.ts` 调用 adapter 时只传了 `prompt: body.content`（当前消息），未构建历史上下文
+2. `adapter.run()` 使用 `-p "当前消息"` 启动子进程，适配器不加载数据库中的历史消息
+3. `--no-session-persistence` flag 禁用了 CLI 层的会话持久化，确保每次运行从零开始
+4. `PlannerService.buildPlannerPrompt()` 虽定义了 `conversationHistory?` 字段，但无调用方填充
+
+### 2.3 修复方案
+
+**核心思路：** 每次 Agent run 启动时，从 DB 加载同 conversation 的历史消息，注入到 `--system-prompt` 中，使 Agent 感知完整对话上下文。
+
+**数据流：**
+
+```
+用户发送消息
+  → agent-runtime.service.ts startDirectRun()
+    → chatService.buildAgentContext(conversationId)
+      → 查询 messages 表（按 createdAt 排序）
+      → pinned 消息优先注入（最多 5 条）
+      → 最近 20 条普通消息（排除当前 prompt）
+      → 4000 字符上限截断
+      → 返回 [{ role, content }, ...]
+    → adapter.run({ prompt, messageHistory, ... })
+      → claude-code.adapter.ts / codex.adapter.ts
+        → 格式化为 [用户] / [AI助手] 标记的对话历史
+        → 注入 --system-prompt
+```
+
+### 2.4 修改文件清单
+
+| 文件 | 变更 |
+|---|---|
+| `adapters/base.ts` | `RunInput` 新增 `messageHistory?: { role, content }[]` 字段 |
+| `chat.service.ts` | 新增 `buildAgentContext()` — 从 DB 读历史 + pinned 优先 + 截断 |
+| `agent-runtime.service.ts` | `startDirectRun()` 调用 `buildAgentContext()` 并传入 `adapter.run()` |
+| `claude-code.adapter.ts` | 将 `messageHistory` 格式化为对话历史注入 `--system-prompt` |
+| `codex.adapter.ts` | 同样的历史注入逻辑（与 Claude Code adapter 一致） |
+| `orchestrator.service.ts` | 群聊路径调用 `buildAgentContext()` 填充 `PlannerInput.conversationHistory` |
+
+### 2.5 关键约束
+
+- **上下文窗口限制：** 4000 字符硬截断，保证不超出 CLI 限制
+- **pinned 优先：** 已 pin 的消息必定注入，最多 5 条；固定消息排在所有消息之前，Agent 总能优先看到固定的上下文
+- **单条消息不截断：** `addMsg()` 以整条消息为单位检查预算，超限则跳过该条而不是截断内容
+- **历史角色标记：** `[用户]` / `[AI助手]` 清晰区分发言人
+- **排除当前消息：** `normal.slice(-maxMessages, -1)` 避免重复发送当前 prompt
+- **群聊兼容：** Orchestrator 调用 Planner 时同步填充 `conversationHistory`
+
+### 2.6 验证结果（2026-06-03）
+
+- 短期记忆：Agent 能正确感知对话历史上下文 ✅
+- pinned 消息注入：固定消息在超长对话中依然排在最前面，不受截断影响 ✅
+- 多轮对话连贯性：用户连续追加需求（如"改成中文"），Agent 记得之前的输出 ✅
+
+---
+
+## 三、Phase 4.2 对话中 Diff 展示完善
 
 ### 2.1 服务端：真实 unified diff 生成
 
@@ -59,7 +121,7 @@
 
 ---
 
-## 三、Phase 4.3 WorkspacePanel 集成完善
+## 四、Phase 4.3 WorkspacePanel 集成完善
 
 ### 3.1 服务端：文件树 API
 
@@ -105,6 +167,7 @@
 
 | 决策 | 说明 |
 |---|---|
+| `buildAgentContext()` 注入短期记忆 | 每次 run 从 DB 读取历史 → system prompt，4000 字符截断 |
 | workspace.store 作为单一数据源 | 文件树、快照、变更仅由 store 管理 |
 | ui.store 管理面板状态 | 扩展支持 selectedChangePath 跨组件通信 |
 | DiffBlock 为统一 diff 渲染器 | MarkdownContent 和 DiffCard 共享 |
@@ -113,48 +176,54 @@
 
 ---
 
+## 五、稳定性修复（2026-06-03）
+
+### 5.1 服务端 EPIPE 崩溃修复
+
+**问题**：Python 启动器 pipe 断开时，`crashLog` 中的 `process.stderr.write` 触发 EPIPE 错误 → `uncaughtException` → 进程崩溃。
+
+**修复：**
+- `crash-log.ts`：移除所有 `process.stderr.write` 调用，仅保留 `fs.appendFileSync` 文件写入
+- `app.ts`：添加 `process.stdout.on("error", ...)` 和 `process.stderr.on("error", ...)` 监听器，EPIPE 静默吞掉
+
+### 5.2 Agent "思考中" 卡死修复
+
+**问题**：CLI 子进程无输出时，事件循环在 `Promise.race` 中永久阻塞，前端 UI 永远显示"思考中"。
+
+**修复：**
+- `claude-code.adapter.ts` / `codex.adapter.ts`：ProcessSupervisor 空闲看门狗 — 3 分钟无输出自动 kill
+- Promise.race 增加 30s 心跳唤醒定时器，定期检查 idle/abort 状态
+- `agent-runtime.service.ts`：stream 未产生 `run_completed`/`run_failed` 时合成 `run_completed`，确保前端始终退出"思考中"
+
+### 5.3 前端 FileChange 去重
+
+**问题**：群聊多 Agent 场景下，WS 广播与 HTTP `load()` 可能返回同一 FileChange 的不同 ID 版本，导致前端展示重复条目。
+
+**修复**（`workspace.store.ts`）：
+- `updateFileChange`（WS 路径）：先按 `id` 精确匹配 → 再按 `(path, changeType)` 去重 → 才新增
+- `load()` merge（HTTP 路径）：同时用 `existingIds` 和 `existingKeys`（`path::changeType`）过滤
+
+### 5.4 tsx watch 排除快照目录
+
+**问题**：`tsx watch` 监控整个 CWD，`data/snapshots/` 下新增快照文件副本会触发服务重启。
+
+**修复**：`package.json` dev 脚本改为 `tsx watch --exclude "data/**" --exclude "node_modules/**" src/index.ts`
+
+### 5.5 快照安全防护
+
+- `_buildTree`：深度限制 20 层 + 跳过危险目录（node_modules、.git 等）
+- `_copyDir`：目标路径在源路径内的递归防护
+- `copySnapshotFiles`：排除隐藏文件
+
+---
+
 ## 验证结果
 
 - TypeScript 编译：server ✅ / web ✅（零错误）
+- **4.1 短期记忆：** agent 能感知对话历史（`buildAgentContext()` → system prompt），群聊 Planner 同步填充 `conversationHistory`
 - 数据链路：store.load() → API → WorkspacePanel 三 Tab 渲染
 - 快照回滚：确认后恢复文件 → 文件树自动刷新
 - Diff 渲染：`+` 绿 / `-` 红 / `@@` 蓝 / 长 diff 折叠
 - 联动：点击 diff 路径 → WorkspacePanel 变更 Tab + 高亮
 - 面板拖拽：240–600px，实时调整
-
----
-
-## 四、2026-06-02 BUG 修复
-
-### 4.1 Planner 任务 ID 碰撞 → 消息消失
-
-**问题：** Planner LLM 生成固定 ID（`task-1`、`task-2`），跨运行冲突导致 `UNIQUE constraint failed: tasks.id`，前端临时消息被移除。
-
-**修复：** `orchestrator.service.ts` — 在 DB 写入前将 planner ID 映射为 `newId()` 生成的 UUID，同时重映射 `dependencies` 引用。
-
-### 4.2 对话删除后磁盘孤儿数据残留
-
-**问题：** `deleteConversation` 只清理 DB 行，`data/snapshots/<id>/` 和 `data/workspaces/<id>/` 目录留在磁盘。
-
-**修复：** `chat.service.ts` — 删除对话前遍历 workspace → snapshot，先 `fs.rmSync` 删除磁盘目录，再删除 DB 行。
-
-### 4.3 跨对话 FileChange 串味
-
-**问题：** 全局 Zustand store 导致 A 对话的变更显示在 B 对话框中。切换对话时 HTTP `load()` 的飞行中响应与 WS 事件交错覆盖。
-
-**修复：** `workspace.store.ts` — 新增 `activeConversationId` 追踪；切换对话时清空状态；飞行中响应若 `activeConversationId` 不匹配则丢弃；`updateFileChange` 采用 upsert 模式。
-
-### 4.4 快照递归复制自身 → ENAMETOOLONG
-
-**问题：** 当 workspace rootPath 覆盖 `data/snapshots/` 所在目录树时，`_copyDir` 将快照目录复制进自身，导致无限嵌套路径和 `ENAMETOOLONG` 错误。
-
-**修复：** `workspace.service.ts`
-- `_copyDir()`: 增加循环检测（dest 在 src 内则跳过） + 跳过 `node_modules`/`data`/`.git`
-- `_buildTree()`: 增加深度上限 20 层 + 同样跳过上述目录
-- 清理了所有被污染的磁盘快照文件和 DB 记录
-
-### 4.5 FileChange 通知不出现（BUG #1）
-
-**问题：** Agent 回复完毕后 FileChangeList 不显示文件变更，需刷新页面后才出现。WS `file:changed` 事件 + HTTP `load()` 双通道均无法实时送达前端。
-
-**状态：** ✅ 已修复（校验通过）
+- **稳定性：** 服务端不再因 EPIPE 崩溃；Agent 不再"思考中"卡死；前端无重复 FileChange 播报

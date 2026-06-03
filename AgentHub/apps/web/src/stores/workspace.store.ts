@@ -29,6 +29,7 @@ interface SnapshotItem {
 }
 
 interface WorkspaceStoreState {
+  activeConversationId: string | null;
   workspaceId: string | null;
   rootPath: string | null;
   files: FileNode[];
@@ -44,6 +45,7 @@ interface WorkspaceStoreState {
 }
 
 export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
+  activeConversationId: null,
   workspaceId: null,
   rootPath: null,
   files: [],
@@ -52,7 +54,16 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   loading: false,
 
   load: async (conversationId) => {
-    set({ loading: true });
+    const prevConvId = get().activeConversationId;
+    const isNewConversation = prevConvId !== conversationId;
+
+    if (isNewConversation) {
+      // Clear per-conversation state when switching conversations
+      set({ activeConversationId: conversationId, loading: true, fileChanges: [], files: [], snapshots: [], workspaceId: null, rootPath: null });
+    } else {
+      set({ loading: true });
+    }
+
     try {
       const [ws, changes] = await Promise.all([
         getWorkspace(conversationId),
@@ -79,7 +90,24 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
         } catch { /* file tree load failure is non-fatal */ }
       }
 
-      set({ files, snapshots, fileChanges: changes, loading: false });
+      set((s) => {
+        // Within the same conversation, merge WS-delivered changes with HTTP response.
+        // Prevents WS-delivered changes from being overwritten by a slower HTTP load().
+        if (s.activeConversationId !== conversationId) {
+          // Conversation changed while request was in-flight — discard
+          return {};
+        }
+        const existingIds = new Set(s.fileChanges.map((c) => c.id));
+        const existingKeys = new Set(s.fileChanges.map((c) => `${c.path}::${c.changeType}`));
+        const freshChanges = changes.filter(
+          (c: FileChangeRow) => !existingIds.has(c.id) && !existingKeys.has(`${c.path}::${c.changeType}`)
+        );
+        const merged = freshChanges.length > 0
+          ? [...freshChanges, ...s.fileChanges]
+          : s.fileChanges;
+        console.log(`[workspace.store] 💾 load() HTTP returned ${changes.length} changes, existing=${s.fileChanges.length}, fresh=${freshChanges.length}, merged=${merged.length}`);
+        return { files, snapshots, fileChanges: merged, loading: false };
+      });
     } catch {
       set({ loading: false });
     }
@@ -100,9 +128,28 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
   },
 
   updateFileChange: (updated) => {
-    set((s) => ({
-      fileChanges: s.fileChanges.map((c) => (c.id === updated.id ? updated : c)),
-    }));
+    set((s) => {
+      // 1) Exact ID match — same record, just update it
+      const idxById = s.fileChanges.findIndex((c) => c.id === updated.id);
+      if (idxById !== -1) {
+        console.log(`[workspace.store] 📝 updateFileChange: UPDATE ${updated.changeType}:${updated.path} (id=${updated.id.slice(0,8)}...) → total=${s.fileChanges.length}`);
+        const next = [...s.fileChanges];
+        next[idxById] = updated;
+        return { fileChanges: next };
+      }
+
+      // 2) Same (path, changeType) but different ID — duplicate from another source, skip
+      const dup = s.fileChanges.some(
+        (c) => c.path === updated.path && c.changeType === updated.changeType
+      );
+      if (dup) {
+        console.log(`[workspace.store] ⏭️  Skip duplicate: ${updated.changeType}:${updated.path} (already shown)`);
+        return {};
+      }
+
+      console.log(`[workspace.store] 📝 updateFileChange: ADD ${updated.changeType}:${updated.path} (id=${updated.id.slice(0,8)}...) → total=${s.fileChanges.length + 1}`);
+      return { fileChanges: [updated, ...s.fileChanges] };
+    });
   },
 
   updateRootPath: async (newPath) => {

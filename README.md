@@ -6,7 +6,7 @@ Multi-Agent Collaboration Platform — 多 Agent 协作平台。支持单聊/群
 
 - **Node.js** >= 20
 - **pnpm** >= 9
-- **Python** >= 3.8（仅启动脚本）
+- **Python** = 3.14（仅启动脚本）
 
 ## 快速启动
 
@@ -21,13 +21,19 @@ ANTHROPIC_API_KEY=sk-ant-...        # 选择哪个 Provider 就填哪个 Key
 
 支持 8 种 AI Provider 自由切换。不填 Key 则群聊降级为单 Agent 执行，单聊不受影响。
 
-### 2. 一键启动
+### 2. VS Code 一键启动（推荐）
+
+`Ctrl+Shift+B` 或 → "Terminal" → "Run Build Task..." → 选择 **dev:all**
+
+同时在终端面板启动后端（端口 3001）和前端（端口 5173），浏览器打开 **http://localhost:5173** 即可访问。点击终端面板的 🗑 图标即可停止。
+
+> `.env` 中的 API Key 会自动注入后端进程。
+
+### Python 脚本启动
 
 ```bash
-python start_dev.py
+.venv\Scripts\python.exe start_dev.py
 ```
-
-同时启动后端（端口 3001）和前端（端口 5173），浏览器打开 **http://localhost:5173** 即可访问。
 
 ### 手动启动
 

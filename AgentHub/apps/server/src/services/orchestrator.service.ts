@@ -86,14 +86,25 @@ export class OrchestratorService {
         conversationHistory,
       });
 
-    // Persist plan to run
-    db.update(schema.runs)
-      .set({ planJson: JSON.stringify(plan) } as any)
-      .where(eq(schema.runs.id, runId))
-      .run();
-
-    // Create task records in DB
+    // Create task records in DB with UUID mapping — planner uses fixed IDs
+    // like "task-1"/"task-2" which collide across runs, so we remap them.
+    const idMap = new Map<string, string>(); // plannerId → realId
     for (const task of plan.tasks) {
+      const realId = newId();
+      idMap.set(task.id, realId);
+    }
+
+    // Replace task IDs and dependency references in the plan
+    const remappedPlan: TaskPlan = {
+      ...plan,
+      tasks: plan.tasks.map((t) => ({
+        ...t,
+        id: idMap.get(t.id) ?? t.id,
+        dependencies: t.dependencies.map((d) => idMap.get(d) ?? d),
+      })),
+    };
+
+    for (const task of remappedPlan.tasks) {
       db.insert(schema.tasks).values({
         id: task.id,
         runId,
@@ -108,17 +119,23 @@ export class OrchestratorService {
       }).run();
     }
 
-    // Broadcast plan to clients
+    // Persist the remapped plan (with real IDs) to the run record
+    db.update(schema.runs)
+      .set({ planJson: JSON.stringify(remappedPlan) } as any)
+      .where(eq(schema.runs.id, runId))
+      .run();
+
+    // Broadcast remapped plan to clients
     broadcastToConversation(conversationId, {
       type: "orchestrator:plan_created",
       runId,
-      plan: plan as any,
+      plan: remappedPlan as any,
     });
 
     // Init orchestration state
     const state: OrchestrationState = {
       runId,
-      plan,
+      plan: remappedPlan,
       completedTasks: new Set(),
       failedTasks: new Set(),
       activeTasks: new Map(),
@@ -127,8 +144,8 @@ export class OrchestratorService {
     this.activeOrchestrations.set(runId, state);
 
     // Create a compact system message with the plan summary
-    const planSummary = plan.tasks.map((t: TaskPlanItem, i: number) => `${i + 1}. ${t.title} → ${t.agentId}`).join("  ·  ");
-    const reasoningLine = plan.reasoning ? ` — ${plan.reasoning}` : "";
+    const planSummary = remappedPlan.tasks.map((t: TaskPlanItem, i: number) => `${i + 1}. ${t.title} → ${t.agentId}`).join("  ·  ");
+    const reasoningLine = remappedPlan.reasoning ? ` — ${remappedPlan.reasoning}` : "";
     await this.chatService.createMessage({
       conversationId,
       role: "system",
@@ -139,7 +156,7 @@ export class OrchestratorService {
     // Kick off scheduling
     await this.scheduleReadyTasks(runId, conversationId, agentConfigs, params.systemPrompt);
 
-    return { runId, plan };
+    return { runId, plan: remappedPlan };
   }
 
   /** Parse @agent mentions from prompt and create tasks directly (no LLM needed) */

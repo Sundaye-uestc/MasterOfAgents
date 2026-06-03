@@ -296,6 +296,7 @@ export class WorkspaceService {
     const beforeSnap = await this.getSnapshot(beforeId);
     const afterSnap = await this.getSnapshot(afterId);
     if (!beforeSnap || !afterSnap) {
+      console.error(`[workspace] diffSnapshots failed: before=${!!beforeSnap} after=${!!afterSnap}`);
       throw new Error("Snapshot not found");
     }
 
@@ -305,6 +306,8 @@ export class WorkspaceService {
     const afterManifest: Manifest = afterSnap.manifestJson
       ? JSON.parse(afterSnap.manifestJson)
       : {};
+
+    console.log(`[workspace] 📋 diffSnapshots: before has ${Object.keys(beforeManifest).length} files, after has ${Object.keys(afterManifest).length} files`);
 
     const runId = afterSnap.runId ?? beforeSnap.runId ?? newId();
     const db = getDb();
@@ -322,13 +325,32 @@ export class WorkspaceService {
 
       if (!before && after) {
         changeType = "create";
+        console.log(`[workspace]   ➕ create: ${filePath}`);
       } else if (before && !after) {
         changeType = "delete";
+        console.log(`[workspace]   ➖ delete: ${filePath}`);
       } else if (before && after && before.hash !== after.hash) {
         changeType = "modify";
         diff = this._generateDiff(beforeId, filePath, before.hash, after.hash);
+        console.log(`[workspace]   ✏️  modify: ${filePath} (${before.hash.slice(0,8)} → ${after.hash.slice(0,8)})`);
       } else {
         continue; // unchanged
+      }
+
+      // Dedup: skip if a FileChange with the same (runId, path, changeType) already exists.
+      // This prevents duplicate entries when multiple runs operate on the same workspace.
+      const existing = db
+        .select()
+        .from(schema.fileChanges)
+        .where(eq(schema.fileChanges.runId, runId))
+        .all()
+        .filter((r: any) => r.path === filePath && r.changeType === changeType);
+
+      if (existing.length > 0) {
+        console.log(`[workspace]   ⏭️  skip duplicate: ${changeType}:${filePath} (already in DB)`);
+        // Return the existing row so the caller still broadcasts it
+        changes.push(existing[0] as FileChangeRow);
+        continue;
       }
 
       const row: FileChangeRow = {
