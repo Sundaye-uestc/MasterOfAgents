@@ -39,13 +39,16 @@
 
 ---
 
-### 4.4 Agent 回复富媒体内联展示
+### 4.4 Agent 回复富媒体内联展示 ✅
 
-- [ ] Diff ↔ file_changes 数据链路打通 — `` ```diff `` 代码块与 file_changes 实时数据联动
-- [ ] 网页预览卡片 — Agent 生成的 HTML/网页产物应在对话流中以内联 iframe 或缩略图卡片形式预览
-- [ ] 文件附件 — Agent 产出的文件（图片、PDF、代码文件等）应以附件卡片形式展示，支持下载和预览
-- [ ] 产物卡片统一组件 — 设计统一的 `ArtifactCard` 内联渲染组件，替代纯文本 Markdown 链接
-- [ ] 用户直接操作 — 用户应能在聊天流中直接预览网页、下载文件、应用 diff，无需切换到右侧面板
+已完成并写入 [phase4-completion.md](milestones/phase4/phase4-completion.md)。
+
+- [x] Diff ↔ file_changes 数据链路打通 — InlineDiffCard 内联展示 + Apply/Revert 操作，FileChangeList 从对话框顶部移至消息下方
+- [x] 网页预览卡片 — WebPreviewCard 内联 iframe，支持收起/展开 + 新窗口打开
+- [x] 文件附件 — 图片内联预览 + DownloadCard 下载卡片
+- [x] 产物卡片统一组件 — InlineArtifactCard 根据 MIME 类型统一分发渲染
+- [x] 用户直接操作 — apply/revert diff、预览网页、下载文件均在聊天流中完成
+- [x] 服务端 artifact 自动创建 pipeline + artifact:created WS 广播
 
 ---
 
