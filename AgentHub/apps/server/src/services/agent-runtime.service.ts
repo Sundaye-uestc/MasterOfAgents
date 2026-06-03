@@ -207,6 +207,7 @@ export class AgentRuntimeService {
               broadcastToConversation(conversationId, {
                 type: "file:changed",
                 change: fc,
+                conversationId,
               });
             }
           } else {

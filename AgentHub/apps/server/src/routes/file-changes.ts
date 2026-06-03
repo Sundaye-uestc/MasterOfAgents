@@ -43,6 +43,7 @@ fileChangeRoutes.post("/:id/apply", async (c) => {
     broadcastToConversation(run.conversationId, {
       type: "file:changed",
       change: fc,
+      conversationId: run.conversationId,
     });
   }
 
@@ -62,6 +63,7 @@ fileChangeRoutes.post("/:id/revert", async (c) => {
     broadcastToConversation(run.conversationId, {
       type: "file:changed",
       change: fc,
+      conversationId: run.conversationId,
     });
   }
 

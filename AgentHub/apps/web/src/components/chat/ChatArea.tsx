@@ -233,6 +233,8 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
         case "file:changed": {
           const fc = (event as any).change as FileChangeRow;
           if (!fc) break;
+          const wsEventConvId = (event as any).conversationId as string | undefined;
+          if (wsEventConvId && wsEventConvId !== conversationId) break;
           console.log(`[ChatArea] 📥 WS file:changed — ${fc.changeType}:${fc.path} (id=${fc.id})`);
           workspaceUpdateFileChange(fc);
           break;

@@ -96,6 +96,9 @@ export function dispatchServerEvent(event: ServerWsEvent): void {
     case "file:changed": {
       const fc = (event as any).change as FileChangeRow;
       if (!fc) break;
+      // Only apply if this event belongs to the currently active conversation
+      const wsEventConvId = (event as any).conversationId as string | undefined;
+      if (wsEventConvId && wsEventConvId !== useWorkspaceStore.getState().activeConversationId) break;
       useWorkspaceStore.getState().updateFileChange(fc);
       break;
     }

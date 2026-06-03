@@ -16,7 +16,7 @@ export type ServerWsEvent =
   | { type: "orchestrator:plan_created"; runId: string; plan: unknown }
   | { type: "orchestrator:confirmation_needed"; runId: string; taskId: string; taskTitle: string }
   | { type: "tool:invocation"; messageId: string; invocation: unknown }
-  | { type: "file:changed"; change: unknown }
+  | { type: "file:changed"; change: unknown; conversationId: string }
   | { type: "artifact:created"; artifact: unknown }
   | { type: "deploy:status"; deployment: unknown }
   | { type: "permission:requested"; permission: unknown }
