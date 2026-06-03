@@ -25,6 +25,15 @@ function isText(mimeType: string | null): boolean {
   );
 }
 
+function isPresentation(mimeType: string | null): boolean {
+  if (!mimeType) return false;
+  return (
+    mimeType.includes("presentation") ||
+    mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+    mimeType === "application/vnd.ms-powerpoint"
+  );
+}
+
 /** Build the static file serving URL for the artifact */
 function artifactUrl(artifact: ArtifactRow): string {
   if (artifact.previewUrl) {
@@ -89,6 +98,31 @@ export function InlineArtifactCard({ artifact }: Props) {
         name={artifact.name}
         mimeType={artifact.mimeType}
       />
+    );
+  }
+
+  // PPT / Presentation file — styled download card
+  if (isPresentation(artifact.mimeType)) {
+    return (
+      <div className="border border-orange-600/40 rounded-lg bg-gradient-to-r from-orange-900/20 to-red-900/10 overflow-hidden">
+        <div className="px-3 py-2 flex items-center gap-3">
+          <span className="text-2xl flex-shrink-0">📊</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-gray-200 truncate">{artifact.name}</div>
+            <div className="text-xs text-orange-400/80">PPT 演示文稿</div>
+            {artifact.size && (
+              <div className="text-xs text-gray-500">{formatSize(artifact.size)}</div>
+            )}
+          </div>
+          <a
+            href={url}
+            download={artifact.name}
+            className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-md bg-orange-600/30 text-orange-300 hover:bg-orange-600/50 transition-colors"
+          >
+            ⬇ 下载
+          </a>
+        </div>
+      </div>
     );
   }
 
