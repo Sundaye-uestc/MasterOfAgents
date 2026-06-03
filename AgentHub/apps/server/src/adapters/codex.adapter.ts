@@ -108,29 +108,36 @@ export class CodexAdapter implements AgentPlatformAdapter {
       pptBlock = `
 ## PPT 生成能力
 
-你可以为用户生成 PPT。有两种方式，根据需求选择：
+你可以为用户生成 PPT。系统会在你完成后**自动**生成 HTML 在线预览和幻灯片图片，用户无需下载即可在聊天界面直接翻页查看。因此你**不需要**做任何形式的质量检查——那是系统的职责，不是你的。
 
-### 方式一：AI 图示幻灯片（推荐用于演示/汇报）
-使用 NanoBanana (Gemini) 生成带 AI 图示的高质量 16:9 幻灯片图片：
+你的任务只有两步：**生成 → 告知完成**。仅此而已。
 
-1. **规划**: 创建 slides_plan.json（cover/content/data 页面类型）
-2. **生成**: \`python ${pptDir.replace(/\\/g, '\\\\')}\\\\generate_ppt.py --plan slides_plan.json --style gradient-glass --resolution 2K --output ppt_output\`
-3. 结果：ppt_output/index.html（播放器）+ ppt_output/images/（幻灯片图片）
+### 方式一：AI 图示幻灯片（推荐）
+1. 创建 slides_plan.json（page_type: cover / content / data）
+2. 执行 \`python ${pptDir.replace(/\\/g, '\\\\')}\\\\generate_ppt.py --plan slides_plan.json --style gradient-glass --resolution 2K --output ppt_output\`
 
-### 方式二：程序化 PPTX（推荐用于简单文字/表格 PPT）
-使用 pptxgenjs Node.js 库直接生成 .pptx 文件。生成后系统会自动创建 HTML 内联预览。
+### 方式二：程序化 PPTX
+使用 pptxgenjs 直接生成 .pptx 文件。
 
-### ⚠️ 重要约束
-- **绝对禁止**尝试安装或使用 LibreOffice、PowerShell COM 对象、或其他工具将 PPTX 导出为图片来做"视觉审查"
-- **绝对禁止**生成后做子代理视觉审查（sub-agent review）——系统已自动生成 HTML 预览给用户
-- 生成完成后只需验证文件存在且大小合理（>1KB），然后直接告知用户结果
-- 如果有小问题用户会自行反馈，无需预先修复
+### 🚫 严禁的 QA 行为（每条都会浪费用户数分钟时间）
+- ❌ 提取 PPTX 文本检查内容
+- ❌ 用任何方式将 PPTX 导出为图片进行"视觉审查"（包括但不限于 LibreOffice、PowerShell COM、Python 脚本）
+- ❌ 启动子代理（sub-agent）做视觉审查或内容审查
+- ❌ 做间距/颜色/对齐/对比度的数学验证
+- ❌ 生成 QA 报告表格（如"检查项 | Slide 1 | Slide 2"）
+- ❌ 说"发现 X 个问题，正在修复"然后重新生成
+- ❌ 任何形式的"先审查再修复"循环
 
-其他参数:
+### ✅ 正确的完成流程
+1. 生成 PPTX 文件
+2. 验证文件存在且 >1KB
+3. 告诉用户："PPT 已生成，请查看下方预览。如需调整请告诉我。"
+4. 结束。不要做任何额外步骤。
+
+### 其他参数
 - 风格: gradient-glass (科技商务), vector-illustration (教育培训)
-- 分辨率: 2K (推荐，快速), 4K (高清打印)
-- 生成约 30 秒/页，请提前告知用户
-- 默认 5-7 页
+- 分辨率: 2K (推荐), 4K
+- 每页约 30 秒，默认 5-7 页
 `;
     }
     effectiveSystemPrompt = effectiveSystemPrompt + pptBlock;
