@@ -134,7 +134,17 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
     listArtifactsByConversation(conversationId)
       .then((arts) => {
         const grouped: Record<string, ArtifactRow[]> = {};
-        for (const art of arts) {
+        const seenNames = new Set<string>();
+        // Sort by createdAt ASC so the FIRST agent to create each file
+        // "owns" it — avoids later runs stealing artifacts from earlier ones.
+        const sorted = [...arts].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        for (const art of sorted) {
+          // Cross-run dedup by name: same filename discovered by multiple
+          // concurrent agents only appears under the earliest run.
+          if (seenNames.has(art.name)) continue;
+          seenNames.add(art.name);
           const rid = art.runId ?? "";
           if (!grouped[rid]) grouped[rid] = [];
           grouped[rid].push(art);
@@ -303,7 +313,15 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           setRunArtifacts((prev) => {
             const runId = art.runId ?? "";
             const existing = prev[runId] ?? [];
+            // Intra-run dedup by id
             if (existing.some((a) => a.id === art.id)) return prev;
+            // Cross-run dedup by name: if another run already owns this
+            // filename, skip — the file was discovered by a different agent
+            // that finished earlier on the same workspace.
+            for (const otherRunId of Object.keys(prev)) {
+              if (otherRunId === runId) continue;
+              if (prev[otherRunId]!.some((a) => a.name === art.name)) return prev;
+            }
             return { ...prev, [runId]: [art, ...existing] };
           });
           break;
