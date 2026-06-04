@@ -3,6 +3,7 @@ import { WebPreviewCard } from "../artifact/WebPreviewCard.js";
 import { DownloadCard } from "../artifact/DownloadCard.js";
 import { TextPreviewCard } from "../artifact/TextPreviewCard.js";
 import { ImageSlideshowCard } from "../artifact/ImageSlideshowCard.js";
+import { PptxViewerCard } from "../artifact/PptxViewerCard.js";
 
 interface Props {
   artifact: ArtifactRow;
@@ -107,7 +108,16 @@ export function InlineArtifactCard({ artifact }: Props) {
     );
   }
 
-  // Default: DownloadCard for PPTX and all other types
+  // PPTX — our own parser (fixed: namespace, fills, borders, backgrounds)
+  if (artifact.mimeType?.includes("presentation") || artifact.name.endsWith(".pptx")) {
+    return (
+      <div className="border border-gray-700 rounded-lg overflow-hidden">
+        <PptxViewerCard url={url} name={artifact.name} />
+      </div>
+    );
+  }
+
+  // Default: DownloadCard for all other types
   return (
     <div className="border border-gray-700 rounded-lg overflow-hidden">
       <DownloadCard
