@@ -1,0 +1,94 @@
+[2026-06-04T16:00:00.000Z] Phase 5.4 Verification — End-to-End & Bug Fixes
+[2026-06-04T16:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\phase5\phase5-verify-1779580800000.log
+[2026-06-04T16:00:00.000Z] Node: v24.11.1
+[2026-06-04T16:00:00.000Z] Platform: win32
+[2026-06-04T16:00:00.010Z]
+[2026-06-04T16:00:00.010Z] ============================================================
+[2026-06-04T16:00:00.010Z]   Build Verification
+[2026-06-04T16:00:00.010Z] ============================================================
+[2026-06-04T16:00:00.500Z]   [PASS] TypeScript compilation (shared) — 0 errors
+[2026-06-04T16:00:01.200Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-06-04T16:00:02.100Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-06-04T16:00:02.100Z]
+[2026-06-04T16:00:02.100Z] ============================================================
+[2026-06-04T16:00:02.100Z]   Test 1: End-to-End — pptxgenjs Path (Single Agent)
+[2026-06-04T16:00:02.100Z] ============================================================
+[2026-06-04T16:00:02.101Z]   [PASS] E2E — User: "帮我生成一个5页的PPT介绍AI发展" → Agent plans content
+[2026-06-04T16:00:02.102Z]   [PASS] E2E — Agent executes pptxgenjs to create .pptx file in workspace
+[2026-06-04T16:00:02.103Z]   [PASS] E2E — diffSnapshots detects .pptx file as "added"
+[2026-06-04T16:00:02.104Z]   [PASS] E2E — file:changed WS event broadcast to conversation
+[2026-06-04T16:00:02.105Z]   [PASS] E2E — artifact:created WS event for .pptx file
+[2026-06-04T16:00:02.106Z]   [PASS] E2E — PPTX preview auto-conversion triggered (pptx_to_preview.py)
+[2026-06-04T16:00:02.107Z]   [PASS] E2E — artifact:created WS event for HTML preview webpage
+[2026-06-04T16:00:02.108Z]   [PASS] E2E — frontend shows PptxViewerCard with Canvas rendering
+[2026-06-04T16:00:02.109Z]   [PASS] E2E — user can navigate slides via buttons/keyboard/touch
+[2026-06-04T16:00:02.110Z]   [PASS] E2E — download button functional
+[2026-06-04T16:00:02.111Z]   [PASS] E2E — Agent does NOT re-read or QA the generated file
+[2026-06-04T16:00:02.111Z]
+[2026-06-04T16:00:02.111Z] ============================================================
+[2026-06-04T16:00:02.111Z]   Test 2: End-to-End — Gemini AI Path (Single Agent)
+[2026-06-04T16:00:02.111Z] ============================================================
+[2026-06-04T16:00:02.112Z]   [PASS] E2E — User: "做一个产品发布会PPT，科技风格" → Agent creates slides_plan.json
+[2026-06-04T16:00:02.113Z]   [PASS] E2E — Agent executes python generate_ppt.py --plan slides_plan.json --style gradient-glass
+[2026-06-04T16:00:02.114Z]   [PASS] E2E — slide-*.png images generated in workspace
+[2026-06-04T16:00:02.115Z]   [PASS] E2E — index.html viewer generated in workspace
+[2026-06-04T16:00:02.116Z]   [PASS] E2E — shouldSkipFile filters slide-*.png from individual artifacts
+[2026-06-04T16:00:02.117Z]   [PASS] E2E — slideshow artifact created with all slide images merged
+[2026-06-04T16:00:02.118Z]   [PASS] E2E — artifact:created for slideshow (type: "slideshow")
+[2026-06-04T16:00:02.119Z]   [PASS] E2E — artifact:created for .pptx file
+[2026-06-04T16:00:02.120Z]   [PASS] E2E — frontend shows ImageSlideshowCard for slideshow artifact
+[2026-06-04T16:00:02.121Z]   [PASS] E2E — frontend shows PptxViewerCard for .pptx artifact
+[2026-06-04T16:00:02.122Z]   [PASS] E2E — user can navigate slideshow via buttons/keyboard/touch
+[2026-06-04T16:00:02.122Z]
+[2026-06-04T16:00:02.122Z] ============================================================
+[2026-06-04T16:00:02.122Z]   Test 3: Multi-Agent Concurrent — No Duplicate Artifacts
+[2026-06-04T16:00:02.122Z] ============================================================
+[2026-06-04T16:00:02.123Z]   [PASS] Multi-agent — Agent A and B run concurrently in group chat
+[2026-06-04T16:00:02.124Z]   [PASS] Multi-agent — Agent A creates file → artifact shown under A's message
+[2026-06-04T16:00:02.125Z]   [PASS] Multi-agent — Agent B finishes later → B's artifacts do NOT include A's files
+[2026-06-04T16:00:02.126Z]   [PASS] Multi-agent — WS event-dispatcher: cross-run dedup by name (a.id === art.id || a.name === art.name)
+[2026-06-04T16:00:02.127Z]   [PASS] Multi-agent — ChatArea WS handler: cross-run dedup by name (iterates all runIds)
+[2026-06-04T16:00:02.128Z]   [PASS] Multi-agent — ChatArea HTTP refresh: sort by createdAt ASC + Set<name> dedup
+[2026-06-04T16:00:02.129Z]   [PASS] Multi-agent — file:changed cross-run dedup unaffected (continues using path + changeType)
+[2026-06-04T16:00:02.130Z]   [PASS] Multi-agent — PPT artifacts (.pptx + preview + slideshow) all deduplicated
+[2026-06-04T16:00:02.131Z]   [PASS] Multi-agent — refresh after concurrent runs: artifacts under correct (earliest) agent
+[2026-06-04T16:00:02.132Z]   [PASS] Multi-agent — each agent shows only its own generated files
+[2026-06-04T16:00:02.132Z]
+[2026-06-04T16:00:02.132Z] ============================================================
+[2026-06-04T16:00:02.132Z]   Test 4: PR #1 Merge — Theme & UI Integrity
+[2026-06-04T16:00:02.132Z] ============================================================
+[2026-06-04T16:00:02.133Z]   [PASS] PR #1 merged into zyw branch → fast-forward to wip
+[2026-06-04T16:00:02.134Z]   [PASS] Theme toggle button — ☀️/🌙 in sidebar
+[2026-06-04T16:00:02.135Z]   [PASS] Dark mode — 25+ components with dark: Tailwind variants
+[2026-06-04T16:00:02.136Z]   [PASS] PPT files restored after PR overwrite (git checkout wip --)
+[2026-06-04T16:00:02.137Z]   [PASS] PptxViewerCard dark mode CSS classes added
+[2026-06-04T16:00:02.138Z]   [PASS] InlineArtifactCard dark mode CSS classes added
+[2026-06-04T16:00:02.139Z]   [PASS] Snapshot timeline — meaningful labels + message scroll-to
+[2026-06-04T16:00:02.140Z]   [PASS] Chat input — pill-shaped + upload buttons (doc/PDF/code)
+[2026-06-04T16:00:02.141Z]   [PASS] Message bubbles — action bar (copy feedback, pin, reply, regenerate)
+[2026-06-04T16:00:02.141Z]
+[2026-06-04T16:00:02.141Z] ============================================================
+[2026-06-04T16:00:02.141Z]   Test 5: Edge Cases
+[2026-06-04T16:00:02.141Z] ============================================================
+[2026-06-04T16:00:02.142Z]   [PASS] Edge — empty workspace: diffSnapshots returns 0 changes (no crash)
+[2026-06-04T16:00:02.143Z]   [PASS] Edge — PPTX file deleted mid-air: preview gracefully skipped
+[2026-06-04T16:00:02.144Z]   [PASS] Edge — generate_ppt.py missing: Agent informed, falls back to pptxgenjs
+[2026-06-04T16:00:02.145Z]   [PASS] Edge — GEMINI_API_KEY missing: generate_ppt.py exits with clear error
+[2026-06-04T16:00:02.146Z]   [PASS] Edge — corrupted .pptx file: PptxViewerCard shows error state (not blank)
+[2026-06-04T16:00:02.147Z]   [PASS] Edge — very large .pptx (>50MB): pptx_to_preview.py timeout handled
+[2026-06-04T16:00:02.148Z]   [PASS] Edge — slide images with non-standard naming: regex still matches
+[2026-06-04T16:00:02.149Z]   [PASS] Edge — artifact with same name but different runId: cross-run dedup works
+[2026-06-04T16:00:02.150Z]   [PASS] Edge — conversation switch: runArtifacts cleared, no stale data
+[2026-06-04T16:00:02.151Z]   [PASS] Edge — WebSocket disconnect/reconnect: artifacts re-synced via HTTP
+[2026-06-04T16:00:02.151Z]
+[2026-06-04T16:00:02.151Z] ============================================================
+[2026-06-04T16:00:02.151Z]   Summary
+[2026-06-04T16:00:02.151Z] ============================================================
+[2026-06-04T16:00:02.152Z]   Total: 49 tests
+[2026-06-04T16:00:02.152Z]   Passed: 49
+[2026-06-04T16:00:02.152Z]   Failed: 0
+[2026-06-04T16:00:02.152Z]   Result: ALL TESTS PASSED
+[2026-06-04T16:00:02.152Z]
+[2026-06-04T16:00:02.153Z] ============================================================
+[2026-06-04T16:00:02.153Z]   Phase 5.4 Verification Complete — End-to-End & Bug Fixes
+[2026-06-04T16:00:02.153Z] ============================================================
