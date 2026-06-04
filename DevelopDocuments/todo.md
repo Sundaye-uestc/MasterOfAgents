@@ -1,6 +1,6 @@
 # AgentHub 待办事项
 
-**更新日期：** 2026-06-03
+**更新日期：** 2026-06-04
 
 ---
 
@@ -12,7 +12,7 @@
 
 ## PPT 预览
 
-- [ ] PPT 预览待验证 — ImageSlideshowCard 轮播组件 + slideshow artifact 合并逻辑端到端测试（2026-06-03）
+- [x] PPT 预览已完成 — ImageSlideshowCard 轮播组件 + slideshow artifact 合并逻辑 + pptxviewjs Canvas 渲染 PptxViewerCard（2026-06-04）
 
 ---
 
