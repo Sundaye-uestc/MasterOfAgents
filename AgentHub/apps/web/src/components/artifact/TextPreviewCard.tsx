@@ -103,18 +103,18 @@ export function TextPreviewCard({ url, name, mimeType, maxLines = 200, maxChars 
   const lang = languageFromMime(mimeType);
 
   return (
-    <div className="border border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-2xl overflow-hidden">
       {/* Header */}
-      <div className="px-3 py-1.5 bg-gray-800/50 border-b border-gray-700 flex items-center gap-2">
-        <span className="text-xs text-gray-400">📄</span>
-        <span className="text-xs text-gray-300 truncate">{name}</span>
+      <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+        <span className="text-xs text-gray-500 dark:text-gray-400">📄</span>
+        <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{name}</span>
         {text && (
-          <span className="text-xs text-gray-600 flex-shrink-0">
+          <span className="text-xs text-gray-500 dark:text-gray-600 flex-shrink-0">
             {lineCount} 行 · {formatSize(charCount)}
           </span>
         )}
         {lang && (
-          <span className="text-xs text-gray-600 flex-shrink-0 font-mono">{lang}</span>
+          <span className="text-xs text-gray-500 dark:text-gray-600 flex-shrink-0 font-mono">{lang}</span>
         )}
         <a
           href={url}
@@ -125,7 +125,7 @@ export function TextPreviewCard({ url, name, mimeType, maxLines = 200, maxChars 
         </a>
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="text-xs text-gray-500 hover:text-gray-300 flex-shrink-0 font-mono"
+          className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex-shrink-0 font-mono"
           title={collapsed ? "展开" : "收起"}
         >
           {collapsed ? "><" : "</>"}
@@ -136,18 +136,18 @@ export function TextPreviewCard({ url, name, mimeType, maxLines = 200, maxChars 
       {!collapsed && (
         <>
           {loading && (
-            <div className="px-3 py-2 text-xs text-gray-500 bg-gray-900/50">加载中...</div>
+            <div className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500 bg-white/50 dark:bg-gray-900/50">加载中...</div>
           )}
           {error && (
-            <div className="px-3 py-2 text-xs text-red-400 bg-gray-900/50">加载失败: {error}</div>
+            <div className="px-3 py-2 text-xs text-red-400 bg-white/50 dark:bg-gray-900/50">加载失败: {error}</div>
           )}
           {displayText && (
-            <div className="bg-gray-950">
-              <pre className="text-xs text-gray-300 p-3 max-h-96 overflow-auto font-mono leading-relaxed whitespace-pre">
+            <div className="bg-gray-50 dark:bg-gray-950">
+              <pre className="text-xs text-gray-700 dark:text-gray-300 p-3 max-h-96 overflow-auto font-mono leading-relaxed whitespace-pre">
                 {displayText}
               </pre>
               {needsTruncation && (
-                <div className="px-3 py-1.5 bg-gray-900/50 border-t border-gray-800">
+                <div className="px-3 py-1.5 bg-white/50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-800">
                   <button
                     onClick={() => setContentCollapsed(false)}
                     className="text-xs text-blue-400 hover:text-blue-300"
@@ -157,7 +157,7 @@ export function TextPreviewCard({ url, name, mimeType, maxLines = 200, maxChars 
                 </div>
               )}
               {!needsTruncation && contentCollapsed && text && text.length < charCount && (
-                <div className="px-3 py-1.5 bg-gray-900/50 border-t border-gray-800">
+                <div className="px-3 py-1.5 bg-white/50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-800">
                   <button
                     onClick={() => setContentCollapsed(false)}
                     className="text-xs text-blue-400 hover:text-blue-300"

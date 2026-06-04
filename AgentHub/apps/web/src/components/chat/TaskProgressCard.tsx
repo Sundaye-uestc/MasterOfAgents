@@ -35,28 +35,28 @@ export function TaskProgressCard({ task, isActive }: TaskProgressCardProps) {
 
   return (
     <div
-      className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
+      className={`px-3 py-2 rounded-2xl border text-sm transition-colors ${
         isActive
-          ? "border-blue-500 bg-blue-900/10"
-          : "border-gray-700 bg-gray-800/50"
+          ? "border-blue-400/50 bg-blue-500/8"
+          : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
       }`}
     >
       <div className="flex items-center gap-2">
         <span className={`${cfg.color} ${task.status === "running" ? "animate-pulse" : ""}`}>
           {cfg.icon}
         </span>
-        <span className="text-gray-200 font-medium truncate flex-1">{task.title}</span>
+        <span className="text-gray-700 dark:text-gray-200 font-medium truncate flex-1">{task.title}</span>
         {task.agentName && task.adapterKind && (
           <AgentBadge agentName={task.agentName} adapterKind={task.adapterKind} size="sm" />
         )}
       </div>
       {task.description && (
-        <p className="text-xs text-gray-500 mt-1 truncate">{task.description}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">{task.description}</p>
       )}
       <div className="flex items-center gap-2 mt-1">
         <span className={`text-xs ${cfg.color}`}>{cfg.label}</span>
         {pendingDeps > 0 && task.status === "queued" && (
-          <span className="text-xs text-gray-600">等待 {pendingDeps} 个前置任务</span>
+          <span className="text-xs text-gray-500 dark:text-gray-600">等待 {pendingDeps} 个前置任务</span>
         )}
       </div>
     </div>

@@ -9,9 +9,9 @@ interface Props {
 }
 
 const changeColors: Record<string, string> = {
-  create: "text-green-400 border-green-600 bg-green-900/20",
-  modify: "text-yellow-400 border-yellow-600 bg-yellow-900/20",
-  delete: "text-red-400 border-red-600 bg-red-900/20",
+  create: "text-green-600 dark:text-green-400 border-green-500 dark:border-green-600 bg-green-50 dark:bg-green-900/20",
+  modify: "text-yellow-600 dark:text-yellow-400 border-yellow-500 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20",
+  delete: "text-red-600 dark:text-red-400 border-red-500 dark:border-red-600 bg-red-50 dark:bg-red-900/20",
 };
 
 const changeLabels: Record<string, string> = {
@@ -21,9 +21,9 @@ const changeLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  pending: "text-gray-400 bg-gray-700",
-  applied: "text-green-400 bg-green-900/30",
-  reverted: "text-orange-400 bg-orange-900/30",
+  pending: "text-gray-400 dark:text-gray-400 bg-gray-200 dark:bg-gray-700",
+  applied: "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30",
+  reverted: "text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30",
 };
 
 const statusLabels: Record<string, string> = {
@@ -74,33 +74,33 @@ export function DiffCard({ change, workspaceId }: Props) {
   const showContent = change.changeType === "create" && !change.diff && workspaceId;
 
   return (
-    <div className={`border rounded-lg overflow-hidden ${changeColors[change.changeType] ?? "border-gray-700"}`}>
+    <div className={`border rounded-2xl overflow-hidden ${changeColors[change.changeType] ?? "border-gray-200/80 dark:border-gray-700/50"}`}>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-gray-800/50"
+        className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800/50"
       >
-        <span className="text-xs text-gray-500">{expanded ? "▾" : "▸"}</span>
+        <span className="text-xs text-gray-400 dark:text-gray-500">{expanded ? "▾" : "▸"}</span>
         <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${changeColors[change.changeType] ?? ""}`}>
           {changeLabels[change.changeType] ?? change.changeType}
         </span>
-        <span className="text-xs text-gray-300 font-mono truncate flex-1">{change.path}</span>
+        <span className="text-xs text-gray-700 dark:text-gray-300 font-mono truncate flex-1">{change.path}</span>
         <span className={`text-xs px-1.5 py-0.5 rounded ${statusColors[change.status] ?? ""}`}>
           {statusLabels[change.status] ?? change.status}
         </span>
       </button>
       {expanded && change.diff && (
-        <div className="border-t border-gray-700 bg-gray-950">
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950">
           <DiffBlock diff={change.diff} filePath={change.path} defaultExpanded={true} />
         </div>
       )}
       {expanded && !change.diff && showContent && (
-        <div className="border-t border-gray-700">
+        <div className="border-t border-gray-200 dark:border-gray-700">
           <FileContentViewer workspaceId={workspaceId} filePath={change.path} />
         </div>
       )}
       {expanded && !change.diff && !showContent && (
-        <div className="border-t border-gray-700 bg-gray-950 px-3 py-2">
-          <span className="text-xs text-gray-500">
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 px-3 py-2">
+          <span className="text-xs text-gray-400 dark:text-gray-500">
             {change.changeType === "delete"
               ? "文件已删除"
               : change.changeType === "create"

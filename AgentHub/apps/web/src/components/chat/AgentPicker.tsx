@@ -42,7 +42,7 @@ export function AgentPicker({ agents, selectedIds, onChange, multiSelect = false
           placeholder="搜索 Agent..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500 mb-2"
+          className="w-full px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 mb-2"
         />
       )}
       <div className={`grid gap-2 ${multiSelect ? "grid-cols-2" : "grid-cols-1"}`}>
@@ -58,14 +58,14 @@ export function AgentPicker({ agents, selectedIds, onChange, multiSelect = false
               onClick={() => toggle(agent.id)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-colors ${
                 selected
-                  ? "border-blue-500 bg-blue-900/20"
-                  : "border-gray-700 bg-gray-800 hover:border-gray-600"
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600"
               }`}
             >
               {multiSelect && (
                 <span
                   className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center ${
-                    selected ? "border-blue-500 bg-blue-500" : "border-gray-600"
+                    selected ? "border-blue-500 bg-blue-500" : "border-gray-300 dark:border-gray-600"
                   }`}
                 >
                   {selected && <span className="text-white text-[10px]">✓</span>}
@@ -77,8 +77,8 @@ export function AgentPicker({ agents, selectedIds, onChange, multiSelect = false
                 size="md"
               />
               <div className="min-w-0 flex-1">
-                <div className="text-sm text-gray-200 truncate">{agent.name}</div>
-                <div className="text-xs text-gray-500">{agent.adapterKind}</div>
+                <div className="text-sm text-gray-700 dark:text-gray-200 truncate">{agent.name}</div>
+                <div className="text-xs text-gray-400 dark:text-gray-500">{agent.adapterKind}</div>
               </div>
               {selected && !multiSelect && (
                 <span className="text-blue-400 text-sm">✓</span>
@@ -88,7 +88,7 @@ export function AgentPicker({ agents, selectedIds, onChange, multiSelect = false
         })}
       </div>
       {filtered.length === 0 && (
-        <p className="text-center text-gray-600 text-sm py-2">暂无可用 Agent</p>
+        <p className="text-center text-gray-400 dark:text-gray-600 text-sm py-2">暂无可用 Agent</p>
       )}
     </div>
   );

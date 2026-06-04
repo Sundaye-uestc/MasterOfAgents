@@ -3,6 +3,7 @@ import { WebPreviewCard } from "../artifact/WebPreviewCard.js";
 import { DownloadCard } from "../artifact/DownloadCard.js";
 import { TextPreviewCard } from "../artifact/TextPreviewCard.js";
 import { ImageSlideshowCard } from "../artifact/ImageSlideshowCard.js";
+import { PptxViewerCard } from "../artifact/PptxViewerCard.js";
 
 interface Props {
   artifact: ArtifactRow;
@@ -49,7 +50,7 @@ export function InlineArtifactCard({ artifact }: Props) {
   // Webpage preview
   if (isWebpage(artifact)) {
     return (
-      <div className="border border-gray-700 rounded-lg overflow-hidden">
+      <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-2xl overflow-hidden">
         <WebPreviewCard previewUrl={url} name={artifact.name} />
       </div>
     );
@@ -58,10 +59,10 @@ export function InlineArtifactCard({ artifact }: Props) {
   // Image preview
   if (isImage(artifact.mimeType)) {
     return (
-      <div className="border border-gray-700 rounded-lg bg-gray-800/50 overflow-hidden">
-        <div className="px-3 py-1.5 bg-gray-800/50 border-b border-gray-700 flex items-center gap-2">
-          <span className="text-xs text-gray-400">🖼️</span>
-          <span className="text-xs text-gray-300 truncate flex-1">{artifact.name}</span>
+      <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-2xl bg-gray-50 dark:bg-gray-800/50 overflow-hidden">
+        <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+          <span className="text-xs text-gray-500 dark:text-gray-400">🖼️</span>
+          <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1">{artifact.name}</span>
           <a
             href={url}
             target="_blank"
@@ -71,7 +72,7 @@ export function InlineArtifactCard({ artifact }: Props) {
             新窗口打开
           </a>
         </div>
-        <div className="p-2 flex justify-center bg-gray-900/30">
+        <div className="p-2 flex justify-center bg-white/30 dark:bg-gray-900/30">
           <img
             src={url}
             alt={artifact.name}
@@ -107,9 +108,19 @@ export function InlineArtifactCard({ artifact }: Props) {
     );
   }
 
-  // Default: DownloadCard for PPTX and all other types
+  // PPTX client-side preview
+  if (
+    artifact.mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+    artifact.mimeType === "application/vnd.ms-powerpoint" ||
+    artifact.name.endsWith(".pptx") ||
+    artifact.name.endsWith(".ppt")
+  ) {
+    return <PptxViewerCard url={url} name={artifact.name} />;
+  }
+
+  // Default: DownloadCard for all other types
   return (
-    <div className="border border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-2xl overflow-hidden">
       <DownloadCard
         name={artifact.name}
         size={artifact.size}
@@ -125,10 +136,10 @@ export function ArtifactInfoLine({ artifact }: { artifact: ArtifactRow }) {
   const url = artifactUrl(artifact);
 
   return (
-    <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-400">
+    <div className="flex items-center gap-2 px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
       <span>📎</span>
       <span className="truncate flex-1">{artifact.name}</span>
-      <span className="text-gray-600">{formatSize(artifact.size)}</span>
+      <span className="text-gray-500 dark:text-gray-600">{formatSize(artifact.size)}</span>
       <a
         href={url}
         download={artifact.name}

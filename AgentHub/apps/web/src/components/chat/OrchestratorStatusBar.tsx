@@ -44,16 +44,21 @@ export function OrchestratorStatusBar({ runId, status, tasks, progress, expanded
   const pct = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
 
   return (
-    <div className="border-b border-gray-800 bg-gray-900/80">
+    <div className="rounded-2xl border border-blue-200 dark:border-blue-800/40 bg-blue-50/50 dark:bg-blue-900/10 overflow-hidden">
       {/* Summary row */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-800/50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-100/50 dark:hover:bg-blue-900/20 transition-colors text-left"
       >
+        <span className="relative flex h-2 w-2 flex-shrink-0">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+        </span>
         <span className={`text-xs font-medium ${statusColor[status] ?? "text-gray-400"}`}>
           {statusLabel[status] ?? status}
         </span>
-        <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+        <span className="text-xs text-gray-400 dark:text-gray-500">任务规划中…</span>
+        <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
           <div
             className="h-full bg-blue-500 rounded-full transition-all duration-500"
             style={{ width: `${pct}%` }}

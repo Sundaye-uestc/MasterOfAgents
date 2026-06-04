@@ -28,6 +28,7 @@ interface Props {
   onFileChangeUpdate: (updated: FileChangeRow) => void;
   onTogglePanel?: () => void;
   onFileSelect?: (filePath: string) => void;
+  onNavigateToRun?: (runId: string) => void;
 }
 
 export function WorkspacePanel({
@@ -36,6 +37,7 @@ export function WorkspacePanel({
   fileChanges,
   onFileChangeUpdate,
   onTogglePanel,
+  onNavigateToRun,
   onFileSelect,
 }: Props) {
   const [activeTab, setActiveTab] = useState<"files" | "snapshots" | "changes">("files");
@@ -117,14 +119,10 @@ export function WorkspacePanel({
   const pendingChanges = fileChanges.filter((c) => c.status === "pending");
 
   const handleRollback = useCallback(async (snapshotId: string) => {
-    if (!workspaceId) return;
-    try {
-      await rollbackSnapshot(workspaceId, snapshotId);
-      // Refresh file tree and snapshots after rollback
-      await workspaceRefresh();
-    } catch (err) {
-      console.error("Failed to rollback snapshot", err);
-    }
+    if (!workspaceId) throw new Error("Workspace not loaded");
+    await rollbackSnapshot(workspaceId, snapshotId);
+    // Refresh file tree and snapshots after rollback
+    await workspaceRefresh();
   }, [workspaceId, workspaceRefresh]);
 
   const handleChangeDir = useCallback(() => {
@@ -141,7 +139,7 @@ export function WorkspacePanel({
   }, [dirInput, workspaceUpdateRootPath]);
 
   return (
-    <div ref={panelRef} className="border-l border-gray-700 bg-gray-900 flex flex-col relative" style={{ width: `${panelWidth}px`, maxHeight: "100vh", minWidth: "240px" }}>
+    <div ref={panelRef} className="border-l border-gray-200/80 dark:border-gray-700/50 bg-white/95 dark:bg-gray-900/95 flex flex-col relative" style={{ width: `${panelWidth}px`, maxHeight: "100vh", minWidth: "240px" }}>
       {/* Resize handle — left edge */}
       <div
         onMouseDown={(e) => {
@@ -150,18 +148,18 @@ export function WorkspacePanel({
           document.body.style.cursor = "col-resize";
           document.body.style.userSelect = "none";
         }}
-        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500/50 z-10"
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400/30 z-10"
         style={{ marginLeft: "-1px" }}
       />
 
       {/* Header */}
-      <div className="border-b border-gray-800 px-3 py-2">
+      <div className="border-b border-gray-200/80 dark:border-gray-800/50 px-4 py-2.5">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wider">工作区</h3>
+          <h3 className="text-xs font-medium text-gray-400 dark:text-gray-500">工作区</h3>
           <div className="flex items-center gap-1">
             <button
               onClick={handleChangeDir}
-              className="text-gray-500 hover:text-blue-400 text-[10px] px-1.5 py-0.5 rounded hover:bg-gray-800 transition-colors"
+              className="text-gray-400 dark:text-gray-500 hover:text-blue-400 text-[10px] px-1.5 py-0.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
               title="更改工作目录"
             >
               📂 更改工作目录
@@ -169,7 +167,7 @@ export function WorkspacePanel({
             {onTogglePanel && (
               <button
                 onClick={onTogglePanel}
-                className="text-gray-500 hover:text-gray-300 text-xs px-1"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-xs px-1"
                 title="关闭工作区"
               >
                 ✕
@@ -178,7 +176,7 @@ export function WorkspacePanel({
           </div>
         </div>
         {workspaceRootPath && (
-          <p className="text-[10px] text-gray-600 mt-1 truncate" title={workspaceRootPath}>
+          <p className="text-[10px] text-gray-500 dark:text-gray-600 mt-1 truncate" title={workspaceRootPath}>
             {workspaceRootPath}
           </p>
         )}
@@ -186,13 +184,13 @@ export function WorkspacePanel({
 
       {/* Directory change input */}
       {showDirInput && (
-        <div className="border-b border-gray-800 px-3 py-2 bg-gray-800/50">
+        <div className="border-b border-gray-200 dark:border-gray-800 px-3 py-2 bg-gray-100 dark:bg-gray-800/50">
           <input
             type="text"
             value={dirInput}
             onChange={(e) => setDirInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleConfirmDir(); if (e.key === "Escape") setShowDirInput(false); }}
-            className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 font-mono focus:outline-none focus:border-blue-500"
+            className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 text-xs text-gray-700 dark:text-gray-200 font-mono focus:outline-none focus:border-blue-500"
             placeholder="D:\Projects\..."
             autoFocus
           />
@@ -205,7 +203,7 @@ export function WorkspacePanel({
             </button>
             <button
               onClick={() => setShowDirInput(false)}
-              className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-400 hover:bg-gray-600 flex-1"
+              className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600 flex-1"
             >
               取消
             </button>
@@ -214,15 +212,15 @@ export function WorkspacePanel({
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-800">
+      <div className="flex border-b border-gray-200/80 dark:border-gray-800/50">
         {(["files", "snapshots", "changes"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 text-xs py-1.5 ${
+            className={`flex-1 text-xs py-2 rounded-t-lg transition-colors ${
               activeTab === tab
-                ? "text-blue-400 border-b border-blue-400 bg-blue-400/5"
-                : "text-gray-500 hover:text-gray-300"
+                ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-500/10"
+                : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/30"
             }`}
           >
             {tab === "files" ? "文件" : tab === "snapshots" ? "快照" : "变更"}
@@ -248,17 +246,19 @@ export function WorkspacePanel({
             selectedId={selectedSnapshotId}
             onSelect={setSelectedSnapshotId}
             onRollback={handleRollback}
+            fileChanges={fileChanges}
+            onNavigateToRun={onNavigateToRun}
           />
         )}
         {activeTab === "changes" && (
-          <div className="divide-y divide-gray-800/50" ref={changesRef}>
+          <div className="divide-y divide-gray-200/80 dark:divide-gray-800/50" ref={changesRef}>
             {fileChanges.length === 0 && (
-              <div className="px-3 py-4 text-xs text-gray-600 text-center">暂无变更</div>
+              <div className="px-3 py-4 text-xs text-gray-500 dark:text-gray-600 text-center">暂无变更</div>
             )}
             {fileChanges.map((change) => {
               const isHighlighted = selectedChangePath === change.path;
               return (
-              <div key={change.id} className={`${isHighlighted ? "ring-1 ring-blue-500 bg-blue-900/10" : "bg-gray-900/50"}`}>
+              <div key={change.id} className={`${isHighlighted ? "ring-1 ring-blue-500 bg-blue-900/10" : "bg-white/50 dark:bg-gray-900/50"}`}>
                 <DiffCard change={change} workspaceId={workspaceId ?? undefined} />
                 {change.status === "pending" && (
                   <div className="flex gap-2 px-3 py-1.5">

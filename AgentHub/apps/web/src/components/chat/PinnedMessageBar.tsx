@@ -17,7 +17,7 @@ export function PinnedMessageBar({ messages, onScrollTo, onUnpin, onClose }: Pro
   const preview = (current.content ?? "").slice(0, 40) + ((current.content?.length ?? 0) > 40 ? "..." : "");
 
   return (
-    <div className="border-b border-gray-700 bg-gray-800/80 px-4 py-1.5">
+    <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/80 px-4 py-1.5">
       <div className="max-w-4xl mx-auto flex items-center gap-2">
         <span className="text-xs text-yellow-500 flex-shrink-0">📌 已固定</span>
         <div className="flex-1 flex items-center gap-1 min-w-0">

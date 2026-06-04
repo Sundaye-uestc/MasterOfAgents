@@ -30,12 +30,12 @@ export function ArtifactCard({ artifact }: Props) {
   const label = typeLabels[artifact.type] ?? artifact.type;
 
   return (
-    <div className="border border-gray-700 rounded-lg bg-gray-800/50 overflow-hidden">
+    <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-2xl bg-gray-100 dark:bg-gray-800/40 overflow-hidden">
       <div className="px-3 py-2 flex items-center gap-2">
         <span className="text-base">{icon}</span>
         <div className="flex-1 min-w-0">
-          <div className="text-sm text-gray-200 truncate font-medium">{artifact.name}</div>
-          <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+          <div className="text-sm text-gray-700 dark:text-gray-200 truncate font-medium">{artifact.name}</div>
+          <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 mt-0.5">
             <span>{label}</span>
             {artifact.size !== null && artifact.size !== undefined && (
               <span>{formatSize(artifact.size)}</span>

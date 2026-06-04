@@ -13,6 +13,7 @@
     "@agenthub/shared": "workspace:*",
     "@hono/node-server": "^1.13.0",
     "diff": "^9.0.0",
+    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.6.0",
     "rxjs": "^7.8.0",

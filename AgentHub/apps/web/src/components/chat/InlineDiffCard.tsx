@@ -9,9 +9,9 @@ interface Props {
 }
 
 const changeColors: Record<string, string> = {
-  create: "text-green-400 border-green-600 bg-green-900/20",
-  modify: "text-yellow-400 border-yellow-600 bg-yellow-900/20",
-  delete: "text-red-400 border-red-600 bg-red-900/20",
+  create: "text-green-600 dark:text-green-400 border-green-500 dark:border-green-600 bg-green-50 dark:bg-green-900/20",
+  modify: "text-yellow-600 dark:text-yellow-400 border-yellow-500 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/20",
+  delete: "text-red-600 dark:text-red-400 border-red-500 dark:border-red-600 bg-red-50 dark:bg-red-900/20",
 };
 
 const changeLabels: Record<string, string> = {
@@ -21,9 +21,9 @@ const changeLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  pending: "text-gray-400 bg-gray-700",
-  applied: "text-green-400 bg-green-900/30",
-  reverted: "text-orange-400 bg-orange-900/30",
+  pending: "text-gray-400 dark:text-gray-400 bg-gray-200 dark:bg-gray-700",
+  applied: "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30",
+  reverted: "text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30",
 };
 
 const statusLabels: Record<string, string> = {
@@ -62,13 +62,13 @@ export function InlineDiffCard({ change, onUpdate }: Props) {
   const isPending = change.status === "pending";
 
   return (
-    <div className={`border rounded-md overflow-hidden text-xs ${changeColors[change.changeType] ?? "border-gray-700"}`}>
+    <div className={`border rounded-xl overflow-hidden text-xs ${changeColors[change.changeType] ?? "border-gray-200/80 dark:border-gray-700/50"}`}>
       {/* Header */}
-      <div className="px-2 py-1.5 flex items-center gap-1.5 bg-gray-800/50">
+      <div className="px-2 py-1.5 flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800/50">
         <span className={`font-mono font-bold px-1 rounded ${changeColors[change.changeType] ?? ""}`}>
           {changeLabels[change.changeType] ?? "?"}
         </span>
-        <span className="text-gray-300 font-mono truncate flex-1">{change.path}</span>
+        <span className="text-gray-700 dark:text-gray-300 font-mono truncate flex-1">{change.path}</span>
         <span className={`px-1 py-0.5 rounded text-xs ${statusColors[change.status] ?? ""}`}>
           {statusLabels[change.status] ?? change.status}
         </span>
@@ -76,12 +76,12 @@ export function InlineDiffCard({ change, onUpdate }: Props) {
 
       {/* Diff body */}
       {change.diff ? (
-        <div className="border-t border-gray-700 bg-gray-950">
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950">
           <DiffBlock diff={change.diff} filePath={change.path} collapsible={false} />
         </div>
       ) : (
-        <div className="border-t border-gray-700 bg-gray-950 px-2 py-1.5">
-          <span className="text-gray-500">
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950 px-2 py-1.5">
+          <span className="text-gray-400 dark:text-gray-500">
             {change.changeType === "delete"
               ? "文件已删除"
               : change.changeType === "create"
@@ -93,7 +93,7 @@ export function InlineDiffCard({ change, onUpdate }: Props) {
 
       {/* Actions (only for pending changes) */}
       {isPending && (
-        <div className="border-t border-gray-700 bg-gray-800/30 px-2 py-1 flex items-center gap-2">
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/30 px-2 py-1 flex items-center gap-2">
           <button
             onClick={handleApply}
             disabled={applying}
