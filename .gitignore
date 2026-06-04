@@ -16,6 +16,7 @@ dist/
 *.swo
 .vscode/c_cpp_properties.json
 .vscode/launch.json
+.vscode/settings.json
 
 # OS
 .DS_Store
