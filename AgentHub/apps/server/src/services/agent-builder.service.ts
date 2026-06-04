@@ -35,7 +35,7 @@ export class AgentBuilderService {
       openrouter:   { endpoint: "https://openrouter.ai/api/v1/chat/completions",       model: "anthropic/claude-sonnet-4" },
       glm:          { endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions", model: "glm-4-plus" },
     };
-    const def = providerDefaults[provider] ?? providerDefaults.anthropic;
+    const def = providerDefaults[provider] ?? providerDefaults["anthropic"]!;
 
     // Explicit options > PLANNER_* env vars > provider defaults
     this.model     = options?.model     || process.env["PLANNER_MODEL"]  || def.model;
