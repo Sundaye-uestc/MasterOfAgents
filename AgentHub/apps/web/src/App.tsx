@@ -6,6 +6,7 @@ import { getConversationAgentsMap } from "./lib/api.js";
 import { useWorkspaceStore } from "./stores/workspace.store.js";
 import { useUIStore } from "./stores/ui.store.js";
 import { useUserAvatar } from "./hooks/useUserAvatar.js";
+import { ThemeToggle } from "./components/ThemeToggle.js";
 import type { ConversationRow } from "@agenthub/shared";
 
 export function App() {
@@ -141,6 +142,7 @@ export function App() {
 
   const { avatar: userAvatar, uploadAvatar, clearAvatar } = useUserAvatar();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [scrollToRunId, setScrollToRunId] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((message: string, type: "success" | "error") => {
@@ -176,10 +178,15 @@ export function App() {
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
-      <div className="w-72 flex-shrink-0 border-r border-gray-800 bg-gray-900 flex flex-col">
-        <div className="p-4 border-b border-gray-800">
-          <h1 className="text-lg font-bold text-white">AgentHub</h1>
-          <p className="text-xs text-gray-500 mt-0.5">Multi-Agent Collaboration</p>
+      <div className="w-72 flex-shrink-0 border-r border-gray-200 dark:border-gray-800/50 bg-white/95 dark:bg-gray-900/95 flex flex-col">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">AgentHub</h1>
+              <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">Multi-Agent Collaboration</p>
+            </div>
+            <ThemeToggle />
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto">
           <ConversationList
@@ -198,13 +205,13 @@ export function App() {
           />
         </div>
         {/* User avatar section */}
-        <div className="border-t border-gray-800 p-3">
+        <div className="border-t border-gray-200 dark:border-gray-800/50 px-4 py-3">
           <div className="flex items-center gap-3">
             <label className="cursor-pointer flex-shrink-0">
               {userAvatar ? (
-                <img src={userAvatar} className="w-9 h-9 rounded-full object-cover border-2 border-gray-600" alt="用户头像" />
+                <img src={userAvatar} className="w-9 h-9 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600 ring-2 ring-gray-200 dark:ring-gray-800" alt="用户头像" />
               ) : (
-                <span className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center text-lg border-2 border-gray-600">
+                <span className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg border-2 border-gray-300 dark:border-gray-600">
                   👤
                 </span>
               )}
@@ -221,13 +228,13 @@ export function App() {
               />
             </label>
             <div className="min-w-0">
-              <p className="text-sm text-gray-300 truncate">我</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 truncate">我</p>
               {userAvatar ? (
-                <button onClick={clearAvatar} className="text-xs text-gray-500 hover:text-gray-300">
+                <button onClick={clearAvatar} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                   移除头像
                 </button>
               ) : (
-                <p className="text-xs text-gray-500">点击上传头像</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">点击上传头像</p>
               )}
             </div>
           </div>
@@ -246,12 +253,14 @@ export function App() {
             conversationTitle={chatTitle}
             adapterKind={activeAdapterKind}
             userAvatar={userAvatar}
+            scrollToRunId={scrollToRunId}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            <div className="text-center">
-              <p className="text-lg">选择一个对话或创建新的对话</p>
-              <p className="text-sm mt-2">开始与 AI Agent 对话</p>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center space-y-3">
+              <div className="w-16 h-16 rounded-2xl bg-gray-100/80 dark:bg-gray-800/50 flex items-center justify-center mx-auto text-2xl">💬</div>
+              <p className="text-lg text-gray-400 dark:text-gray-500 font-medium">选择一个对话</p>
+              <p className="text-sm text-gray-400 dark:text-gray-600">或创建新的对话开始与 AI Agent 协作</p>
             </div>
           </div>
         )}
@@ -265,6 +274,7 @@ export function App() {
           fileChanges={workspaceFileChanges}
           onFileChangeUpdate={workspaceUpdateFileChange}
           onTogglePanel={() => togglePanel("workspace")}
+          onNavigateToRun={(runId) => setScrollToRunId(runId)}
         />
       )}
 
@@ -272,7 +282,7 @@ export function App() {
       {activeConversationId && !workspacePanelVisible && (
         <button
           onClick={() => togglePanel("workspace")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 bg-gray-800 border border-gray-700 rounded-l-lg px-1 py-3 text-gray-400 hover:text-gray-200 hover:bg-gray-700 z-10"
+          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700/50 rounded-l-xl px-1 py-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 z-10"
           title="显示工作区"
         >
           ◀
@@ -281,12 +291,12 @@ export function App() {
 
       {/* Toast notification */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white/90 dark:bg-transparent rounded-2xl">
           <div
-            className={`px-4 py-2 rounded-lg text-sm shadow-lg ${
+            className={`px-5 py-2.5 rounded-2xl text-sm shadow-xl ${
               toast.type === "success"
-                ? "bg-green-600 text-white"
-                : "bg-red-600 text-white"
+                ? "bg-green-500/90 dark:bg-green-500/90 text-white"
+                : "bg-red-500/90 dark:bg-red-500/90 text-white"
             }`}
           >
             {toast.message}

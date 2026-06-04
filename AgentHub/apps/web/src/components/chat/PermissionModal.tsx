@@ -44,29 +44,29 @@ export function PermissionModal({ open, permission, onApprove, onDeny }: Permiss
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-96 shadow-xl">
+      <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border border-gray-200/80 dark:border-gray-700/50 rounded-2xl p-6 w-96 shadow-2xl">
         <p className="text-sm font-medium text-yellow-400 mb-3">Agent 请求权限</p>
 
         <div className="space-y-2 mb-4">
           <div>
-            <span className="text-xs text-gray-500">工具名称</span>
-            <p className="text-sm text-gray-200">{permission.toolName}</p>
+            <span className="text-xs text-gray-400 dark:text-gray-500">工具名称</span>
+            <p className="text-sm text-gray-700 dark:text-gray-200">{permission.toolName}</p>
           </div>
           <div>
-            <span className="text-xs text-gray-500">描述</span>
-            <p className="text-sm text-gray-200">{permission.description}</p>
+            <span className="text-xs text-gray-400 dark:text-gray-500">描述</span>
+            <p className="text-sm text-gray-700 dark:text-gray-200">{permission.description}</p>
           </div>
           {permission.command && (
             <div>
-              <span className="text-xs text-gray-500">命令</span>
-              <pre className="text-xs bg-gray-900 text-gray-300 p-2 rounded mt-0.5 overflow-x-auto">
+              <span className="text-xs text-gray-400 dark:text-gray-500">命令</span>
+              <pre className="text-xs bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 p-2 rounded mt-0.5 overflow-x-auto">
                 {permission.command}
               </pre>
             </div>
           )}
         </div>
 
-        <div className="text-xs text-gray-500 mb-3">
+        <div className="text-xs text-gray-400 dark:text-gray-500 mb-3">
           {countdown > 0
             ? `${countdown} 秒后自动拒绝`
             : "已自动拒绝"}
@@ -75,7 +75,7 @@ export function PermissionModal({ open, permission, onApprove, onDeny }: Permiss
         <div className="flex justify-end gap-3">
           <button
             onClick={onDeny}
-            className="px-4 py-1.5 text-sm text-gray-300 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
           >
             拒绝
           </button>

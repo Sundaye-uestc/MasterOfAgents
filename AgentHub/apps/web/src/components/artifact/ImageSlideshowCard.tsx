@@ -71,7 +71,7 @@ export function ImageSlideshowCard({ images, name }: Props) {
   if (total === 0) return null;
 
   return (
-    <div className="border border-gray-700 rounded-lg bg-gray-900/50 overflow-hidden">
+    <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-2xl bg-gray-50 dark:bg-gray-900/40 overflow-hidden">
       {/* Viewport */}
       <div
         ref={viewerRef}
@@ -124,39 +124,39 @@ export function ImageSlideshowCard({ images, name }: Props) {
       </div>
 
       {/* Controls bar */}
-      <div className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-800/60 border-t border-gray-700">
+      <div className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800/60 border-t border-gray-200 dark:border-gray-700">
         <button
           onClick={() => goTo(0)}
           disabled={current === 0}
-          className="px-2 py-1 text-xs rounded bg-gray-700/50 text-gray-300 hover:bg-gray-700 disabled:opacity-30"
+          className="px-2 py-1 text-xs rounded bg-gray-200/80 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
         >
           ⏮
         </button>
         <button
           onClick={() => goTo(current - 1)}
           disabled={current === 0}
-          className="px-2 py-1 text-xs rounded bg-gray-700/50 text-gray-300 hover:bg-gray-700 disabled:opacity-30"
+          className="px-2 py-1 text-xs rounded bg-gray-200/80 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
         >
           ◀
         </button>
-        <span className="text-xs text-gray-400 min-w-[60px] text-center">
+        <span className="text-xs text-gray-500 dark:text-gray-400 min-w-[60px] text-center">
           {current + 1} / {total}
         </span>
         <button
           onClick={() => goTo(current + 1)}
           disabled={current >= total - 1}
-          className="px-2 py-1 text-xs rounded bg-gray-700/50 text-gray-300 hover:bg-gray-700 disabled:opacity-30"
+          className="px-2 py-1 text-xs rounded bg-gray-200/80 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
         >
           ▶
         </button>
         <button
           onClick={() => goTo(total - 1)}
           disabled={current >= total - 1}
-          className="px-2 py-1 text-xs rounded bg-gray-700/50 text-gray-300 hover:bg-gray-700 disabled:opacity-30"
+          className="px-2 py-1 text-xs rounded bg-gray-200/80 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
         >
           ⏭
         </button>
-        <span className="text-gray-600 mx-1">|</span>
+        <span className="text-gray-500 dark:text-gray-600 mx-1">|</span>
         {/* Dot indicators */}
         <div className="flex gap-1">
           {Array.from({ length: total }, (_, i) => (

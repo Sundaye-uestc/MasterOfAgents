@@ -36,11 +36,11 @@ function parseDiff(diffText: string): DiffLine[] {
 }
 
 const lineStyles: Record<DiffLine["type"], string> = {
-  add: "bg-green-900/30 border-l-2 border-green-500 text-green-300",
-  remove: "bg-red-900/30 border-l-2 border-red-500 text-red-300",
-  header: "bg-blue-900/30 text-cyan-300 font-medium",
-  meta: "text-gray-500",
-  context: "text-gray-300",
+  add: "bg-green-100 dark:bg-green-900/30 border-l-2 border-green-500 text-green-700 dark:text-green-300",
+  remove: "bg-red-100 dark:bg-red-900/30 border-l-2 border-red-500 text-red-700 dark:text-red-300",
+  header: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-cyan-300 font-medium",
+  meta: "text-gray-400 dark:text-gray-500",
+  context: "text-gray-600 dark:text-gray-300",
 };
 
 export function DiffBlock({ diff, filePath, collapsible = true, defaultExpanded = false, collapseThreshold = 20 }: Props) {
@@ -70,17 +70,17 @@ export function DiffBlock({ diff, filePath, collapsible = true, defaultExpanded 
   const previewLines = shouldCollapse ? parsedLines.slice(0, 10) : parsedLines;
 
   return (
-    <div className="border border-gray-700 rounded-md overflow-hidden my-1">
+    <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-xl overflow-hidden my-1">
       {/* File path header */}
       {extractedPath && (
         <button
           onClick={handleFilePathClick}
-          className="w-full text-left px-3 py-1.5 bg-gray-800/50 border-b border-gray-700 text-xs text-gray-400 font-mono hover:bg-gray-700/50 hover:text-blue-400 flex items-center gap-2"
+          className="w-full text-left px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 font-mono hover:bg-gray-200 dark:hover:bg-gray-700/50 hover:text-blue-400 flex items-center gap-2"
           title="在变更面板中查看"
         >
           <span>📄</span>
           <span className="truncate">{extractedPath}</span>
-          <span className="ml-auto text-gray-600 text-[10px]">点击定位</span>
+          <span className="ml-auto text-gray-500 dark:text-gray-600 text-[10px]">点击定位</span>
         </button>
       )}
 
@@ -97,7 +97,7 @@ export function DiffBlock({ diff, filePath, collapsible = true, defaultExpanded 
       {shouldCollapse && !expanded && (
         <button
           onClick={() => setExpanded(true)}
-          className="w-full text-center py-1.5 bg-gray-800/30 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 border-t border-gray-700"
+          className="w-full text-center py-1.5 bg-gray-100 dark:bg-gray-800/30 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700"
         >
           展开完整差异（共 {lineCount} 行）
         </button>
@@ -115,7 +115,7 @@ export function DiffBlock({ diff, filePath, collapsible = true, defaultExpanded 
           </div>
           <button
             onClick={() => setExpanded(false)}
-            className="w-full text-center py-1.5 bg-gray-800/30 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 border-t border-gray-700"
+            className="w-full text-center py-1.5 bg-gray-100 dark:bg-gray-800/30 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700"
           >
             收起差异
           </button>

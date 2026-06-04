@@ -251,7 +251,7 @@ export function ConversationList({
       <div className="p-3">
         <button
           onClick={handleNewClick}
-          className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+          className="w-full py-2 px-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-medium transition-colors"
         >
           + 新建对话
         </button>
@@ -260,14 +260,14 @@ export function ConversationList({
           placeholder="搜索..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full mt-2 px-3 py-1.5 bg-gray-800 border border-gray-700 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-gray-600"
+          className="w-full mt-2 px-3 py-2 bg-gray-100 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/50 rounded-xl text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500/30"
         />
-        <label className="flex items-center gap-2 px-1 py-1 text-xs text-gray-500 cursor-pointer mt-1">
+        <label className="flex items-center gap-2 px-1 py-1 text-xs text-gray-400 dark:text-gray-500 cursor-pointer mt-1">
           <input
             type="checkbox"
             checked={showArchived}
             onChange={(e) => setShowArchived(e.target.checked)}
-            className="rounded bg-gray-700 border-gray-600"
+            className="rounded bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
           />
           显示已归档
         </label>
@@ -280,13 +280,13 @@ export function ConversationList({
           return (
             <div
               key={conv.id}
-              className={`group flex items-center border-b border-gray-800/50 ${
-                conv.id === activeId ? "bg-gray-800 border-l-2 border-l-blue-500" : ""
+              className={`group flex items-center border-b border-gray-200 dark:border-gray-800/30 px-2 ${
+                conv.id === activeId ? "bg-blue-500/10 rounded-lg" : ""
               }`}
             >
               <button
                 onClick={() => !isEditing && onSelect(conv.id)}
-                className="flex-1 text-left px-4 py-3 hover:bg-gray-800 transition-colors min-w-0"
+                className="flex-1 text-left px-2 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800/30 rounded-lg transition-colors min-w-0"
               >
                 <div className="flex items-center gap-2">
                   {agent && (
@@ -308,17 +308,17 @@ export function ConversationList({
                       }}
                       onBlur={() => handleRenameSave(conv.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="bg-gray-700 text-sm text-white px-1 py-0.5 rounded border border-blue-500 focus:outline-none w-full"
+                      className="bg-gray-100 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-1 py-0.5 rounded border border-blue-500 focus:outline-none w-full"
                     />
                   ) : (
-                    <span className="text-sm font-medium text-gray-200 truncate">
+                    <span className="text-sm text-gray-700 dark:text-gray-200 truncate">
                       {conv.pinnedAt && <span className="mr-1">📌</span>}
                       {conv.title}
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5 ml-7">
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
                     {conv.type === "direct" ? "单聊" : "群聊"}
                   </span>
                   {conv.status === "archived" && (
@@ -327,62 +327,62 @@ export function ConversationList({
                 </div>
               </button>
 
-              {/* Dropdown menu trigger */}
+              {/* Dropdown menu — always visible */}
               <div className="relative" ref={menuOpenId === conv.id ? menuRef : null}>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setMenuOpenId(menuOpenId === conv.id ? null : conv.id);
                   }}
-                  className="px-2 py-1 mr-1 text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity rounded hover:bg-gray-700"
+                  className="px-2 py-1 mr-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700/50 rounded-lg"
                 >
                   ···
                 </button>
                 {menuOpenId === conv.id && (
-                  <div className="absolute right-0 top-full mt-1 w-32 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-10">
+                  <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700/50 rounded-xl shadow-xl z-10 overflow-hidden">
                     <button
                       onClick={() => handlePinClick(conv.id, !conv.pinnedAt)}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-t-md"
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700/50"
                     >
                       {conv.pinnedAt ? "📌 取消置顶" : "📌 置顶"}
                     </button>
                     <button
                       onClick={() => handleRenameClick(conv)}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700/50"
                     >
                       ✍️ 重命名
                     </button>
                     {conv.type === "group" && (
                       <>
-                        <div className="border-t border-gray-700" />
+                        <div className="border-t border-gray-200 dark:border-gray-700/50" />
                         <button
                           onClick={() => handleManageMembers(conv.id)}
-                          className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700/50"
                         >
                           👥 管理成员
                         </button>
                       </>
                     )}
-                    <div className="border-t border-gray-700" />
+                    <div className="border-t border-gray-200 dark:border-gray-700/50" />
                     {conv.status === "archived" ? (
                       <button
                         onClick={() => handleArchiveClick(conv.id, false)}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700/50"
                       >
                         📂 取消归档
                       </button>
                     ) : (
                       <button
                         onClick={() => handleArchiveClick(conv.id, true)}
-                        className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
                       >
                         📦 归档
                       </button>
                     )}
-                    <div className="border-t border-gray-700" />
+                    <div className="border-t border-gray-200 dark:border-gray-700" />
                     <button
                       onClick={() => handleDeleteClick(conv.id)}
-                      className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-700 rounded-b-md"
+                      className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-md"
                     >
                       🗑️ 删除
                     </button>
@@ -393,7 +393,7 @@ export function ConversationList({
           );
         })}
         {filtered.length === 0 && (
-          <p className="text-center text-gray-600 text-sm mt-8">
+          <p className="text-center text-gray-400 dark:text-gray-600 text-sm mt-8">
             暂无对话
           </p>
         )}
@@ -402,30 +402,30 @@ export function ConversationList({
       {/* New conversation modal */}
       {showNewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-96 shadow-xl max-h-[80vh] overflow-y-auto">
-            <p className="text-sm text-gray-200 text-center mb-4">新建对话</p>
+          <div className="bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-200 dark:border-gray-700/50 rounded-2xl p-6 w-96 shadow-2xl max-h-[80vh] overflow-y-auto">
+            <p className="text-sm text-gray-700 dark:text-gray-200 text-center mb-4">新建对话</p>
 
             {/* Chat type toggle */}
             <div className="flex gap-2 mb-3">
               <button
                 onClick={() => { setIsGroupChat(false); setSelectedAgentIds([]); }}
-                className={`flex-1 py-1.5 text-sm rounded border ${
-                  !isGroupChat ? "border-blue-500 bg-blue-900/20 text-blue-300" : "border-gray-700 text-gray-500"
+                className={`flex-1 py-1.5 text-sm rounded-lg border transition-colors ${
+                  !isGroupChat ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300" : "border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
                 }`}
               >
                 单聊
               </button>
               <button
                 onClick={() => setIsGroupChat(true)}
-                className={`flex-1 py-1.5 text-sm rounded border ${
-                  isGroupChat ? "border-blue-500 bg-blue-900/20 text-blue-300" : "border-gray-700 text-gray-500"
+                className={`flex-1 py-1.5 text-sm rounded-lg border transition-colors ${
+                  isGroupChat ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300" : "border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800"
                 }`}
               >
                 群聊
               </button>
             </div>
 
-            <label className="block text-xs text-gray-400 mb-1">对话名称</label>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">对话名称</label>
             <input
               ref={inputRef}
               type="text"
@@ -436,11 +436,11 @@ export function ConversationList({
                 if (e.key === "Escape") setShowNewModal(false);
               }}
               placeholder="输入对话名称"
-              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
 
-            <label className="block text-xs text-gray-400 mb-1 mt-3">
-              工作目录 <span className="text-gray-600">（可选，留空则使用默认目录）</span>
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1 mt-3">
+              工作目录 <span className="text-gray-400 dark:text-gray-600">（可选，留空则使用默认目录）</span>
             </label>
             <input
               type="text"
@@ -451,10 +451,10 @@ export function ConversationList({
                 if (e.key === "Escape") setShowNewModal(false);
               }}
               placeholder="例: D:\Projects\MyWorkDir"
-              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500 font-mono"
+              className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 font-mono"
             />
 
-            <label className="block text-xs text-gray-400 mb-1 mt-3">
+            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1 mt-3">
               {isGroupChat ? "选择多个 Agent" : "选择 Agent"}
             </label>
             {isGroupChat ? (
@@ -465,23 +465,17 @@ export function ConversationList({
                 multiSelect
               />
             ) : (
-              <select
-                value={newAgentId}
-                onChange={(e) => setNewAgentId(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 focus:outline-none focus:border-blue-500"
-              >
-                {agents.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.adapterKind})
-                  </option>
-                ))}
-              </select>
+              <AgentPicker
+                agents={agents}
+                selectedIds={[newAgentId]}
+                onChange={(ids) => { if (ids.length > 0) setNewAgentId(ids[0]!); }}
+              />
             )}
 
             <div className="flex justify-center gap-3 mt-4">
               <button
                 onClick={() => setShowNewModal(false)}
-                className="px-4 py-1.5 text-sm text-gray-300 bg-gray-700 hover:bg-gray-600 rounded"
+                className="px-4 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
               >
                 取消
               </button>
@@ -499,14 +493,14 @@ export function ConversationList({
       {/* Delete confirmation modal */}
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-80 shadow-xl">
-            <p className="text-sm text-gray-200 text-center">
+          <div className="bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-200 dark:border-gray-700/50 rounded-2xl p-6 w-80 shadow-2xl">
+            <p className="text-sm text-gray-700 dark:text-gray-200 text-center">
               对话删除后不可撤销！
             </p>
             <div className="flex justify-center gap-3 mt-4">
               <button
                 onClick={() => setConfirmDeleteId(null)}
-                className="px-4 py-1.5 text-sm text-gray-300 bg-gray-700 hover:bg-gray-600 rounded"
+                className="px-4 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
               >
                 取消
               </button>
@@ -524,20 +518,20 @@ export function ConversationList({
       {/* Manage members modal */}
       {manageMembersConvId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 w-96 shadow-xl max-h-[80vh] overflow-y-auto">
-            <p className="text-sm text-gray-200 text-center mb-4">管理群成员</p>
+          <div className="bg-white dark:bg-gray-800/95 backdrop-blur-md border border-gray-200 dark:border-gray-700/50 rounded-2xl p-6 w-96 shadow-2xl max-h-[80vh] overflow-y-auto">
+            <p className="text-sm text-gray-700 dark:text-gray-200 text-center mb-4">管理群成员</p>
 
             {/* Current members */}
             <div className="mb-4">
-              <p className="text-xs text-gray-400 mb-2">当前成员 ({manageMembersList.length})</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">当前成员 ({manageMembersList.length})</p>
               {manageMembersList.length === 0 ? (
-                <p className="text-xs text-gray-600">暂无成员</p>
+                <p className="text-xs text-gray-400 dark:text-gray-600">暂无成员</p>
               ) : (
                 <div className="space-y-1.5">
                   {manageMembersList.map((m) => (
                     <div
                       key={m.agentId}
-                      className="flex items-center justify-between px-3 py-2 bg-gray-900 rounded-lg border border-gray-700"
+                      className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700"
                     >
                       <div className="flex items-center gap-2">
                         <AgentBadge
@@ -545,11 +539,11 @@ export function ConversationList({
                           adapterKind={m.adapterKind}
                           size="sm"
                         />
-                        <span className="text-xs text-gray-400 capitalize">{m.role}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{m.role}</span>
                       </div>
                       <button
                         onClick={() => handleRemoveMember(m.agentId)}
-                        className="text-xs text-red-400 hover:text-red-300 hover:bg-gray-700 px-2 py-1 rounded transition-colors"
+                        className="text-xs text-red-400 hover:text-red-300 hover:bg-gray-200 dark:hover:bg-gray-700 px-2 py-1 rounded transition-colors"
                       >
                         移除
                       </button>
@@ -560,13 +554,13 @@ export function ConversationList({
             </div>
 
             {/* Add member */}
-            <div className="border-t border-gray-700 pt-4">
-              <p className="text-xs text-gray-400 mb-2">添加成员</p>
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">添加成员</p>
               <div className="flex gap-2">
                 <select
                   value={addMemberAgentId}
                   onChange={(e) => setAddMemberAgentId(e.target.value)}
-                  className="flex-1 px-3 py-1.5 bg-gray-900 border border-gray-700 rounded text-sm text-gray-200 focus:outline-none focus:border-blue-500"
+                  className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:border-blue-500"
                 >
                   <option value="">选择 Agent...</option>
                   {manageMembersAgents
@@ -590,7 +584,7 @@ export function ConversationList({
             <div className="flex justify-center mt-4">
               <button
                 onClick={() => setManageMembersConvId(null)}
-                className="px-4 py-1.5 text-sm text-gray-300 bg-gray-700 hover:bg-gray-600 rounded"
+                className="px-4 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
               >
                 关闭
               </button>

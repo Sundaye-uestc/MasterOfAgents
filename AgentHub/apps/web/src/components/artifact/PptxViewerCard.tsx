@@ -227,10 +227,62 @@ export function PptxViewerCard({ url, name }: Props) {
     else if (relX > rect.width * 0.8) goTo(current + 1);
   };
 
-  const isReady = state.phase === "ready";
+  // --- Loading state ---
+  if (state.phase === "loading") {
+    return (
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-white/50 dark:bg-gray-900/50 overflow-hidden">
+        <div className="flex items-center justify-center py-16 text-gray-500 dark:text-gray-400">
+          <span className="animate-pulse">📊 正在解析 PPT...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Error state ---
+  if (state.phase === "error") {
+    return (
+      <div className="border border-red-800/40 rounded-lg bg-red-900/20 overflow-hidden">
+        <div className="flex flex-col items-center justify-center py-8 gap-2">
+          <span className="text-red-400">⚠️ PPT 解析失败</span>
+          <span className="text-xs text-red-400/60">{state.message}</span>
+          <a
+            href={url}
+            download={name}
+            className="mt-2 px-3 py-1 text-xs rounded bg-red-800/30 text-red-300 hover:bg-red-800/50"
+          >
+            ⬇ 直接下载
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Empty ---
+  if (total === 0) {
+    return (
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <div className="flex items-center gap-3 px-3 py-2">
+          <span className="text-xl">📊</span>
+          <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">{name}</span>
+          <a
+            href={url}
+            download={name}
+            className="px-3 py-1 text-xs rounded bg-orange-600/30 text-orange-300 hover:bg-orange-600/50"
+          >
+            ⬇ 下载
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Ready ---
+  const refSlide = state.phase === "ready" ? state.slides[0] : null;
+  const scaleX = refSlide ? slideWidth / refSlide.widthPx : 1;
+  const scaleY = refSlide ? slideHeight / refSlide.heightPx : 1;
 
   return (
-    <div className="border border-gray-700 rounded-lg bg-gray-900/50 overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-white/50 dark:bg-gray-900/50 overflow-hidden">
       {/* Viewport */}
       <div
         ref={viewportRef}
@@ -299,76 +351,61 @@ export function PptxViewerCard({ url, name }: Props) {
         )}
       </div>
 
-      {/* Controls bar */}
-      <div className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-800/60 border-t border-gray-700">
-        {isReady ? (
-          <>
+      {/* Controls */}
+      <div className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800/60 border-t border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => goTo(0)}
+          disabled={current === 0}
+          className="px-2 py-1 text-xs rounded bg-gray-200/80 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+        >
+          ⏮
+        </button>
+        <button
+          onClick={() => goTo(current - 1)}
+          disabled={current === 0}
+          className="px-2 py-1 text-xs rounded bg-gray-200/80 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+        >
+          ◀
+        </button>
+        <span className="text-xs text-gray-500 dark:text-gray-400 min-w-[60px] text-center">
+          {current + 1} / {total}
+        </span>
+        <button
+          onClick={() => goTo(current + 1)}
+          disabled={current >= total - 1}
+          className="px-2 py-1 text-xs rounded bg-gray-200/80 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+        >
+          ▶
+        </button>
+        <button
+          onClick={() => goTo(total - 1)}
+          disabled={current >= total - 1}
+          className="px-2 py-1 text-xs rounded bg-gray-200/80 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+        >
+          ⏭
+        </button>
+        <span className="text-gray-500 dark:text-gray-600 mx-1">|</span>
+        {/* Dots */}
+        <div className="flex gap-1">
+          {Array.from({ length: total }, (_, i) => (
             <button
-              onClick={() => goTo(0)}
-              disabled={current === 0}
-              className="px-2 py-1 text-xs rounded bg-gray-700/50 text-gray-300 hover:bg-gray-700 disabled:opacity-30"
-            >
-              ⏮
-            </button>
-            <button
-              onClick={() => goTo(current - 1)}
-              disabled={current === 0}
-              className="px-2 py-1 text-xs rounded bg-gray-700/50 text-gray-300 hover:bg-gray-700 disabled:opacity-30"
-            >
-              ◀
-            </button>
-            <span className="text-xs text-gray-400 min-w-[60px] text-center">
-              {current + 1} / {total}
-            </span>
-            <button
-              onClick={() => goTo(current + 1)}
-              disabled={current >= total - 1}
-              className="px-2 py-1 text-xs rounded bg-gray-700/50 text-gray-300 hover:bg-gray-700 disabled:opacity-30"
-            >
-              ▶
-            </button>
-            <button
-              onClick={() => goTo(total - 1)}
-              disabled={current >= total - 1}
-              className="px-2 py-1 text-xs rounded bg-gray-700/50 text-gray-300 hover:bg-gray-700 disabled:opacity-30"
-            >
-              ⏭
-            </button>
-            <span className="text-gray-600 mx-1">|</span>
-            {/* Dot indicators */}
-            <div className="flex gap-1">
-              {Array.from({ length: total }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => goTo(i)}
-                  className="w-2 h-2 rounded-full transition-colors"
-                  style={{
-                    background:
-                      i === current
-                        ? "rgba(255,255,255,0.7)"
-                        : "rgba(255,255,255,0.2)",
-                  }}
-                />
-              ))}
-            </div>
-            <span className="text-gray-600 mx-1">|</span>
-            <a
-              href={url}
-              download={name}
-              className="px-2 py-1 text-xs rounded bg-blue-800/30 text-blue-300 hover:bg-blue-800/50"
-            >
-              ⬇ 下载
-            </a>
-          </>
-        ) : (
-          <a
-            href={url}
-            download={name}
-            className="px-2 py-1 text-xs rounded bg-blue-800/30 text-blue-300 hover:bg-blue-800/50"
-          >
-            ⬇ 下载 PPT
-          </a>
-        )}
+              key={i}
+              onClick={() => goTo(i)}
+              className="w-2 h-2 rounded-full transition-colors"
+              style={{
+                background: i === current ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.2)",
+              }}
+            />
+          ))}
+        </div>
+        <span className="text-gray-500 dark:text-gray-600 mx-1">|</span>
+        <a
+          href={url}
+          download={name}
+          className="px-2 py-1 text-xs rounded bg-orange-600/30 text-orange-300 hover:bg-orange-600/50"
+        >
+          ⬇ 下载
+        </a>
       </div>
     </div>
   );

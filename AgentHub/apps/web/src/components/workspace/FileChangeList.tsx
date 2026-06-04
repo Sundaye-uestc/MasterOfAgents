@@ -43,27 +43,27 @@ export function FileChangeList({ changes, onUpdate, collapsible = true, workspac
   const pendingCount = changes.filter((c) => c.status === "pending").length;
 
   return (
-    <div className="border border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-2xl overflow-hidden">
       {collapsible && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-gray-800/50 bg-gray-800/30"
+          className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800/50 bg-gray-100 dark:bg-gray-800/30"
         >
-          <span className="text-xs text-gray-500">{expanded ? "▾" : "▸"}</span>
-          <span className="text-sm text-gray-300 font-medium">文件变更</span>
-          <span className="text-xs text-gray-500">({changes.length})</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">{expanded ? "▾" : "▸"}</span>
+          <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">文件变更</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">({changes.length})</span>
           {pendingCount > 0 && (
             <span className="text-xs text-yellow-400 ml-1">({pendingCount} 待处理)</span>
           )}
         </button>
       )}
       {expanded && (
-        <div className="divide-y divide-gray-800">
+        <div className="divide-y divide-gray-200 dark:divide-gray-800">
           {changes.map((change) => (
-            <div key={change.id} className="bg-gray-900/50">
+            <div key={change.id} className="bg-white/50 dark:bg-gray-900/50">
               <DiffCard change={change} workspaceId={workspaceId} />
               {change.status === "pending" && (
-                <div className="flex gap-2 px-3 py-1.5 border-t border-gray-800/50">
+                <div className="flex gap-2 px-3 py-1.5 border-t border-gray-200/80 dark:border-gray-800/50">
                   <button
                     onClick={() => handleApply(change.id)}
                     disabled={acting === change.id}

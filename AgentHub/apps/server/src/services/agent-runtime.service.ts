@@ -115,6 +115,7 @@ export class AgentRuntimeService {
     (async () => {
       crashLog(`IIFE START run=${runId.slice(0, 8)}`);
       let beforeSnapshotId: string | null = null;
+      let snapshotBaseName = "";
 
       // Ensure workspace exists BEFORE the run so we can use it as workingDir
       let workspaceRoot: string | null = null;
@@ -122,9 +123,19 @@ export class AgentRuntimeService {
         const ws = await workspaceSvc.ensureWorkspace(conversationId);
         workspaceRoot = ws.rootPath;
         crashLog(`Workspace ready: ${workspaceRoot}`);
+
+        // Build a meaningful snapshot label: conversation title + user message preview
+        let convTitle = conversationId;
+        try {
+          const conv = await chatService.getConversation(conversationId);
+          if (conv?.title) convTitle = conv.title;
+        } catch {}
+        const msgPreview = prompt.length > 20 ? prompt.slice(0, 20) + "..." : prompt;
+        snapshotBaseName = `${convTitle} · "${msgPreview}"`;
+
         const beforeManifest = workspaceSvc.generateManifest(ws.rootPath);
         crashLog(`Manifest: ${Object.keys(beforeManifest).length} files`);
-        const beforeSnap = await workspaceSvc.createSnapshot(ws.id, runId, "before", beforeManifest);
+        const beforeSnap = await workspaceSvc.createSnapshot(ws.id, runId, `对话前 · ${snapshotBaseName}`, beforeManifest);
         beforeSnapshotId = beforeSnap.id;
         crashLog(`Before snapshot: ${beforeSnapshotId.slice(0, 8)}`);
       } catch (snapErr) {
@@ -200,7 +211,7 @@ export class AgentRuntimeService {
         try {
           const ws = await workspaceSvc.ensureWorkspace(conversationId);
           const afterManifest = workspaceSvc.generateManifest(ws.rootPath);
-          const afterSnap = await workspaceSvc.createSnapshot(ws.id, runId, "after", afterManifest);
+          const afterSnap = await workspaceSvc.createSnapshot(ws.id, runId, `对话后 · ${snapshotBaseName}`, afterManifest);
           if (beforeSnapshotId) {
             crashLog(`Diffing snapshots before=${beforeSnapshotId.slice(0,8)} after=${afterSnap.id.slice(0,8)}`);
             const changes = await workspaceSvc.diffSnapshots(beforeSnapshotId, afterSnap.id);

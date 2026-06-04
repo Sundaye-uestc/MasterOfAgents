@@ -12,10 +12,10 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  pending: "text-gray-400 bg-gray-700",
-  building: "text-yellow-400 bg-yellow-900/30",
-  deployed: "text-green-400 bg-green-900/30",
-  failed: "text-red-400 bg-red-900/30",
+  pending: "text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700",
+  building: "text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30",
+  deployed: "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30",
+  failed: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30",
 };
 
 const targetLabels: Record<string, string> = {
@@ -25,11 +25,11 @@ const targetLabels: Record<string, string> = {
 
 export function DeployStatusCard({ status, url, target }: Props) {
   return (
-    <div className="border border-gray-700 rounded-lg bg-gray-800/50 overflow-hidden">
+    <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-2xl bg-gray-100 dark:bg-gray-800/40 overflow-hidden">
       <div className="px-3 py-2 flex items-center gap-2">
         <span className="text-base">🚀</span>
         <div className="flex-1 min-w-0">
-          <div className="text-sm text-gray-200 font-medium">
+          <div className="text-sm text-gray-700 dark:text-gray-200 font-medium">
             {target ? (targetLabels[target] ?? target) : "部署"}
           </div>
           <div className="flex items-center gap-2 text-xs mt-0.5">

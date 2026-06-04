@@ -31,12 +31,12 @@ function FileTreeItem({ node, depth, onSelect, selectedPath }: FileTreeItemProps
       <div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full text-left px-2 py-0.5 flex items-center gap-1 hover:bg-gray-800/50 text-xs"
+          className="w-full text-left px-2 py-0.5 flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-800/50 text-xs"
           style={{ paddingLeft: `${depth * 12 + 8}px` }}
         >
-          <span className="text-gray-500 w-3 text-center">{expanded ? "▾" : "▸"}</span>
+          <span className="text-gray-400 dark:text-gray-500 w-3 text-center">{expanded ? "▾" : "▸"}</span>
           <span className="text-yellow-500 flex-shrink-0">📁</span>
-          <span className="text-gray-300 truncate">{node.name}</span>
+          <span className="text-gray-600 dark:text-gray-300 truncate">{node.name}</span>
         </button>
         {expanded && sortNodes(children).map((child) => (
           <FileTreeItem
@@ -63,8 +63,8 @@ function FileTreeItem({ node, depth, onSelect, selectedPath }: FileTreeItemProps
   return (
     <button
       onClick={() => onSelect(node.path)}
-      className={`w-full text-left px-2 py-0.5 flex items-center gap-1 hover:bg-gray-800/50 text-xs ${
-        isSelected ? "bg-blue-600/20 text-blue-300" : "text-gray-400"
+      className={`w-full text-left px-2 py-0.5 flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-800/50 text-xs ${
+        isSelected ? "bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-300" : "text-gray-500 dark:text-gray-400"
       }`}
       style={{ paddingLeft: `${depth * 12 + 8}px` }}
     >
