@@ -21,6 +21,47 @@ WEB_DIR = ROOT / "apps" / "web"
 
 processes: list[subprocess.Popen] = []
 
+# ports used by AgentHub — cleaned before each launch
+AGENTHUB_PORTS = [3001, 5173]
+
+
+def kill_ports(ports: list[int]) -> None:
+    """Kill any processes occupying the given ports so we get a clean start.
+    Checks ALL connection states, not just Listen — catches FIN_WAIT/TIME_WAIT leftovers."""
+    if sys.platform == "win32":
+        for port in ports:
+            try:
+                result = subprocess.run(
+                    [
+                        "powershell", "-NoProfile", "-Command",
+                        # Kill by port (any state), then also kill orphaned node children
+                        f"$pids = (Get-NetTCPConnection -LocalPort {port} -ErrorAction SilentlyContinue).OwningProcess | Select-Object -Unique | Where-Object {{ $_ -gt 0 }}; "
+                        f"foreach ($pid in $pids) {{ Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue }}",
+                    ],
+                    capture_output=True, text=True, timeout=15,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
+                if result.returncode != 0 and result.stderr:
+                    print(f"[launcher] Port {port} cleanup warning: {result.stderr.strip()}")
+            except (subprocess.TimeoutExpired, OSError) as e:
+                print(f"[launcher] Port {port} cleanup failed: {e}")
+    else:
+        # POSIX: use lsof, fall back to fuser
+        for port in ports:
+            try:
+                subprocess.run(
+                    ["lsof", "-ti", f":{port}", "|", "xargs", "-r", "kill", "-9"],
+                    capture_output=True, timeout=10, shell=True,
+                )
+            except (subprocess.TimeoutExpired, OSError):
+                try:
+                    subprocess.run(
+                        ["fuser", "-k", f"{port}/tcp"],
+                        capture_output=True, timeout=10,
+                    )
+                except (subprocess.TimeoutExpired, OSError):
+                    pass
+
 
 def load_dotenv(path: Path) -> dict[str, str]:
     """Parse a .env file, returning only keys with non-empty values."""
@@ -79,6 +120,36 @@ def start_process(cmd: list[str], cwd: Path, prefix: str, env_vars: dict[str, st
     return proc
 
 
+def port_in_use(port: int) -> bool:
+    """Return True if `port` is being listened on (TCP connect, tries IPv4 then IPv6)."""
+    import socket
+    addrs = [("127.0.0.1", socket.AF_INET), ("::1", socket.AF_INET6)]
+    for host, family in addrs:
+        try:
+            s = socket.socket(family, socket.SOCK_STREAM)
+            s.settimeout(1)
+            s.connect((host, port))
+            s.close()
+            return True
+        except OSError:
+            continue
+    return False
+
+
+def wait_for_port(port: int, timeout: float = 30.0) -> bool:
+    """Poll until `port` is listening, or timeout. Returns True if ready."""
+    deadline = time.time() + timeout
+    attempt = 0
+    while time.time() < deadline:
+        if port_in_use(port):
+            return True
+        attempt += 1
+        if attempt <= 6:
+            print(f"[launcher]   ...waiting for port {port} ({attempt * 0.5:.0f}s)", flush=True)
+        time.sleep(0.5)
+    return False
+
+
 def cleanup():
     print("\nShutting down...")
     for p in processes:
@@ -95,6 +166,8 @@ def cleanup():
                 p.kill()
             except OSError:
                 pass
+    # Double-insurance: kill anything still on our ports
+    kill_ports(AGENTHUB_PORTS)
     print("All servers stopped.")
 
 
@@ -146,6 +219,11 @@ def main():
     print("=" * 50)
     print()
 
+    # Kill any leftover processes from a previous run
+    print("[launcher] Cleaning up leftover processes...")
+    kill_ports(AGENTHUB_PORTS)
+    print()
+
     if not (ROOT / "node_modules").exists():
         print("Installing dependencies (pnpm install)...")
         subprocess.run([pnpm, "install"], cwd=str(ROOT), check=True)
@@ -166,8 +244,16 @@ def main():
         cleanup()
         sys.exit(1)
 
-    # Short delay to let server start initializing
-    time.sleep(2)
+    # Wait for backend to actually be ready to accept connections
+    print("[launcher] Waiting for backend to be ready...")
+    if not wait_for_port(3001, timeout=30.0):
+        print("ERROR: Backend did not start within 30 seconds.")
+        if p_server.poll() is not None:
+            print(f"       Backend process exited with code {p_server.returncode}")
+        print("       Check crash log: AgentHub/apps/server/data/crash.log")
+        cleanup()
+        sys.exit(1)
+    print("[launcher] Backend is ready on port 3001.")
 
     # Start frontend dev server
     print("[launcher] Starting frontend dev server (port 5173)...")
@@ -184,9 +270,17 @@ def main():
         cleanup()
         sys.exit(1)
 
+    # Wait for Vite to be ready
+    if not wait_for_port(5173, timeout=15.0):
+        print("ERROR: Frontend (Vite) did not start within 15 seconds.")
+        if p_web.poll() is not None:
+            print(f"       Vite process exited with code {p_web.returncode}")
+        cleanup()
+        sys.exit(1)
+
     print()
     print("-" * 50)
-    print("  Both servers starting. Open http://localhost:5173")
+    print("  Both servers ready. Open http://localhost:5173")
     print("  Press Ctrl+C to stop all servers.")
     print("-" * 50)
     print()
