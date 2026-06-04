@@ -108,14 +108,13 @@ export function InlineArtifactCard({ artifact }: Props) {
     );
   }
 
-  // PPTX client-side preview
-  if (
-    artifact.mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-    artifact.mimeType === "application/vnd.ms-powerpoint" ||
-    artifact.name.endsWith(".pptx") ||
-    artifact.name.endsWith(".ppt")
-  ) {
-    return <PptxViewerCard url={url} name={artifact.name} />;
+  // PPTX client-side preview (pptxviewjs Canvas-based)
+  if (artifact.mimeType?.includes("presentation") || artifact.name.endsWith(".pptx") || artifact.name.endsWith(".ppt")) {
+    return (
+      <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-2xl overflow-hidden">
+        <PptxViewerCard url={url} name={artifact.name} />
+      </div>
+    );
   }
 
   // Default: DownloadCard for all other types

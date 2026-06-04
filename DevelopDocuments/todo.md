@@ -12,7 +12,7 @@
 
 ## PPT 预览
 
-- [ ] PPT 预览端到端测试 — ImageSlideshowCard + slideshow artifact（2026-06-03）
+- [x] PPT 预览已完成 — ImageSlideshowCard 轮播组件 + slideshow artifact 合并逻辑 + pptxviewjs Canvas 渲染 PptxViewerCard（2026-06-04）
 
 ---
 

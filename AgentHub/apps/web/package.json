@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@agenthub/shared": "workspace:*",
+    "chart.js": "^4.5.1",
     "jszip": "^3.10.1",
+    "pptxviewjs": "^1.1.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
