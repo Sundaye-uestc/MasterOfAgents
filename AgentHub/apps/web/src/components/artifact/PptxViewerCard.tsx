@@ -351,6 +351,14 @@ export function PptxViewerCard({ url, name }: Props) {
                 />
               ))}
             </div>
+            <span className="text-gray-600 mx-1">|</span>
+            <a
+              href={url}
+              download={name}
+              className="px-2 py-1 text-xs rounded bg-blue-800/30 text-blue-300 hover:bg-blue-800/50"
+            >
+              ⬇ 下载
+            </a>
           </>
         ) : (
           <a
