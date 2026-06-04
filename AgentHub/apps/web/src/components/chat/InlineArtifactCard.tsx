@@ -108,13 +108,8 @@ export function InlineArtifactCard({ artifact }: Props) {
     );
   }
 
-  // PPTX client-side preview
-  if (
-    artifact.mimeType === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
-    artifact.mimeType === "application/vnd.ms-powerpoint" ||
-    artifact.name.endsWith(".pptx") ||
-    artifact.name.endsWith(".ppt")
-  ) {
+  // PPTX client-side preview (pptxviewjs Canvas renderer)
+  if (artifact.mimeType?.includes("presentation") || artifact.name.endsWith(".pptx")) {
     return <PptxViewerCard url={url} name={artifact.name} />;
   }
 
