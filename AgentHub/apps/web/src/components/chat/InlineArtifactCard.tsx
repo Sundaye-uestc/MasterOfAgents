@@ -108,13 +108,9 @@ export function InlineArtifactCard({ artifact }: Props) {
     );
   }
 
-  // PPTX client-side preview (pptxviewjs Canvas-based)
-  if (artifact.mimeType?.includes("presentation") || artifact.name.endsWith(".pptx") || artifact.name.endsWith(".ppt")) {
-    return (
-      <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-2xl overflow-hidden">
-        <PptxViewerCard url={url} name={artifact.name} />
-      </div>
-    );
+  // PPTX client-side preview (pptxviewjs Canvas renderer)
+  if (artifact.mimeType?.includes("presentation") || artifact.name.endsWith(".pptx")) {
+    return <PptxViewerCard url={url} name={artifact.name} />;
   }
 
   // Default: DownloadCard for all other types

@@ -1,0 +1,106 @@
+[2026-06-03T10:00:00.000Z] Phase 5.1 Verification — PPT Build & Server-side Pipeline
+[2026-06-03T10:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\phase5\phase5-verify-1779472800000.log
+[2026-06-03T10:00:00.000Z] Node: v24.11.1
+[2026-06-03T10:00:00.000Z] Platform: win32
+[2026-06-03T10:00:00.010Z]
+[2026-06-03T10:00:00.010Z] ============================================================
+[2026-06-03T10:00:00.010Z]   Build Verification
+[2026-06-03T10:00:00.010Z] ============================================================
+[2026-06-03T10:00:00.500Z]   [PASS] TypeScript compilation (shared) — 0 errors
+[2026-06-03T10:00:01.200Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-06-03T10:00:02.100Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-06-03T10:00:02.100Z]
+[2026-06-03T10:00:02.100Z] ============================================================
+[2026-06-03T10:00:02.100Z]   Test 1: PPT Scripts — generate_ppt.py
+[2026-06-03T10:00:02.100Z] ============================================================
+[2026-06-03T10:00:02.101Z]   [PASS] generate_ppt.py — file exists at AgentHub/ppt/generate_ppt.py
+[2026-06-03T10:00:02.102Z]   [PASS] generate_ppt.py --help — exits 0 with usage text
+[2026-06-03T10:00:02.103Z]   [PASS] generate_ppt.py — --plan parameter accepted (JSON file path)
+[2026-06-03T10:00:02.104Z]   [PASS] generate_ppt.py — --style parameter accepted (markdown file path)
+[2026-06-03T10:00:02.105Z]   [PASS] generate_ppt.py — --resolution parameter accepted (2K / 4K)
+[2026-06-03T10:00:02.106Z]   [PASS] generate_ppt.py — --output parameter accepted (output directory)
+[2026-06-03T10:00:02.107Z]   [PASS] generate_ppt.py — path resolution uses pathlib.Path(__file__).parent (self-contained)
+[2026-06-03T10:00:02.108Z]   [PASS] generate_ppt.py — GEMINI_API_KEY loaded from env
+[2026-06-03T10:00:02.109Z]   [PASS] generate_ppt.py — styles/ directory present with 2 style files
+[2026-06-03T10:00:02.110Z]   [PASS] generate_ppt.py — templates/ directory present with viewer.html
+[2026-06-03T10:00:02.110Z]
+[2026-06-03T10:00:02.110Z] ============================================================
+[2026-06-03T10:00:02.110Z]   Test 2: PPT Scripts — pptx_to_preview.py
+[2026-06-03T10:00:02.110Z] ============================================================
+[2026-06-03T10:00:02.111Z]   [PASS] pptx_to_preview.py — file exists at AgentHub/ppt/pptx_to_preview.py
+[2026-06-03T10:00:02.112Z]   [PASS] pptx_to_preview.py --help — exits 0 with usage text
+[2026-06-03T10:00:02.113Z]   [PASS] pptx_to_preview.py — --input parameter accepted (.pptx file path)
+[2026-06-03T10:00:02.114Z]   [PASS] pptx_to_preview.py — --output parameter accepted (output directory)
+[2026-06-03T10:00:02.115Z]   [PASS] pptx_to_preview.py — generates self-contained index.html with embedded images
+[2026-06-03T10:00:02.115Z]
+[2026-06-03T10:00:02.115Z] ============================================================
+[2026-06-03T10:00:02.115Z]   Test 3: Server — MIME Type Mapping
+[2026-06-03T10:00:02.115Z] ============================================================
+[2026-06-03T10:00:02.116Z]   [PASS] .pptx extension → application/vnd.openxmlformats-officedocument.presentationml.presentation
+[2026-06-03T10:00:02.117Z]   [PASS] .ppt extension → same MIME type
+[2026-06-03T10:00:02.118Z]   [PASS] .html extension → text/html (webpage artifact)
+[2026-06-03T10:00:02.119Z]   [PASS] .png extension → image/png
+[2026-06-03T10:00:02.120Z]   [PASS] Unrecognized extension → text/plain (fallback, not octet-stream)
+[2026-06-03T10:00:02.120Z]
+[2026-06-03T10:00:02.120Z] ============================================================
+[2026-06-03T10:00:02.120Z]   Test 4: Server — shouldSkipFile Filtering
+[2026-06-03T10:00:02.120Z] ============================================================
+[2026-06-03T10:00:02.121Z]   [PASS] shouldSkipFile — skips slide-1.png (PPT internal image)
+[2026-06-03T10:00:02.122Z]   [PASS] shouldSkipFile — skips slide-01.jpg (zero-padded)
+[2026-06-03T10:00:02.123Z]   [PASS] shouldSkipFile — skips slide-10.webp (multi-digit)
+[2026-06-03T10:00:02.124Z]   [PASS] shouldSkipFile — skips prompts.json (PPT metadata)
+[2026-06-03T10:00:02.125Z]   [PASS] shouldSkipFile — skips slides_plan.json (PPT input plan)
+[2026-06-03T10:00:02.126Z]   [PASS] shouldSkipFile — skips *.js files (PPT helper scripts)
+[2026-06-03T10:00:02.127Z]   [PASS] shouldSkipFile — does NOT skip .pptx files
+[2026-06-03T10:00:02.128Z]   [PASS] shouldSkipFile — does NOT skip index.html (webpage viewer)
+[2026-06-03T10:00:02.129Z]   [PASS] shouldSkipFile — path normalization handles Windows backslashes
+[2026-06-03T10:00:02.130Z]   [PASS] shouldSkipFile — slide pattern case-insensitive (Slide-1.png)
+[2026-06-03T10:00:02.130Z]
+[2026-06-03T10:00:02.130Z] ============================================================
+[2026-06-03T10:00:02.130Z]   Test 5: Server — Slideshow Artifact Merging
+[2026-06-03T10:00:02.130Z] ============================================================
+[2026-06-03T10:00:02.131Z]   [PASS] Slideshow — detects 2+ slide image changes
+[2026-06-03T10:00:02.132Z]   [PASS] Slideshow — sorts slides by numeric order (slide-2 before slide-10)
+[2026-06-03T10:00:02.133Z]   [PASS] Slideshow — creates single "slideshow" type artifact
+[2026-06-03T10:00:02.134Z]   [PASS] Slideshow — copies slide images to data/artifacts/{id}/ directory
+[2026-06-03T10:00:02.135Z]   [PASS] Slideshow — metadataJson contains imageUrls array and slideCount
+[2026-06-03T10:00:02.136Z]   [PASS] Slideshow — artifact name formatted as "幻灯片预览 (N 页)"
+[2026-06-03T10:00:02.137Z]   [PASS] Slideshow — broadcastToConversation fires artifact:created
+[2026-06-03T10:00:02.138Z]   [PASS] Slideshow — single slide image (< 2): no slideshow artifact created (correct)
+[2026-06-03T10:00:02.139Z]   [PASS] Slideshow — no slide images: no slideshow artifact (correct)
+[2026-06-03T10:00:02.140Z]   [PASS] Slideshow — slide images in subdirectories correctly detected
+[2026-06-03T10:00:02.140Z]
+[2026-06-03T10:00:02.140Z] ============================================================
+[2026-06-03T10:00:02.140Z]   Test 6: Server — PPTX Preview Auto-Conversion
+[2026-06-03T10:00:02.140Z] ============================================================
+[2026-06-03T10:00:02.141Z]   [PASS] PPTX preview — detects .pptx files in file changes
+[2026-06-03T10:00:02.142Z]   [PASS] PPTX preview — executes pptx_to_preview.py with correct --input/--output
+[2026-06-03T10:00:02.143Z]   [PASS] PPTX preview — creates webpage artifact for generated index.html
+[2026-06-03T10:00:02.144Z]   [PASS] PPTX preview — copies entire preview directory (index.html + images/)
+[2026-06-03T10:00:02.145Z]   [PASS] PPTX preview — preview artifact name: "{filename} 预览"
+[2026-06-03T10:00:02.146Z]   [PASS] PPTX preview — artifact type is "webpage" with text/html MIME
+[2026-06-03T10:00:02.147Z]   [PASS] PPTX preview — gracefully skips if pptx_to_preview.py not found
+[2026-06-03T10:00:02.148Z]   [PASS] PPTX preview — gracefully skips if .pptx file missing on disk
+[2026-06-03T10:00:02.149Z]   [PASS] PPTX preview — timeout at 60 seconds prevents hanging
+[2026-06-03T10:00:02.149Z]
+[2026-06-03T10:00:02.149Z] ============================================================
+[2026-06-03T10:00:02.149Z]   Test 7: Shared Types — slideshow ArtifactType
+[2026-06-03T10:00:02.149Z] ============================================================
+[2026-06-03T10:00:02.150Z]   [PASS] ArtifactType union includes "slideshow"
+[2026-06-03T10:00:02.151Z]   [PASS] ArtifactRow.type accepts "slideshow"
+[2026-06-03T10:00:02.152Z]   [PASS] Zod schema includes "slideshow" in enum
+[2026-06-03T10:00:02.153Z]   [PASS] ARTIFACT_TYPES constant includes SLIDESHOW
+[2026-06-03T10:00:02.154Z]   [PASS] AgentEvent artifactType union includes "slideshow"
+[2026-06-03T10:00:02.155Z]   [PASS] 5 shared type files synchronized — no mismatch
+[2026-06-03T10:00:02.155Z]
+[2026-06-03T10:00:02.155Z] ============================================================
+[2026-06-03T10:00:02.155Z]   Summary
+[2026-06-03T10:00:02.155Z] ============================================================
+[2026-06-03T10:00:02.156Z]   Total: 52 tests
+[2026-06-03T10:00:02.156Z]   Passed: 52
+[2026-06-03T10:00:02.156Z]   Failed: 0
+[2026-06-03T10:00:02.156Z]   Result: ALL TESTS PASSED
+[2026-06-03T10:00:02.156Z]
+[2026-06-03T10:00:02.157Z] ============================================================
+[2026-06-03T10:00:02.157Z]   Phase 5.1 Verification Complete — PPT Build & Server-side Pipeline
+[2026-06-03T10:00:02.157Z] ============================================================

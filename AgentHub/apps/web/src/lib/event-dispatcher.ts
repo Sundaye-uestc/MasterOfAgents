@@ -107,7 +107,7 @@ export function dispatchServerEvent(event: ServerWsEvent): void {
       const art = (event as any).artifact;
       if (!art) break;
       useArtifactStore.setState((s) => ({
-        artifacts: s.artifacts.some((a) => a.id === art.id)
+        artifacts: s.artifacts.some((a) => a.id === art.id || a.name === art.name)
           ? s.artifacts
           : [art as ArtifactRow, ...s.artifacts],
       }));

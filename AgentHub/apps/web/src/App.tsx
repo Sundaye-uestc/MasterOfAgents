@@ -7,6 +7,8 @@ import { useWorkspaceStore } from "./stores/workspace.store.js";
 import { useUIStore } from "./stores/ui.store.js";
 import { useUserAvatar } from "./hooks/useUserAvatar.js";
 import { ThemeToggle } from "./components/ThemeToggle.js";
+import { AgentManagePanel } from "./components/agent/AgentManagePanel.js";
+import { useAgentStore } from "./stores/agent.store.js";
 import type { ConversationRow } from "@agenthub/shared";
 
 export function App() {
@@ -14,6 +16,8 @@ export function App() {
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [agentMap, setAgentMap] = useState<Record<string, AgentInfo>>({});
+  const [showAgentManage, setShowAgentManage] = useState(false);
+  const agentStore = useAgentStore();
 
   // Fetch agent map whenever conversations are loaded
   const refreshAgentMap = useCallback(() => {
@@ -204,39 +208,47 @@ export function App() {
             refreshKey={refreshKey}
           />
         </div>
-        {/* User avatar section */}
+        {/* User + Agent management section */}
         <div className="border-t border-gray-200 dark:border-gray-800/50 px-4 py-3">
-          <div className="flex items-center gap-3">
-            <label className="cursor-pointer flex-shrink-0">
-              {userAvatar ? (
-                <img src={userAvatar} className="w-9 h-9 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600 ring-2 ring-gray-200 dark:ring-gray-800" alt="用户头像" />
-              ) : (
-                <span className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg border-2 border-gray-300 dark:border-gray-600">
-                  👤
-                </span>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  handleUploadAvatar(file);
-                  e.target.value = "";
-                }}
-              />
-            </label>
-            <div className="min-w-0">
-              <p className="text-sm text-gray-700 dark:text-gray-300 truncate">我</p>
-              {userAvatar ? (
-                <button onClick={clearAvatar} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
-                  移除头像
-                </button>
-              ) : (
-                <p className="text-xs text-gray-400 dark:text-gray-500">点击上传头像</p>
-              )}
+          <div className="flex items-center gap-2">
+            {/* Left: User avatar */}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <label className="cursor-pointer flex-shrink-0">
+                {userAvatar ? (
+                  <img src={userAvatar} className="w-8 h-8 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600" alt="用户头像" />
+                ) : (
+                  <span className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-base border-2 border-gray-300 dark:border-gray-600">
+                    👤
+                  </span>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    handleUploadAvatar(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <div className="min-w-0">
+                <p className="text-xs text-gray-700 dark:text-gray-300 truncate">我</p>
+              </div>
             </div>
+
+            {/* Vertical divider */}
+            <div className="w-px h-8 bg-gray-300 dark:bg-gray-700 flex-shrink-0" />
+
+            {/* Right: Agent management toggle */}
+            <button
+              onClick={() => setShowAgentManage(true)}
+              className="flex items-center gap-1 flex-1 min-w-0 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg px-2 py-1 transition-colors"
+            >
+              <span className="text-sm flex-shrink-0">⚙️</span>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">Agent 管理 &gt;</p>
+            </button>
           </div>
         </div>
       </div>
@@ -302,6 +314,17 @@ export function App() {
             {toast.message}
           </div>
         </div>
+      )}
+
+      {/* Agent Management Panel */}
+      {showAgentManage && (
+        <AgentManagePanel
+          agents={agentStore.agents}
+          onClose={() => setShowAgentManage(false)}
+          onAgentUpdated={() => {
+            agentStore.load();
+          }}
+        />
       )}
     </div>
   );

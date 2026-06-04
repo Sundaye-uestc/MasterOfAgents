@@ -131,6 +131,20 @@ export interface ArtifactRow {
   createdAt: string;
 }
 
+// --- Agent Builder (LLM-powered) ---
+export interface ParsedAgentIntent {
+  name: string;
+  platform: string;
+  systemPrompt: string;
+  capabilities: string[];
+  toolSetIds: string[];
+}
+
+export interface PolishPromptResponse {
+  systemPrompt: string;
+  capabilities: string[];
+}
+
 // --- Workspace ---
 export interface WorkspaceRow {
   id: string;

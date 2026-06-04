@@ -230,7 +230,7 @@ export function PptxViewerCard({ url, name }: Props) {
   const isReady = state.phase === "ready";
 
   return (
-    <div className="border border-gray-200/80 dark:border-gray-700/50 rounded-2xl bg-white dark:bg-gray-900/50 overflow-hidden">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-white/50 dark:bg-gray-900/50 overflow-hidden">
       {/* Viewport */}
       <div
         ref={viewportRef}
@@ -251,7 +251,7 @@ export function PptxViewerCard({ url, name }: Props) {
         {/* Loading overlay */}
         {state.phase === "loading" && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 z-10">
-            <span className="animate-pulse text-gray-400">
+            <span className="animate-pulse text-gray-500 dark:text-gray-400">
               📊 正在加载 PPT...
             </span>
           </div>
@@ -306,14 +306,14 @@ export function PptxViewerCard({ url, name }: Props) {
             <button
               onClick={() => goTo(0)}
               disabled={current === 0}
-              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
             >
               ⏮
             </button>
             <button
               onClick={() => goTo(current - 1)}
               disabled={current === 0}
-              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
             >
               ◀
             </button>
@@ -323,18 +323,18 @@ export function PptxViewerCard({ url, name }: Props) {
             <button
               onClick={() => goTo(current + 1)}
               disabled={current >= total - 1}
-              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
             >
               ▶
             </button>
             <button
               onClick={() => goTo(total - 1)}
               disabled={current >= total - 1}
-              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
             >
               ⏭
             </button>
-            <span className="text-gray-600 mx-1">|</span>
+            <span className="text-gray-400 dark:text-gray-600 mx-1">|</span>
             {/* Dot indicators */}
             <div className="flex gap-1">
               {Array.from({ length: total }, (_, i) => (
@@ -351,7 +351,7 @@ export function PptxViewerCard({ url, name }: Props) {
                 />
               ))}
             </div>
-            <span className="text-gray-600 mx-1">|</span>
+            <span className="text-gray-400 dark:text-gray-600 mx-1">|</span>
             <a
               href={url}
               download={name}
