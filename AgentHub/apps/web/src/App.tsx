@@ -17,7 +17,12 @@ export function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [agentMap, setAgentMap] = useState<Record<string, AgentInfo>>({});
   const [showAgentManage, setShowAgentManage] = useState(false);
+  const [manageMembersConvId, setManageMembersConvId] = useState<string | null>(null);
   const agentStore = useAgentStore();
+
+  const handleManageMembers = useCallback((convId: string) => {
+    setManageMembersConvId(convId);
+  }, []);
 
   // Fetch agent map whenever conversations are loaded
   const refreshAgentMap = useCallback(() => {
@@ -211,6 +216,9 @@ export function App() {
             agentMap={agentMap}
             onAgentMapLoaded={setAgentMap}
             refreshKey={refreshKey}
+            userAvatar={userAvatar}
+            manageMembersConvId={manageMembersConvId}
+            onManageMembersClose={() => setManageMembersConvId(null)}
           />
         </div>
         {/* User + Agent management section */}
@@ -271,6 +279,7 @@ export function App() {
             adapterKind={activeAdapterKind}
             userAvatar={userAvatar}
             scrollToRunId={scrollToRunId}
+            onManageMembers={handleManageMembers}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center">

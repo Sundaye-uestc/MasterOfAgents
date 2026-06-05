@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { MessageRow, FileChangeRow, ArtifactRow } from "@agenthub/shared";
-import { listMessages, sendMessage, stopRun, deleteMessage, pinMessage, getPinnedMessages, retryMessage, listMembers, listAgents, listArtifactsByConversation } from "../../lib/api.js";
+import { listMessages, sendMessage, stopRun, deleteMessage, pinMessage, getPinnedMessages, retryMessage, listMembers, removeMember, listAgents, listArtifactsByConversation } from "../../lib/api.js";
 import { useWebSocket } from "../../hooks/useWebSocket.js";
 import type { WsServerEvent } from "../../hooks/useWebSocket.js";
 import { useOrchestrationState } from "../../hooks/useOrchestrationState.js";
@@ -42,9 +42,10 @@ interface Props {
   adapterKind?: string;
   userAvatar?: string | null;
   scrollToRunId?: string | null;
+  onManageMembers?: (convId: string) => void;
 }
 
-export function ChatArea({ conversationId, onRefreshList, agentId, conversationType, conversationTitle, adapterKind, userAvatar, scrollToRunId }: Props) {
+export function ChatArea({ conversationId, onRefreshList, agentId, conversationType, conversationTitle, adapterKind, userAvatar, scrollToRunId, onManageMembers }: Props) {
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -60,6 +61,9 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
   } | null>(null);
   const [orchBarExpanded, setOrchBarExpanded] = useState(false);
   const [agentCapabilities, setAgentCapabilities] = useState<string[]>([]);
+  const [memberCapabilities, setMemberCapabilities] = useState<Record<string, string[]>>({});
+  const [showMemberMenu, setShowMemberMenu] = useState(false);
+  const memberMenuRef = useRef<HTMLDivElement>(null);
   const [toolInvocations, setToolInvocations] = useState<Record<string, ToolInvocation[]>>({});
   const [replyTo, setReplyTo] = useState<{
     messageId: string;
@@ -109,6 +113,43 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
       setAgentCapabilities([]);
     }
   }, [conversationId, conversationType, agentId]);
+
+  // Load agent capabilities for all group members (for member info dropdown)
+  useEffect(() => {
+    if (conversationType === "group" && members.length > 0) {
+      listAgents()
+        .then((agents) => {
+          const map: Record<string, string[]> = {};
+          for (const m of members) {
+            const agent = agents.find((a) => a.id === m.agentId);
+            if (agent?.capabilitiesJson) {
+              try {
+                const caps = JSON.parse(agent.capabilitiesJson) as Array<{ label: string; value: string }>;
+                map[m.agentId] = caps.map((c) => c.label ?? c.value ?? c).slice(0, 4);
+              } catch {
+                map[m.agentId] = [];
+              }
+            } else {
+              map[m.agentId] = [];
+            }
+          }
+          setMemberCapabilities(map);
+        })
+        .catch(() => {});
+    }
+  }, [conversationId, conversationType, members]);
+
+  // Close member menu on outside click
+  useEffect(() => {
+    if (!showMemberMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (memberMenuRef.current && !memberMenuRef.current.contains(e.target as Node)) {
+        setShowMemberMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showMemberMenu]);
 
   // Load messages on mount / conversation change
   useEffect(() => {
@@ -520,11 +561,81 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           {conversationType === "group" && members.length > 0 && (
             <div className="flex items-center gap-1">
               {members.slice(0, 3).map((m) => (
-                <AgentBadge key={m.agentId} agentName={m.agentName} adapterKind={m.adapterKind} size="sm" />
+                <AgentBadge key={m.agentId} agentName={m.agentName} adapterKind={m.adapterKind} size="sm" rounded="full" />
               ))}
               {members.length > 3 && (
                 <span className="text-xs text-gray-400 dark:text-gray-600">+{members.length - 3}</span>
               )}
+              {/* Member info dropdown */}
+              <div className="relative" ref={memberMenuRef}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMemberMenu((v) => !v); }}
+                  className="px-1 py-0.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 rounded ml-0.5"
+                >
+                  ···
+                </button>
+                {showMemberMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-gray-800/95 backdrop-blur-sm border border-gray-200 dark:border-gray-700/50 rounded-xl shadow-xl z-20 overflow-hidden">
+                    <div className="flex items-center justify-between px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700/50">
+                      <span>群成员 · {members.length} 人</span>
+                      <button
+                        onClick={() => {
+                          setShowMemberMenu(false);
+                          onManageMembers?.(conversationId);
+                        }}
+                        className="flex-shrink-0 px-1.5 py-0.5 text-blue-500 hover:text-blue-400 font-medium rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                      >
+                        ➕ 新增
+                      </button>
+                    </div>
+                    {members.map((m) => {
+                      const caps = memberCapabilities[m.agentId] ?? [];
+                      return (
+                        <div
+                          key={m.agentId}
+                          className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                        >
+                          <AgentBadge agentName={m.agentName} adapterKind={m.adapterKind} size="sm" rounded="full" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                              {m.agentName}
+                              {m.role === "host" && (
+                                <span className="ml-1 text-[10px] text-blue-500 align-middle">👑</span>
+                              )}
+                            </div>
+                            {caps.length > 0 && (
+                              <div className="flex flex-wrap gap-0.5 mt-0.5">
+                                {caps.map((cap) => (
+                                  <span
+                                    key={cap}
+                                    className="inline-block px-1 py-0 text-[10px] rounded bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400"
+                                  >
+                                    {formatCapability(cap)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => {
+                              removeMember(conversationId, m.agentId)
+                                .then(() => {
+                                  setMembers((prev) => prev.filter((x) => x.agentId !== m.agentId));
+                                  onRefreshList();
+                                })
+                                .catch(() => {});
+                            }}
+                            className="text-xs text-red-400 hover:text-red-600 dark:hover:text-red-300 flex-shrink-0 px-1.5 py-0.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          >
+                            ❌️ 移除
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+              </div>
             </div>
           )}
           {running && (
@@ -696,6 +807,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
         onApprove={handleApprovePermission}
         onDeny={handleDenyPermission}
       />
+
     </>
   );
 }

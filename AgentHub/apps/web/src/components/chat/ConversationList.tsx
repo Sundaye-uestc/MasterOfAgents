@@ -15,6 +15,7 @@ import {
 } from "../../lib/api.js";
 import { AgentPicker } from "./AgentPicker.js";
 import { AgentBadge } from "./AgentBadge.js";
+import { GroupAvatar } from "./GroupAvatar.js";
 
 export interface AgentInfo {
   agentId: string;
@@ -35,6 +36,9 @@ interface Props {
   agentMap: Record<string, AgentInfo>;
   onAgentMapLoaded: (map: Record<string, AgentInfo>) => void;
   refreshKey: number;
+  userAvatar?: string | null;
+  manageMembersConvId?: string | null;
+  onManageMembersClose?: () => void;
 }
 
 export function ConversationList({
@@ -50,6 +54,9 @@ export function ConversationList({
   agentMap,
   onAgentMapLoaded,
   refreshKey,
+  userAvatar,
+  manageMembersConvId,
+  onManageMembersClose,
 }: Props) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -66,7 +73,7 @@ export function ConversationList({
   const [agents, setAgents] = useState<AgentRow[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [manageMembersConvId, setManageMembersConvId] = useState<string | null>(null);
+  const [membersMap, setMembersMap] = useState<Record<string, Array<{ agentId: string; agentName: string; adapterKind: string }>>>({});
   const [manageMembersList, setManageMembersList] = useState<Array<{ agentId: string; agentName: string; role: string; adapterKind: string }>>([]);
   const [manageMembersAgents, setManageMembersAgents] = useState<AgentRow[]>([]);
   const [addMemberAgentId, setAddMemberAgentId] = useState("");
@@ -89,6 +96,37 @@ export function ConversationList({
       .then(onLoaded)
       .catch(() => {});
   }, [refreshKey, debouncedSearch]);
+
+  // Fetch members for group conversations so we can show GroupAvatar
+  useEffect(() => {
+    const groupConvs = conversations.filter((c) => c.type === "group");
+    if (groupConvs.length === 0) return;
+    Promise.all(
+      groupConvs.map((c) =>
+        listMembers(c.id)
+          .then((m) => [c.id, m] as const)
+          .catch(() => [c.id, []] as const)
+      )
+    ).then((pairs) => {
+      const map: Record<string, Array<{ agentId: string; agentName: string; adapterKind: string }>> = {};
+      for (const [id, m] of pairs) {
+        map[id as string] = m as Array<{ agentId: string; agentName: string; adapterKind: string }>;
+      }
+      setMembersMap(map);
+    });
+  }, [conversations]);
+
+  // Load data when manageMembersConvId changes (triggered from ChatArea header)
+  useEffect(() => {
+    if (!manageMembersConvId) return;
+    Promise.all([listMembers(manageMembersConvId), listAgents()])
+      .then(([members, agents]) => {
+        setManageMembersList(members);
+        setManageMembersAgents(agents);
+        setAddMemberAgentId("");
+      })
+      .catch(() => {});
+  }, [manageMembersConvId]);
 
   // Close menu on outside click
   useEffect(() => {
@@ -215,7 +253,6 @@ export function ConversationList({
     setMenuOpenId(null);
     try {
       const [members, agents] = await Promise.all([listMembers(convId), listAgents()]);
-      setManageMembersConvId(convId);
       setManageMembersList(members);
       setManageMembersAgents(agents);
       setAddMemberAgentId("");
@@ -286,16 +323,18 @@ export function ConversationList({
             >
               <button
                 onClick={() => !isEditing && onSelect(conv.id)}
-                className="flex-1 text-left px-2 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800/30 rounded-lg transition-colors min-w-0"
+                className="flex items-center gap-2 flex-1 text-left px-2 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800/30 rounded-lg transition-colors min-w-0"
               >
-                <div className="flex items-center gap-2">
-                  {agent && (
-                    <AgentBadge
-                      agentName={agent.agentName}
-                      adapterKind={agent.adapterKind}
-                      size="sm"
-                    />
-                  )}
+                {conv.type === "group" ? (
+                  <GroupAvatar members={membersMap[conv.id] ?? []} userAvatar={userAvatar} size="sm" />
+                ) : agent ? (
+                  <AgentBadge
+                    agentName={agent.agentName}
+                    adapterKind={agent.adapterKind}
+                    size="sm"
+                  />
+                ) : null}
+                <div className="min-w-0 flex-1">
                   {isEditing ? (
                     <input
                       ref={editInputRef}
@@ -311,19 +350,19 @@ export function ConversationList({
                       className="bg-gray-100 dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-1 py-0.5 rounded border border-blue-500 focus:outline-none w-full"
                     />
                   ) : (
-                    <span className="text-sm text-gray-700 dark:text-gray-200 truncate">
+                    <span className="text-sm text-gray-700 dark:text-gray-200 truncate block">
                       {conv.pinnedAt && <span className="mr-1">📌</span>}
                       {conv.title}
                     </span>
                   )}
-                </div>
-                <div className="flex items-center gap-2 mt-0.5 ml-7">
-                  <span className="text-xs text-gray-400 dark:text-gray-500">
-                    {conv.type === "direct" ? "单聊" : "群聊"}
-                  </span>
-                  {conv.status === "archived" && (
-                    <span className="text-xs text-yellow-600">已归档</span>
-                  )}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      {conv.type === "direct" ? "单聊" : "群聊"}
+                    </span>
+                    {conv.status === "archived" && (
+                      <span className="text-xs text-yellow-600">已归档</span>
+                    )}
+                  </div>
                 </div>
               </button>
 
@@ -556,37 +595,29 @@ export function ConversationList({
             {/* Add member */}
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">添加成员</p>
-              <div className="flex gap-2">
-                <select
-                  value={addMemberAgentId}
-                  onChange={(e) => setAddMemberAgentId(e.target.value)}
-                  className="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">选择 Agent...</option>
-                  {manageMembersAgents
-                    .filter((a) => !manageMembersList.some((m) => m.agentId === a.id))
-                    .map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} ({a.adapterKind})
-                      </option>
-                    ))}
-                </select>
-                <button
-                  onClick={handleAddMember}
-                  disabled={!addMemberAgentId}
-                  className="px-3 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  添加
-                </button>
+              <div className="max-h-48 overflow-y-auto mb-3">
+                <AgentPicker
+                  agents={manageMembersAgents.filter((a) => !manageMembersList.some((m) => m.agentId === a.id))}
+                  selectedIds={addMemberAgentId ? [addMemberAgentId] : []}
+                  onChange={(ids) => setAddMemberAgentId(ids[0] ?? "")}
+                  multiSelect={false}
+                />
               </div>
             </div>
 
-            <div className="flex justify-center mt-4">
+            <div className="flex gap-2 mt-4">
               <button
-                onClick={() => setManageMembersConvId(null)}
-                className="px-4 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded"
+                onClick={() => onManageMembersClose?.()}
+                className="flex-1 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors"
               >
                 关闭
+              </button>
+              <button
+                onClick={handleAddMember}
+                disabled={!addMemberAgentId}
+                className="flex-1 px-3 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                添加
               </button>
             </div>
           </div>
