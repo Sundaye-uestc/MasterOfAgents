@@ -46,6 +46,7 @@ export function WorkspacePanel({
   const [actingId, setActingId] = useState<string | null>(null);
   const [showDirInput, setShowDirInput] = useState(false);
   const [dirInput, setDirInput] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
   const changesRef = useRef<HTMLDivElement>(null);
 
   // Resize state
@@ -217,15 +218,37 @@ export function WorkspacePanel({
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 text-xs py-2 rounded-t-lg transition-colors ${
+            className={`flex-1 text-xs py-2 rounded-t-lg transition-colors relative ${
               activeTab === tab
                 ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-500/10"
                 : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/30"
             }`}
           >
-            {tab === "files" ? "文件" : tab === "snapshots" ? "快照" : "变更"}
+            <span>{tab === "files" ? "文件" : tab === "snapshots" ? "快照" : "变更"}</span>
             {tab === "changes" && pendingChanges.length > 0 && (
               <span className="ml-1 text-yellow-400">({pendingChanges.length})</span>
+            )}
+            {tab === "files" && activeTab === "files" && (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRefreshing(true);
+                  workspaceRefresh().finally(() => setRefreshing(false));
+                }}
+                title="刷新文件列表"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2"
+              >
+                <svg
+                  className={`w-3 h-3 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors ${refreshing ? "animate-spin pointer-events-none" : "cursor-pointer"}`}
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <path d="M14 8a6 6 0 0 1-12 0M2 8a6 6 0 0 1 12 0" />
+                  <path d="M14 2v4h-4M2 14v-4h4" />
+                </svg>
+              </span>
             )}
           </button>
         ))}

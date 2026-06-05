@@ -59,7 +59,7 @@ export function ConversationList({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showNewModal, setShowNewModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [newRootPath, setNewRootPath] = useState("");
+  const [newRootPath, setNewRootPath] = useState("D:/Projects/MasterOfAgents/Test");
   const [newAgentId, setNewAgentId] = useState("default-claude");
   const [isGroupChat, setIsGroupChat] = useState(false);
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
@@ -127,7 +127,7 @@ export function ConversationList({
     } catch { /* ignore */ }
     setShowNewModal(true);
     setNewTitle("");
-    setNewRootPath("");
+    setNewRootPath("D:/Projects/MasterOfAgents/Test");
     setNewAgentId("default-claude");
     setIsGroupChat(false);
     setSelectedAgentIds([]);
