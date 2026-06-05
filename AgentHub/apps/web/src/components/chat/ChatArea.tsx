@@ -134,20 +134,18 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
     listArtifactsByConversation(conversationId)
       .then((arts) => {
         const grouped: Record<string, ArtifactRow[]> = {};
-        const seenNames = new Set<string>();
-        // Sort by createdAt ASC so the FIRST agent to create each file
-        // "owns" it — avoids later runs stealing artifacts from earlier ones.
         const sorted = [...arts].sort(
           (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
         for (const art of sorted) {
-          // Cross-run dedup by name: same filename discovered by multiple
-          // concurrent agents only appears under the earliest run.
-          if (seenNames.has(art.name)) continue;
-          seenNames.add(art.name);
           const rid = art.runId ?? "";
           if (!grouped[rid]) grouped[rid] = [];
-          grouped[rid].push(art);
+          // Intra-run dedup by id only — same file modified in different runs
+          // should appear under each run. writeScope conflict detection in the
+          // orchestrator already prevents concurrent agents from touching the
+          // same file, so cross-run filename dedup is unnecessary.
+          if (grouped[rid]!.some((a) => a.id === art.id)) continue;
+          grouped[rid]!.push(art);
         }
         setRunArtifacts(grouped);
       })
@@ -292,17 +290,10 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
               updated[idx] = fc;
               return { ...prev, [runId]: updated };
             }
-            // Intra-run dedup
+            // Intra-run dedup by (path, changeType) — avoid showing the
+            // same file change twice within a single run.
             const sameKey = existing.find((c) => c.path === fc.path && c.changeType === fc.changeType);
             if (sameKey) return prev;
-            // Cross-run dedup: check ALL other runs for the same (path, changeType)
-            for (const otherRunId of Object.keys(prev)) {
-              if (otherRunId === runId) continue;
-              const other = prev[otherRunId] ?? [];
-              if (other.some((c) => c.path === fc.path && c.changeType === fc.changeType)) {
-                return prev; // belongs to another agent's run — skip
-              }
-            }
             return { ...prev, [runId]: [fc, ...existing] };
           });
           break;
@@ -313,15 +304,8 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           setRunArtifacts((prev) => {
             const runId = art.runId ?? "";
             const existing = prev[runId] ?? [];
-            // Intra-run dedup by id
+            // Intra-run dedup by id only
             if (existing.some((a) => a.id === art.id)) return prev;
-            // Cross-run dedup by name: if another run already owns this
-            // filename, skip — the file was discovered by a different agent
-            // that finished earlier on the same workspace.
-            for (const otherRunId of Object.keys(prev)) {
-              if (otherRunId === runId) continue;
-              if (prev[otherRunId]!.some((a) => a.name === art.name)) return prev;
-            }
             return { ...prev, [runId]: [art, ...existing] };
           });
           break;
