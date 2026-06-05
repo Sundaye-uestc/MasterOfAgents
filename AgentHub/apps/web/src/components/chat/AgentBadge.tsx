@@ -8,10 +8,12 @@ interface AgentBadgeProps {
   avatar?: string;
   size?: "sm" | "md" | "lg";
   showName?: boolean;
+  /** @default "md" — "md" for sidebar (square-ish), "full" for header (round) */
+  rounded?: "md" | "full";
 }
 
 const sizeClasses: Record<string, string> = {
-  sm: "w-5 h-5 text-[10px]",
+  sm: "w-7 h-7 text-[10px]",
   md: "w-7 h-7 text-xs",
   lg: "w-9 h-9 text-sm",
 };
@@ -23,16 +25,17 @@ const adapterColors: Record<string, string> = {
   custom: "border-yellow-500 bg-yellow-900/30 text-yellow-300",
 };
 
-const logos: Record<string, string> = {
+export const logos: Record<string, string> = {
   "claude-code": "/agents/claude-code.png",
   codex: "/agents/codex.png",
   opencode: "/agents/opencode.png",
 };
 
-export function AgentBadge({ agentName, adapterKind, avatar, size = "sm", showName = false }: AgentBadgeProps) {
+export function AgentBadge({ agentName, adapterKind, avatar, size = "sm", showName = false, rounded = "md" }: AgentBadgeProps) {
   const sz = sizeClasses[size] ?? sizeClasses.sm;
   const colors = adapterColors[adapterKind] ?? "border-gray-500 bg-gray-700 text-gray-300";
   const logoSrc = avatar ?? logos[adapterKind];
+  const round = rounded === "full" ? "rounded-full" : "rounded-md";
 
   return (
     <span className="inline-flex items-center gap-1.5 flex-shrink-0">
@@ -40,12 +43,12 @@ export function AgentBadge({ agentName, adapterKind, avatar, size = "sm", showNa
         <img
           src={logoSrc}
           alt={agentName}
-          className={`${sz} rounded-full object-cover border-2 ${colors.split(" ")[0]}`}
+          className={`${sz} ${round} object-cover border-2 ${colors.split(" ")[0]}`}
           title={agentName}
         />
       ) : (
         <span
-          className={`inline-flex items-center justify-center rounded-full border-2 font-bold ${sz} ${colors}`}
+          className={`inline-flex items-center justify-center ${round} border-2 font-bold ${sz} ${colors}`}
           title={agentName}
         >
           {agentName.slice(0, 2).toUpperCase()}
