@@ -158,13 +158,47 @@ AI 生成的能力标签改为中文 + emoji 前缀，3~5 个：
 |---|---|
 | `b63c4e5` | Docs: update 4.5 plan — modal instead of route, Agent管理 naming, enabled filter |
 | `3ff39f7` | Feat: 4.5 User Agent Management — full-stack custom agent CRUD |
+| `9e953e3` | Fix: PPT allow-list filter + capability emoji fallback + TS errors |
+| `4f9d480` | Docs: add bug items — PPT preview after edit, agent data loss on refresh |
 
 ---
 
-## 九、待提交修复
+## 九、群聊 Planner 修复（Phase 6 追加）
 
-| 文件 | 修复内容 |
+### 9.1 ESM Hoisting API Key 修复 — Planner 永远失败的根因
+
+`config.ts` 的 `resolveApiKey()` 在 ESM import 时（`dotenv.config()` 之前）执行，API key 为空 → Planner 始终 fallback 到 `degradedPlan`。**与 `AgentBuilderService` 完全相同的 bug。**
+
+**修复**：`PlannerService` 构造函数重写，绕过 `config.*` 静态值，直接从 `process.env` 运行时读取。新增 `resolveEnvApiKey()` 支持 8 个 provider。移除 `config` import。
+
+### 9.2 Planner Prompt 强化
+
+| 改动 | 说明 |
 |---|---|
-| `apps/server/src/services/agent-builder.service.ts` | TS 错误修复：`def` possibly undefined → non-null assertion |
-| `apps/server/src/services/agent-runtime.service.ts` | PPT 白名单过滤：`isPPTMode` 检测 → 仅展示 .pptx 文件 |
-| `apps/web/src/components/chat/ChatArea.tsx` | 能力标签 emoji 检测：`startsWithEmoji` → 跳过 fallback `⚡` |
+| Agent 能力附带 | `名称（ID）` → `名称（ID）— 擅长：xxx、xxx` |
+| 无 @ 分配规则 | "用户未 @ 时，必须将工作分配给所有相关 Agent" |
+| 能力匹配规则 | "根据 Agent 的能力描述，分配给最擅长该领域的 Agent" |
+| 输出中文化 | 首条关键规则："所有输出字段必须使用中文" |
+| 任务边界 | "每个 task 的 description 只写该 Agent 自己要做的事"、"注明只做 XXX，不要做 YYY" |
+| `preprocessMentions` | 无 @ 时注入提示要求自行分配 Agent |
+
+### 9.3 degradedPlan 策略
+
+- **之前**：每个 Agent 收到相同完整 prompt → 所有人做相同工作（重复）
+- **之后**：只给第一个 Agent 单任务。宁可少做不重复；Planner prompt 优化后 fallback 极低
+
+### 9.4 Agent 名称显示
+
+`orchestrator.service.ts` 两处：计划摘要 `任务1 → default-codex` → `任务1 → Codex`；任务完成后从 DB 查真实名称而非用 ID
+
+### 9.5 前端：移除行内文件变更卡片
+
+`ChatArea.tsx` 移除 `InlineDiffCard` 渲染块（工作区面板已覆盖）
+
+---
+
+## 十、待验证
+
+- [ ] Planner LLM 正常工作时，验证分工正确且输出中文
+- [ ] Planner LLM 失败时，验证 degradedPlan 单 Agent 执行不重复
+- [ ] 非并行任务（有依赖关系）：DAG 调度正确性、文件传递、writeScope 冲突

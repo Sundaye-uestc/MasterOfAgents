@@ -4,7 +4,6 @@
 // ============================================================
 
 import type { TaskPlan, TaskPlanItem } from "@agenthub/shared";
-import { config } from "../lib/config.js";
 import { newId } from "../lib/ids.js";
 
 interface PlannerInput {
@@ -20,10 +19,54 @@ export class PlannerService {
   private apiFormat: "anthropic" | "openai";
 
   constructor(options?: { model?: string; apiUrl?: string; apiKey?: string; apiFormat?: "anthropic" | "openai" }) {
-    this.model = options?.model ?? config.plannerModel;
-    this.apiUrl = options?.apiUrl ?? config.plannerApiUrl;
-    this.apiKey = options?.apiKey ?? config.plannerApiKey;
-    this.apiFormat = options?.apiFormat ?? config.plannerApiFormat;
+    // Resolve all config from process.env at construction time (dotenv already loaded).
+    // Do NOT use config.plannerApiKey as default — it was evaluated at ESM import time
+    // before dotenv.config() ran and is always empty.
+    const provider = process.env["PLANNER_PROVIDER"] ?? "anthropic";
+    const isOpenAI = ["dashscope", "deepseek", "dobrain", "moonshot", "openai", "openrouter", "glm"].includes(provider);
+
+    const providerDefaults: Record<string, { endpoint: string; model: string }> = {
+      anthropic:  { endpoint: "https://api.anthropic.com/v1/messages",               model: "claude-sonnet-4-6-20250514" },
+      dashscope:  { endpoint: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", model: "qwen-max" },
+      deepseek:   { endpoint: "https://api.deepseek.com/v1/chat/completions",        model: "deepseek-chat" },
+      dobrain:    { endpoint: "https://api.dobrain.com/v1/chat/completions",         model: "dobrain-v1" },
+      moonshot:   { endpoint: "https://api.moonshot.cn/v1/chat/completions",         model: "moonshot-v1-8k" },
+      openai:     { endpoint: "https://api.openai.com/v1/chat/completions",          model: "gpt-4o" },
+      openrouter: { endpoint: "https://openrouter.ai/api/v1/chat/completions",       model: "anthropic/claude-sonnet-4" },
+      glm:        { endpoint: "https://open.bigmodel.cn/api/paas/v4/chat/completions", model: "glm-4-plus" },
+    };
+    const def = providerDefaults[provider] ?? providerDefaults["anthropic"]!;
+
+    this.model     = options?.model     || process.env["PLANNER_MODEL"]  || def.model;
+    this.apiUrl    = options?.apiUrl    || process.env["PLANNER_API_URL"] || def.endpoint;
+    this.apiKey    = options?.apiKey    || this.resolveEnvApiKey();
+    this.apiFormat = options?.apiFormat ?? (isOpenAI ? "openai" : "anthropic");
+  }
+
+  /** Re-read API key from process.env at runtime (dotenv is loaded by now) */
+  private resolveEnvApiKey(): string {
+    const provider = process.env["PLANNER_PROVIDER"] ?? "anthropic";
+    const providerEnvKeys: Record<string, string> = {
+      anthropic: "ANTHROPIC_API_KEY",
+      dashscope: "DASHSCOPE_API_KEY",
+      deepseek: "DEEPSEEK_API_KEY",
+      dobrain: "DOBRAIN_API_KEY",
+      moonshot: "MOONSHOT_API_KEY",
+      openai: "OPENAI_API_KEY",
+      openrouter: "OPENROUTER_API_KEY",
+      glm: "GLM_API_KEY",
+    };
+    const candidates = [
+      providerEnvKeys[provider],
+      "PLANNER_API_KEY",
+      "ANTHROPIC_API_KEY",
+    ].filter(Boolean) as string[];
+
+    for (const key of candidates) {
+      const val = process.env[key];
+      if (val && val.length > 10 && !val.startsWith("your-")) return val;
+    }
+    return "";
   }
 
   async generateTaskPlan(input: PlannerInput): Promise<TaskPlan> {
@@ -150,22 +193,31 @@ export class PlannerService {
   }
 
   private degradedPlan(input: PlannerInput): TaskPlan {
-    const firstAgent = input.availableAgents[0];
+    // When the Planner LLM fails, fall back to a single-agent plan.
+    // We intentionally only assign the first agent — assigning ALL agents
+    // the same full prompt causes every agent to duplicate the same work.
+    // The improved Planner prompt makes this fallback rare.
+    const firstAgent = input.availableAgents[0] ?? {
+      id: "default-claude",
+      name: "Claude Code",
+      capabilities: [],
+    };
+
     const task: TaskPlanItem = {
       id: newId(),
-      title: "Execute request directly",
+      title: "直接执行用户请求",
       description: input.prompt,
-      agentId: firstAgent?.id ?? "default-claude",
+      agentId: firstAgent.id,
       dependencies: [],
-      expectedOutput: "Complete the requested task",
-      riskLevel: "low",
+      expectedOutput: "完成用户请求的任务",
+      riskLevel: "low" as const,
       writeScope: [],
     };
 
     return {
       planId: newId(),
       tasks: [task],
-      reasoning: "Planner fell back to single-task execution after failing to generate a valid plan.",
+      reasoning: `Planner 规划失败，降级为单 Agent（${firstAgent.name}）直接执行。`,
       estimatedRounds: 1,
     };
   }
@@ -181,7 +233,12 @@ export class PlannerService {
     }
 
     if (mentions.length === 0) {
-      return input;
+      // No @mentions: inject hint telling Planner to distribute to ALL agents
+      const allIds = input.availableAgents.map((a) => a.id).join(", ");
+      return {
+        ...input,
+        prompt: `${input.prompt}\n\n[用户未指定 Agent。请将任务分解并分配给所有可用的、与任务相关的 Agent（${allIds}），让每个 Agent 都有机会参与协作。不要把所有工作只分配给某一个 Agent。]`,
+      };
     }
 
     // Match mentions to available agents (case-insensitive partial match)
@@ -215,8 +272,11 @@ export class PlannerService {
   }
 
   private buildPlannerPrompt(input: PlannerInput, errorContext: string): string {
-    const agentListSimple = input.availableAgents
-      .map((a) => `- ${a.name}（ID: ${a.id}）`)
+    const agentList = input.availableAgents
+      .map((a) => {
+        const caps = a.capabilities.length > 0 ? ` — 擅长：${a.capabilities.join("、")}` : "";
+        return `- ${a.name}（ID: ${a.id}）${caps}`;
+      })
       .join("\n");
 
     const historySection = input.conversationHistory
@@ -227,9 +287,10 @@ export class PlannerService {
       ? `\n\n【重要】上轮输出无效：${errorContext}\n修正后重新输出。`
       : "";
 
-    return `你的唯一任务是：将以下用户请求拆分为子任务。
+    return `你的唯一任务是：将以下用户请求拆分为子任务，分配给最合适的 Agent。
 
-可用 Agent：${agentListSimple}
+可用 Agent（含能力描述）：
+${agentList}
 
 用户请求：${input.prompt}${historySection}
 
@@ -238,11 +299,11 @@ export class PlannerService {
   "tasks": [
     {
       "id": "task-1",
-      "title": "任务标题（中文）",
-      "description": "详细描述（中文，原样传达用户需求给 Agent）",
+      "title": "任务标题（中文，简短概括该子任务）",
+      "description": "仅描述该 Agent 需要完成的具体子任务（中文）。不要让此 Agent 做其他 Agent 的任务。",
       "agentId": "上述 Agent ID",
       "dependencies": [],
-      "expectedOutput": "期望产出（中文）",
+      "expectedOutput": "该 Agent 应产出的具体成果（中文，只描述它自己的产出）",
       "riskLevel": "low",
       "writeScope": []
     }
@@ -252,8 +313,13 @@ export class PlannerService {
 }
 
 关键规则：
+- 所有输出字段必须使用中文（title、description、expectedOutput、reasoning）。
 - 直接执行用户请求。不要分析 Agent 本身，不要讨论 Agent 能力。
 - 用户 @N 个 Agent → 至少 N 个任务，严格对应。
+- 用户未 @ 时，必须将工作分配给所有相关 Agent，不要把所有任务都交给同一个 Agent。
+- 根据 Agent 的能力描述，将子任务分配给最擅长该领域的 Agent。
+- **每个 task 的 description 只写该 Agent 自己要做的事，严禁包含其他 Agent 的任务。**
+- description 中注明"只做 XXX，不要做 YYY"，明确边界。
 - 无依赖间用空数组 []。
 - riskLevel 只填 "low"/"medium"/"high"。${errorSection}
 

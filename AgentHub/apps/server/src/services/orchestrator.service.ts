@@ -144,7 +144,8 @@ export class OrchestratorService {
     this.activeOrchestrations.set(runId, state);
 
     // Create a compact system message with the plan summary
-    const planSummary = remappedPlan.tasks.map((t: TaskPlanItem, i: number) => `${i + 1}. ${t.title} → ${t.agentId}`).join("  ·  ");
+    const agentNameMap = new Map(agentConfigs.map((a) => [a.id, a.name]));
+    const planSummary = remappedPlan.tasks.map((t: TaskPlanItem, i: number) => `${i + 1}. ${t.title} → ${agentNameMap.get(t.agentId) ?? t.agentId}`).join("  ·  ");
     const reasoningLine = remappedPlan.reasoning ? ` — ${remappedPlan.reasoning}` : "";
     await this.chatService.createMessage({
       conversationId,
@@ -483,11 +484,16 @@ export class OrchestratorService {
     const run2 = db2.select().from(schema.runs).where(eq(schema.runs.id, params.runId)).get() as any;
     const convId = run2?.conversationId ?? run2?.conversation_id;
 
-    // Build agent configs from the plan tasks
+    // Build agent configs from the plan tasks — look up real names from DB
     const agentIds = [...new Set(state.plan.tasks.map((t) => t.agentId))];
+    const agentRows = db2.select().from(schema.agents).all() as any[];
+    const agentNameById = new Map<string, string>();
+    for (const row of agentRows) {
+      agentNameById.set(row.id, row.name);
+    }
     const agentConfigs: AgentConfig[] = agentIds.map((id) => ({
       id,
-      name: id,
+      name: agentNameById.get(id) ?? id,
       platform: "claude-code" as const,
       status: "online" as const,
       capabilities: [],

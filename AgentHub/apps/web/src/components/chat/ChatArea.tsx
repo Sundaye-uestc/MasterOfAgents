@@ -716,27 +716,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
                     </div>
                   );
                 })()}
-                {/* Inline file changes (per-run, below agent message) */}
-                {isAgent && msg.runId && runFileChanges[msg.runId] && runFileChanges[msg.runId]!.length > 0 && (
-                  <div className="mt-1.5 space-y-1">
-                    {runFileChanges[msg.runId]!.map((change) => (
-                      <InlineDiffCard
-                        key={change.id}
-                        change={change}
-                        onUpdate={(updated) => {
-                          workspaceUpdateFileChange(updated);
-                          setRunFileChanges((prev) => {
-                            const list = prev[msg.runId!] ?? [];
-                            return {
-                              ...prev,
-                              [msg.runId!]: list.map((c) => c.id === updated.id ? updated : c),
-                            };
-                          });
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
+                {isAgent && msg.runId && runFileChanges[msg.runId] && runFileChanges[msg.runId]!.length > 0 && null /* inline file changes removed — workspace panel covers this */}
                 {/* Inline artifact cards (per-run, below agent message) */}
                 {isAgent && msg.runId && runArtifacts[msg.runId] && runArtifacts[msg.runId]!.length > 0 && (
                   <div className="mt-1.5 space-y-1">
