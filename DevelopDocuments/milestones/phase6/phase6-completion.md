@@ -195,10 +195,35 @@ AI 生成的能力标签改为中文 + emoji 前缀，3~5 个：
 
 `ChatArea.tsx` 移除 `InlineDiffCard` 渲染块（工作区面板已覆盖）
 
+### 9.6 Follow-up 消息重复计划修复
+
+**问题**：用户对执行结果提出 BUG 反馈后，Planner 再次输出与第一次完全相同的任务分解。例如用户说 "网页有 BUG ⚠️ JSON.parse error"，Planner 仍分解为 "创建 data.json + 创建 HTML"，导致 Claude 不必要地重新检查已存在的文件。
+
+**根因**：`startOrchestratedRun()` 每次都调用 Planner，prompt 固定为 "将以下用户请求拆分为子任务"，没有 "后续消息/反馈" 的上下文感知。
+
+**修复**（两个文件）：
+
+| 文件 | 改动 |
+|------|------|
+| `orchestrator.service.ts` | 调用 Planner 前查询该对话是否有已完成的编排 run。如果有，在 prompt 头部注入 `[上下文：这是用户对上一轮任务执行结果的反馈...]` 提示，引导 Planner 创建修复任务而非重新分解 |
+| `planner.service.ts` | 关键规则中加入对应指令，识别 `[上下文：...]` 标记 → 只创建修复/改进任务（通常 1 个），不重复已完成的任务 |
+
+### 9.7 DAG 依赖调度验证
+
+**测试用例**："先用一个 Agent 写 data.json，再用另一个 Agent 写 HTML 读取并展示成绩表格"
+
+| 验证项 | 结果 |
+|--------|------|
+| Planner 正确分解为 2 个任务并设置依赖（task-2 依赖 task-1） | ✅ |
+| 任务按 DAG 顺序执行（task-1 完成 → task-2 启动） | ✅ |
+| 文件传递正常（HTML 能读到 data.json） | ✅ |
+| Follow-up BUG 修复（只出 1 个修复任务，不再重复原始计划） | ✅ |
+
 ---
 
-## 十、待验证
+## 十、验证状态
 
-- [ ] Planner LLM 正常工作时，验证分工正确且输出中文
-- [ ] Planner LLM 失败时，验证 degradedPlan 单 Agent 执行不重复
-- [ ] 非并行任务（有依赖关系）：DAG 调度正确性、文件传递、writeScope 冲突
+- [x] Planner LLM 正常工作时，验证分工正确且输出中文
+- [x] Planner LLM 失败时，验证 degradedPlan 单 Agent 执行不重复
+- [x] 非并行任务（有依赖关系）：DAG 调度正确性、文件传递、writeScope 冲突
+- [x] Follow-up 消息处理：Planner 识别反馈/修复请求，不重复出原始计划

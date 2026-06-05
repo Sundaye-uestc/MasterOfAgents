@@ -320,6 +320,7 @@ ${agentList}
 - 根据 Agent 的能力描述，将子任务分配给最擅长该领域的 Agent。
 - **每个 task 的 description 只写该 Agent 自己要做的事，严禁包含其他 Agent 的任务。**
 - description 中注明"只做 XXX，不要做 YYY"，明确边界。
+- 如果用户请求中包含 "[上下文：这是用户对上一轮任务执行结果的反馈" 标记，说明这是后续反馈而非新任务。此时只创建修复/改进任务（通常 1 个），不要重新创建对话历史中已经完成的任务。
 - 无依赖间用空数组 []。
 - riskLevel 只填 "low"/"medium"/"high"。${errorSection}
 

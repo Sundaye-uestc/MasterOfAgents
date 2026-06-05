@@ -79,9 +79,34 @@ export class OrchestratorService {
       console.warn(`[orchestrator] Failed to build conversation history: ${(err as Error).message}`);
     }
 
+    // Detect if this is a follow-up message (conversation has prior completed/failed
+    // orchestrated runs). If so, inject a hint so the Planner creates a fix/refinement
+    // plan instead of re-decomposing the original task from scratch.
+    let effectivePrompt = prompt;
+    try {
+      const priorRuns = db.select()
+        .from(schema.runs)
+        .where(eq(schema.runs.conversationId, conversationId))
+        .all() as any[];
+      const hasPriorCompletedRun = priorRuns.some(
+        (r: any) => r.mode === "orchestrated" && (r.status === "completed" || r.status === "failed")
+      );
+      if (hasPriorCompletedRun) {
+        effectivePrompt = `[上下文：这是用户对上一轮任务执行结果的反馈或后续请求，不是全新的独立任务。请先判断用户意图——
+- 如果用户报告了 BUG、指出问题、要求修复 → 只创建 1 个修复/改进任务，分配给合适的 Agent
+- 如果用户要求微调、改进、补充 → 创建针对性的调整任务
+- 只有当用户提出完全不同的新需求时，才按正常流程分解
+关键：不要重复创建对话历史中已经完成的任务。]
+
+${prompt}`;
+      }
+    } catch (err) {
+      console.warn(`[orchestrator] Failed to check prior runs: ${(err as Error).message}`);
+    }
+
     const plan = this.parseMentionedTasks(prompt, agentConfigs) ??
       await this.planner.generateTaskPlan({
-        prompt,
+        prompt: effectivePrompt,
         availableAgents: agentInfos,
         conversationHistory,
       });
