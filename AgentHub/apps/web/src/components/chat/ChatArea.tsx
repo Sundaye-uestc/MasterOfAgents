@@ -315,12 +315,17 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
             const existing = prev[runId] ?? [];
             // Intra-run dedup by id
             if (existing.some((a) => a.id === art.id)) return prev;
-            // Cross-run dedup by name: if another run already owns this
-            // filename, skip — the file was discovered by a different agent
-            // that finished earlier on the same workspace.
+            // Cross-run dedup: only skip if same name + type exists in another run
+            // (multi-agent discovering same file). PPT modifications create new
+            // artifacts with the same name but different id → allow them.
             for (const otherRunId of Object.keys(prev)) {
               if (otherRunId === runId) continue;
-              if (prev[otherRunId]!.some((a) => a.name === art.name)) return prev;
+              const dup = prev[otherRunId]!.find((a) => a.name === art.name && a.type === art.type);
+              if (dup) {
+                // Same file, same type — but this is a NEW run's artifact (modification).
+                // Remove the old one from other run so the new one takes its place.
+                prev[otherRunId] = prev[otherRunId]!.filter((a) => a.id !== dup.id);
+              }
             }
             return { ...prev, [runId]: [art, ...existing] };
           });

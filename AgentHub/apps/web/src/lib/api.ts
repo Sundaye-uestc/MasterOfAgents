@@ -142,8 +142,9 @@ import type { ParsedAgentIntent, PolishPromptResponse } from "@agenthub/shared";
 
 // --- Agents ---
 
-export function listAgents() {
-  return request<AgentRow[]>("/agents");
+export function listAgents(enabledOnly?: boolean) {
+  const qs = enabledOnly ? "?enabled=true" : "";
+  return request<AgentRow[]>(`/agents${qs}`);
 }
 
 export function getAgent(id: string) {
