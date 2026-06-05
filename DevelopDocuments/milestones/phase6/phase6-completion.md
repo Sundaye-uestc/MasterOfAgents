@@ -2,6 +2,8 @@
 
 **完成日期：** 2026-06-05
 
+> **最后更新：** 2026-06-05 — 6.6 群聊头像拼图 + 成员管理优化
+
 ---
 
 ## 概述
@@ -28,6 +30,7 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | `apps/web/src/components/agent/AgentDeleteConfirmModal.tsx` | 删除确认 |
 | `apps/web/src/components/agent/AgentManagePanel.tsx` | 全屏管理面板 |
 | `apps/web/public/agents/opencode.png` | OpenCode 头像（从根目录复制） |
+| `apps/web/src/components/chat/GroupAvatar.tsx` | 群聊头像拼图组件（CSS Grid，类微信风格） |
 
 ### 1.2 修改文件
 
@@ -51,6 +54,10 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | `apps/web/src/components/agent/AgentEditModal.tsx` | 能力标签中文显示 |
 | `apps/web/src/components/agent/AgentManagePanel.tsx` | 能力标签中文显示 |
 | `apps/web/src/components/agent/AgentDetailModal.tsx` | 能力标签中文显示 |
+| `apps/web/src/components/chat/ChatArea.tsx` | Header 群成员 ··· 菜单（信息/移除/新增→管理面板） |
+| `apps/web/src/components/chat/ConversationList.tsx` | 群聊侧边栏 GroupAvatar + membersMap + 管理面板 AgentPicker 图形选人 |
+| `apps/web/src/components/chat/AgentBadge.tsx` | 导出 logos + rounded 属性（md/full）+ sm 尺寸调整 |
+| `start_dev.py` | 修复 Windows 端口检测死锁（回退到原始 time.sleep 方案） |
 
 ---
 
@@ -146,7 +153,41 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 
 ---
 
-## 五、关键架构决策
+## 五、群聊 UX 优化
+
+### 5.1 群聊头像拼图（GroupAvatar）
+
+CSS Grid 实现的微信风格群聊头像拼接：
+
+- **布局**：用户头像在首位，各 Agent 头像按顺序填充网格
+- **自适应**：≤2 人 → 2 列，≤4 人 → 2×2，5~9 人 → 3×3（最多 9 格）
+- **圆角策略**：侧边栏 `rounded-md`（方角），对话页 Header `rounded-full`（圆形）
+- **Agent 头像**：使用真实 logo（导出 `logos` 映射），自定义 Agent 用彩色底 + 首字母 fallback
+- **用户头像**：上传则用真实图片，否则 `👤` 占位
+
+| 位置 | 单聊 | 群聊 |
+|------|------|------|
+| 侧边栏 (ConversationList) | AgentBadge `rounded-md` | GroupAvatar `rounded-md` |
+| 对话页 Header | 不显示头像 | 横向排列圆形 AgentBadge `rounded-full` |
+
+### 5.2 群成员 ··· 菜单
+
+群聊 Header 中 Agent 头像右侧新增 `···` 按钮，点击弹出下拉菜单：
+
+- **成员列表**：每行显示圆形头像、名称、Host 标识👑、能力标签（emoji + 中文）
+- **❌️ 移除**：点击调用 `DELETE /conversations/:id/members/:agentId`，即时更新
+- **➕ 新增**：点击唤起已有的"管理群成员"面板（复用 ConversationList 中的模态框）
+- **管理面板**：添加成员使用 `AgentPicker` 图形化选择（替代 `<select>` 下拉），带头像/名称/类型，点击高亮蓝框 + ✓
+
+### 5.3 AgentBadge 增强
+
+- 导出 `logos` 映射 → `GroupAvatar` 复用 Agent 真实 logo
+- 新增 `rounded` 属性：`"md"`（方角，默认侧边栏）/ `"full"`（圆形，Header）
+- `sm` 尺寸从 `w-5` → `w-7`，与 GroupAvatar 容器对齐
+
+---
+
+## 六、关键架构决策
 
 | 决策 | 说明 |
 |---|---|
@@ -162,7 +203,7 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 
 ---
 
-## 六、验证结果
+## 七、验证结果
 
 | 验证项 | 状态 |
 |---|---|
@@ -189,10 +230,16 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | 新建对话默认工作目录 | ✅ |
 | 工作区文件刷新按钮 | ✅ |
 | TypeScript 编译 server + web | ✅ |
+| 群聊头像拼图（侧边栏 GroupAvatar + Header 圆形排列） | ✅ |
+| 群成员 ··· 菜单（信息/能力标签/移除） | ✅ |
+| 管理面板图形化选人（AgentPicker） | ✅ |
+| 管理面板添加/移除成员 | ✅ |
+| AgentBadge rounded 属性 + 尺寸对齐 | ✅ |
+| start_dev.py 修复（回退到简单 time.sleep 方案） | ✅ |
 
 ---
 
-## 七、Git 提交记录
+## 八、Git 提交记录
 
 | Commit | 说明 |
 |---|---|
@@ -205,3 +252,5 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | `34fdd05` | Docs: update todo + zyw merge (agent data loss fix, enabled filter) |
 | `376a708` (已回退) | Feat: OpenCode built-in agent + capability Chinese labels + workspace refresh + default working dir |
 | 未提交 | Fix: Planner casual conversation + Agent context isolation + intra-run artifact dedup |
+| 未提交 | Feat: 群聊头像拼图 + 成员管理菜单 + AgentPicker 图形化选人 + 管理面板复用 |
+| 未提交 | Fix: start_dev.py 回退到原始简单方案（time.sleep + netstat port cleanup） |
