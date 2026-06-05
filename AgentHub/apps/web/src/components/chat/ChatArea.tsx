@@ -141,12 +141,16 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
         for (const art of sorted) {
           const rid = art.runId ?? "";
           if (!grouped[rid]) grouped[rid] = [];
-          // Intra-run dedup by id only — same file modified in different runs
-          // should appear under each run. writeScope conflict detection in the
-          // orchestrator already prevents concurrent agents from touching the
-          // same file, so cross-run filename dedup is unnecessary.
-          if (grouped[rid]!.some((a) => a.id === art.id)) continue;
-          grouped[rid]!.push(art);
+          // Intra-run dedup by path (latest wins) — if two tasks within the same
+          // orchestrated run touch the same file (e.g. Agent A creates, Agent B
+          // refines), only show the latest version. Different runs each keep their
+          // own copy so file preview refreshes across rounds.
+          const existingIdx = grouped[rid]!.findIndex((a) => a.path === art.path);
+          if (existingIdx >= 0) {
+            grouped[rid]![existingIdx] = art; // replace with newer
+          } else {
+            grouped[rid]!.push(art);
+          }
         }
         setRunArtifacts(grouped);
       })
@@ -305,8 +309,13 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           setRunArtifacts((prev) => {
             const runId = art.runId ?? "";
             const existing = prev[runId] ?? [];
-            // Intra-run dedup by id only
-            if (existing.some((a) => a.id === art.id)) return prev;
+            // Intra-run dedup by path: replace older version of same file
+            const samePathIdx = existing.findIndex((a) => a.path === art.path);
+            if (samePathIdx >= 0) {
+              const updated = [...existing];
+              updated[samePathIdx] = art;
+              return { ...prev, [runId]: updated };
+            }
             return { ...prev, [runId]: [art, ...existing] };
           });
           break;

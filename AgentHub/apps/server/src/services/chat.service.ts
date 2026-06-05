@@ -426,6 +426,9 @@ export class ChatService {
     let totalChars = 0;
 
     const addMsg = (msg: any) => {
+      // Skip orchestrator system messages (plan summaries, completion notices)
+      // — they leak the full task plan to individual agents and cause scope creep.
+      if (msg.role === "system" && msg.runId) return;
       const content = (msg.content ?? "").trim();
       if (!content) return;
       if (totalChars + content.length > maxChars) return;

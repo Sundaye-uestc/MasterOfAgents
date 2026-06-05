@@ -233,11 +233,11 @@ export class PlannerService {
     }
 
     if (mentions.length === 0) {
-      // No @mentions: inject hint telling Planner to distribute to ALL agents
-      const allIds = input.availableAgents.map((a) => a.id).join(", ");
+      // No @mentions: inject a light hint — don't force "distribute to ALL agents"
+      // because casual conversation (greetings, small talk) shouldn't be taskified.
       return {
         ...input,
-        prompt: `${input.prompt}\n\n[用户未指定 Agent。请将任务分解并分配给所有可用的、与任务相关的 Agent（${allIds}），让每个 Agent 都有机会参与协作。不要把所有工作只分配给某一个 Agent。]`,
+        prompt: `${input.prompt}\n\n[用户未指定 Agent。如果用户的请求确实需要多 Agent 协作完成编程/文件操作等任务，请根据能力将任务分配给最合适的 Agent（们）；如果只是闲聊、问候、感谢或询问状态，为每个 Agent 各创建一个简单的回复任务，不要涉及任何代码或技术操作。]`,
       };
     }
 
@@ -315,8 +315,9 @@ ${agentList}
 关键规则：
 - 所有输出字段必须使用中文（title、description、expectedOutput、reasoning）。
 - 直接执行用户请求。不要分析 Agent 本身，不要讨论 Agent 能力。
+- **首先判断用户意图**：如果用户消息是纯闲聊（问候、打招呼、感谢、询问"在吗"/"你好"等），不涉及任何实际编程/文件操作/代码任务 → 为每个可用的 Agent 各创建 1 个 task，标题如"回复用户问候"，description 为"自然地回复用户的问候/消息，不要写代码，不要做任何技术操作"，所有 task 无依赖、riskLevel 为 "low"。不要强行分解为代码相关任务。
 - 用户 @N 个 Agent → 至少 N 个任务，严格对应。
-- 用户未 @ 时，必须将工作分配给所有相关 Agent，不要把所有任务都交给同一个 Agent。
+- 用户未 @ 时，如果确实是编程任务，将工作分配给最合适的 1~2 个 Agent，不要过度拆分。
 - 根据 Agent 的能力描述，将子任务分配给最擅长该领域的 Agent。
 - **每个 task 的 description 只写该 Agent 自己要做的事，严禁包含其他 Agent 的任务。**
 - description 中注明"只做 XXX，不要做 YYY"，明确边界。
