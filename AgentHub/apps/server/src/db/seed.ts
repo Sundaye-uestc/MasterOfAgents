@@ -18,6 +18,13 @@ const DEFAULT_AGENTS = [
     avatar: "/agents/codex.png",
     capabilities: ["code-generation", "code-review", "documentation"],
   },
+  {
+    id: "default-opencode",
+    name: "OpenCode",
+    adapterKind: "opencode",
+    avatar: "/agents/opencode.png",
+    capabilities: ["code-generation", "debugging", "refactoring", "code-review"],
+  },
 ];
 
 export function seedAgents() {

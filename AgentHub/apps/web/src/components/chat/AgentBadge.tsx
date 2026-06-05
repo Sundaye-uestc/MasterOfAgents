@@ -26,6 +26,7 @@ const adapterColors: Record<string, string> = {
 const logos: Record<string, string> = {
   "claude-code": "/agents/claude-code.png",
   codex: "/agents/codex.png",
+  opencode: "/agents/opencode.png",
 };
 
 export function AgentBadge({ agentName, adapterKind, avatar, size = "sm", showName = false }: AgentBadgeProps) {
