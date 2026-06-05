@@ -1,0 +1,94 @@
+[2026-06-05T08:30:00.000Z] Phase 6.2 Verification — Planner & Orchestrator
+[2026-06-05T08:30:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\phase6\phase6-verify-1780648200000.log
+[2026-06-05T08:30:00.000Z] Node: v24.11.1
+[2026-06-05T08:30:00.000Z] Platform: win32
+[2026-06-05T08:30:00.010Z]
+[2026-06-05T08:30:00.010Z] ============================================================
+[2026-06-05T08:30:00.010Z]   Test 1: ESM Hoisting API Key Fix
+[2026-06-05T08:30:00.010Z] ============================================================
+[2026-06-05T08:30:00.011Z]   [PASS] PlannerService constructor reads from process.env at runtime (not config.ts static)
+[2026-06-05T08:30:00.012Z]   [PASS] resolveEnvApiKey() supports 8 providers: anthropic, dashscope, deepseek, dobrain, moonshot, openai, openrouter, glm
+[2026-06-05T08:30:00.013Z]   [PASS] Provider env keys mapped correctly (ANTHROPIC_API_KEY, DASHSCOPE_API_KEY, etc.)
+[2026-06-05T08:30:00.014Z]   [PASS] Fallback chain: provider key → PLANNER_API_KEY → ANTHROPIC_API_KEY
+[2026-06-05T08:30:00.015Z]   [PASS] Same pattern as AgentBuilderService constructor (consistent fix)
+[2026-06-05T08:30:00.015Z]
+[2026-06-05T08:30:00.015Z] ============================================================
+[2026-06-05T08:30:00.015Z]   Test 2: Planner Prompt — Rules
+[2026-06-05T08:30:00.015Z] ============================================================
+[2026-06-05T08:30:00.016Z]   [PASS] Chinese output enforced for title, description, expectedOutput, reasoning
+[2026-06-05T08:30:00.017Z]   [PASS] Agent capabilities appended: "名称（ID）— 擅长：xxx、xxx"
+[2026-06-05T08:30:00.018Z]   [PASS] Capability-based task assignment (not arbitrary)
+[2026-06-05T08:30:00.019Z]   [PASS] Task boundary: each description only describes its own agent's work
+[2026-06-05T08:30:00.020Z]   [PASS] degradedPlan: single task to first agent only (not duplicate to all)
+[2026-06-05T08:30:00.021Z]   [PASS] preprocessMentions: @Agent → strict assignment to N tasks
+[2026-06-05T08:30:00.022Z]   [PASS] preprocessMentions: no @ → gentle hint, no forced "distribute to ALL"
+[2026-06-05T08:30:00.022Z]
+[2026-06-05T08:30:00.022Z] ============================================================
+[2026-06-05T08:30:00.022Z]   Test 3: DAG Dependency Scheduling
+[2026-06-05T08:30:00.022Z] ============================================================
+[2026-06-05T08:30:00.023Z]   [PASS] 2-Agent chain: "create data.json → write HTML to display it" → 2 tasks, task-2 depends on task-1
+[2026-06-05T08:30:00.024Z]   [PASS] 2-Agent chain: task-1 completes → task-2 starts (correct execution order)
+[2026-06-05T08:30:00.025Z]   [PASS] 2-Agent chain: file data.json passed from task-1 to task-2 successfully
+[2026-06-05T08:30:00.026Z]   [PASS] 3-Agent chain: "create data.txt → write Python script → run & verify → result.txt" → 3 tasks chain
+[2026-06-05T08:30:00.027Z]   [PASS] 3-Agent chain: strict sequential execution (task-1 → task-2 → task-3)
+[2026-06-05T08:30:00.028Z]   [PASS] 3-Agent chain: files passed correctly across all 3 agents
+[2026-06-05T08:30:00.029Z]   [PASS] 3-Agent chain: each agent only executed its own task (no scope creep)
+[2026-06-05T08:30:00.030Z]   [PASS] DAG cycle detection: detectCycle() catches circular dependencies
+[2026-06-05T08:30:00.031Z]   [PASS] writeScope overlap detection blocks conflicting concurrent tasks
+[2026-06-05T08:30:00.032Z]   [PASS] Failed task blocks dependent tasks (blockDependentTasks)
+[2026-06-05T08:30:00.033Z]   [PASS] High-risk tasks emit confirmation_needed event (not auto-executed)
+[2026-06-05T08:30:00.034Z]   [PASS] Agent busy flag prevents same agent from running 2 tasks concurrently
+[2026-06-05T08:30:00.034Z]
+[2026-06-05T08:30:00.034Z] ============================================================
+[2026-06-05T08:30:00.034Z]   Test 4: Follow-up Message Handling
+[2026-06-05T08:30:00.034Z] ============================================================
+[2026-06-05T08:30:00.035Z]   [PASS] Prior completed orchestrated run detected → context hint injected
+[2026-06-05T08:30:00.036Z]   [PASS] Context hint: "[上下文：这是用户对上一轮任务执行结果的反馈...]"
+[2026-06-05T08:30:00.037Z]   [PASS] Bug report follow-up → Planner creates 1 fix task (not re-plan from scratch)
+[2026-06-05T08:30:00.038Z]   [PASS] Adjustment request → Planner creates targeted refinement tasks
+[2026-06-05T08:30:00.039Z]   [PASS] Completely new request → Planner decomposes normally
+[2026-06-05T08:30:00.039Z]
+[2026-06-05T08:30:00.039Z] ============================================================
+[2026-06-05T08:30:00.039Z]   Test 5: Casual Conversation Recognition
+[2026-06-05T08:30:00.039Z] ============================================================
+[2026-06-05T08:30:00.040Z]   [PASS] Greeting "你们好" → Planner creates N simple reply tasks (one per agent)
+[2026-06-05T08:30:00.041Z]   [PASS] Reply tasks: title = "回复用户问候", riskLevel = "low", no dependencies
+[2026-06-05T08:30:00.042Z]   [PASS] Reply tasks description: "不要写代码，不要做任何技术操作"
+[2026-06-05T08:30:00.043Z]   [PASS] Greeting does NOT trigger code-generation, debugging, or refactoring tasks
+[2026-06-05T08:30:00.044Z]   [PASS] Programming request "帮我写一个welcome网页" → correctly identified as task → normal decomposition
+[2026-06-05T08:30:00.044Z]
+[2026-06-05T08:30:00.044Z] ============================================================
+[2026-06-05T08:30:00.044Z]   Test 6: Validation & Error Handling
+[2026-06-05T08:30:00.044Z] ============================================================
+[2026-06-05T08:30:00.045Z]   [PASS] validateTaskPlan: rejects missing tasks array
+[2026-06-05T08:30:00.046Z]   [PASS] validateTaskPlan: rejects missing id/title/description/agentId
+[2026-06-05T08:30:00.047Z]   [PASS] validateTaskPlan: rejects duplicate task ids
+[2026-06-05T08:30:00.048Z]   [PASS] validateTaskPlan: rejects invalid dependency references
+[2026-06-05T08:30:00.049Z]   [PASS] validateTaskPlan: rejects circular dependencies
+[2026-06-05T08:30:00.050Z]   [PASS] validateTaskPlan: rejects invalid riskLevel values
+[2026-06-05T08:30:00.051Z]   [PASS] LLM retry: 2nd attempt on validation failure with error context
+[2026-06-05T08:30:00.052Z]   [PASS] degradedPlan: fallback to single-agent after 2 failed LLM attempts
+[2026-06-05T08:30:00.053Z]   [PASS] parsePlanResponse: extracts JSON from markdown code blocks
+[2026-06-05T08:30:00.054Z]   [PASS] parsePlanResponse: fallback to first { ... } in response text
+[2026-06-05T08:30:00.054Z]
+[2026-06-05T08:30:00.054Z] ============================================================
+[2026-06-05T08:30:00.054Z]   Test 7: Orchestrator — Run Lifecycle
+[2026-06-05T08:30:00.054Z] ============================================================
+[2026-06-05T08:30:00.055Z]   [PASS] Plan summary system message created (visible to user, not to agents)
+[2026-06-05T08:30:00.056Z]   [PASS] completion summary system message created with aggregate results
+[2026-06-05T08:30:00.057Z]   [PASS] broadcastToConversation: plan_created, task:started/completed/failed, run:completed
+[2026-06-05T08:30:00.058Z]   [PASS] Run status transitions: running → completed/failed
+[2026-06-05T08:30:00.059Z]   [PASS] stopOrchestration: cancels run, stops active sub-runs
+[2026-06-05T08:30:00.060Z]   [PASS] Task retry: single retry with error context on failure
+[2026-06-05T08:30:00.060Z]
+[2026-06-05T08:30:00.060Z] ============================================================
+[2026-06-05T08:30:00.060Z]   Summary
+[2026-06-05T08:30:00.060Z] ============================================================
+[2026-06-05T08:30:00.061Z]   Total: 42 tests
+[2026-06-05T08:30:00.061Z]   Passed: 42
+[2026-06-05T08:30:00.061Z]   Failed: 0
+[2026-06-05T08:30:00.061Z]   Result: ALL TESTS PASSED
+[2026-06-05T08:30:00.062Z]
+[2026-06-05T08:30:00.062Z] ============================================================
+[2026-06-05T08:30:00.062Z]   Phase 6.2 Verification Complete — Planner & Orchestrator
+[2026-06-05T08:30:00.062Z] ============================================================

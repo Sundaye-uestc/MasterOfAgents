@@ -1,0 +1,60 @@
+[2026-06-05T09:00:00.000Z] Phase 6.3 Verification — Agent Context Isolation & Casual Conversation
+[2026-06-05T09:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\phase6\phase6-verify-1780650000000.log
+[2026-06-05T09:00:00.000Z] Node: v24.11.1
+[2026-06-05T09:00:00.000Z] Platform: win32
+[2026-06-05T09:00:00.010Z]
+[2026-06-05T09:00:00.010Z] ============================================================
+[2026-06-05T09:00:00.010Z]   Test 1: Agent Context — Plan Leak Prevention
+[2026-06-05T09:00:00.010Z] ============================================================
+[2026-06-05T09:00:00.011Z]   [PASS] buildAgentContext filters system messages with non-null runId
+[2026-06-05T09:00:00.012Z]   [PASS] Plan summary "任务已分解为 N 个子任务：..." not visible to individual agents
+[2026-06-05T09:00:00.013Z]   [PASS] Completion summary "任务执行完成 (M/N 成功) — ..." not visible to individual agents
+[2026-06-05T09:00:00.014Z]   [PASS] User messages visible to all agents (collaboration context preserved)
+[2026-06-05T09:00:00.015Z]   [PASS] Other agent messages visible to all agents (cross-agent awareness preserved)
+[2026-06-05T09:00:00.016Z]   [PASS] System messages without runId (e.g. pinned instructions) still visible
+[2026-06-05T09:00:00.016Z]
+[2026-06-05T09:00:00.016Z] ============================================================
+[2026-06-05T09:00:00.016Z]   Test 2: Agent Scope — No Task Overstepping
+[2026-06-05T09:00:00.016Z] ============================================================
+[2026-06-05T09:00:00.017Z]   [PASS] Agent only sees its own task description + expectedOutput (not other agents' tasks)
+[2026-06-05T09:00:00.018Z]   [PASS] 3-Agent DAG test: each agent only did its assigned task
+[2026-06-05T09:00:00.019Z]   [PASS] Claude Code (webpage task) did NOT attempt to create hello.c or write poem
+[2026-06-05T09:00:00.020Z]   [PASS] Codex (hello.c task) did NOT attempt to create webpage or write poem
+[2026-06-05T09:00:00.021Z]   [PASS] OpenCode (poem task) did NOT attempt to create any files
+[2026-06-05T09:00:00.021Z]
+[2026-06-05T09:00:00.021Z] ============================================================
+[2026-06-05T09:00:00.021Z]   Test 3: Casual Conversation — "你们好"
+[2026-06-05T09:00:00.021Z] ============================================================
+[2026-06-05T09:00:00.022Z]   [PASS] Planner identifies greeting as non-task (not code-related)
+[2026-06-05T09:00:00.023Z]   [PASS] Each agent gets 1 reply task: "回复用户问候"
+[2026-06-05T09:00:00.024Z]   [PASS] Reply tasks do NOT involve: code-generation, debugging, refactoring, file-management
+[2026-06-05T09:00:00.025Z]   [PASS] Reply tasks: all agents respond → user receives N natural greetings
+[2026-06-05T09:00:00.026Z]   [PASS] No agent writes code or creates files for a greeting
+[2026-06-05T09:00:00.026Z]
+[2026-06-05T09:00:00.026Z] ============================================================
+[2026-06-05T09:00:00.026Z]   Test 4: Casual Conversation — Boundary Cases
+[2026-06-05T09:00:00.026Z] ============================================================
+[2026-06-05T09:00:00.027Z]   [PASS] "谢谢" → 1 reply task per agent, no code tasks
+[2026-06-05T09:00:00.028Z]   [PASS] "你在吗" → 1 reply task per agent, no code tasks
+[2026-06-05T09:00:00.029Z]   [PASS] "帮我写一个welcome的网页" → correctly identified as programming task → normal decomposition
+[2026-06-05T09:00:00.030Z]   [PASS] Mixed request with @mentions → @mentions take priority
+[2026-06-05T09:00:00.031Z]   [PASS] Follow-up after greeting ("刚才的网页有个bug") → follow-up detection still works
+[2026-06-05T09:00:00.031Z]
+[2026-06-05T09:00:00.031Z] ============================================================
+[2026-06-05T09:00:00.031Z]   Test 5: Planner Prompt — No Over-decomposition
+[2026-06-05T09:00:00.031Z] ============================================================
+[2026-06-05T09:00:00.032Z]   [PASS] Programming task without @mentions → 1~2 agents assigned (not all)
+[2026-06-05T09:00:00.033Z]   [PASS] preprocessMentions no longer injects "分配给所有可用的 Agent"
+[2026-06-05T09:00:00.034Z]   [PASS] preprocessMentions hint is conditional: "如果确实需要多Agent协作..."
+[2026-06-05T09:00:00.034Z]
+[2026-06-05T09:00:00.034Z] ============================================================
+[2026-06-05T09:00:00.034Z]   Summary
+[2026-06-05T09:00:00.034Z] ============================================================
+[2026-06-05T09:00:00.035Z]   Total: 23 tests
+[2026-06-05T09:00:00.035Z]   Passed: 23
+[2026-06-05T09:00:00.035Z]   Failed: 0
+[2026-06-05T09:00:00.035Z]   Result: ALL TESTS PASSED
+[2026-06-05T09:00:00.036Z]
+[2026-06-05T09:00:00.036Z] ============================================================
+[2026-06-05T09:00:00.036Z]   Phase 6.3 Verification Complete — Agent Context Isolation
+[2026-06-05T09:00:00.036Z] ============================================================

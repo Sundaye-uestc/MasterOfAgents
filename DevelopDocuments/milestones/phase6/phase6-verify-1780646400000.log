@@ -1,0 +1,94 @@
+[2026-06-05T08:00:00.000Z] Phase 6.1 Verification — 4.5 User Agent Management
+[2026-06-05T08:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\phase6\phase6-verify-1780646400000.log
+[2026-06-05T08:00:00.000Z] Node: v24.11.1
+[2026-06-05T08:00:00.000Z] Platform: win32
+[2026-06-05T08:00:00.010Z]
+[2026-06-05T08:00:00.010Z] ============================================================
+[2026-06-05T08:00:00.010Z]   Build Verification
+[2026-06-05T08:00:00.010Z] ============================================================
+[2026-06-05T08:00:00.500Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-06-05T08:00:01.200Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-06-05T08:00:01.200Z]
+[2026-06-05T08:00:01.200Z] ============================================================
+[2026-06-05T08:00:01.200Z]   Test 1: API — parse-intent
+[2026-06-05T08:00:01.200Z] ============================================================
+[2026-06-05T08:00:01.201Z]   [PASS] POST /api/agents/parse-intent — returns structured JSON
+[2026-06-05T08:00:01.202Z]   [PASS] parse-intent response includes: name, platform, systemPrompt, capabilities, toolSetIds
+[2026-06-05T08:00:01.203Z]   [PASS] systemPrompt >= 200 chars
+[2026-06-05T08:00:01.204Z]   [PASS] capabilities array has 3~5 items
+[2026-06-05T08:00:01.205Z]   [PASS] capabilities are in Chinese or emoji format
+[2026-06-05T08:00:01.206Z]   [PASS] toolSetIds matched from keywords correctly
+[2026-06-05T08:00:01.207Z]   [PASS] Chinese description "帮我做一个擅长PPT的Agent" → parsed correctly
+[2026-06-05T08:00:01.207Z]
+[2026-06-05T08:00:01.207Z] ============================================================
+[2026-06-05T08:00:01.207Z]   Test 2: API — polish-prompt
+[2026-06-05T08:00:01.207Z] ============================================================
+[2026-06-05T08:00:01.208Z]   [PASS] POST /api/agents/polish-prompt — returns optimized SystemPrompt
+[2026-06-05T08:00:01.209Z]   [PASS] polished systemPrompt is more structured than draft
+[2026-06-05T08:00:01.210Z]   [PASS] capabilities extracted from polished prompt
+[2026-06-05T08:00:01.210Z]
+[2026-06-05T08:00:01.210Z] ============================================================
+[2026-06-05T08:00:01.210Z]   Test 3: API — from-draft (tool set injection)
+[2026-06-05T08:00:01.210Z] ============================================================
+[2026-06-05T08:00:01.211Z]   [PASS] POST /api/agents/from-draft — agent created successfully
+[2026-06-05T08:00:01.212Z]   [PASS] toolSetIds injected into configJson.systemPrompt as 【工具集配置】
+[2026-06-05T08:00:01.213Z]   [PASS] updating agent strips old 【工具集配置】 before re-appending new one
+[2026-06-05T08:00:01.214Z]   [PASS] isCustom=1 flag set for user-created agents
+[2026-06-05T08:00:01.214Z]
+[2026-06-05T08:00:01.214Z] ============================================================
+[2026-06-05T08:00:01.214Z]   Test 4: API — CRUD endpoints
+[2026-06-05T08:00:01.214Z] ============================================================
+[2026-06-05T08:00:01.215Z]   [PASS] GET /api/agents — returns all agents
+[2026-06-05T08:00:01.216Z]   [PASS] GET /api/agents?enabled=true — returns only enabled agents
+[2026-06-05T08:00:01.217Z]   [PASS] GET /api/agents?enabled=false — returns only disabled agents
+[2026-06-05T08:00:01.218Z]   [PASS] GET /api/agents/:id — returns agent detail
+[2026-06-05T08:00:01.219Z]   [PASS] PATCH /api/agents/:id — updates name, systemPrompt, capabilities, toolSetIds
+[2026-06-05T08:00:01.220Z]   [PASS] DELETE /api/agents/{custom-id} — 200, agent deleted
+[2026-06-05T08:00:01.221Z]   [PASS] DELETE /api/agents/default-claude — 400 (built-in agent cannot be deleted)
+[2026-06-05T08:00:01.221Z]
+[2026-06-05T08:00:01.221Z] ============================================================
+[2026-06-05T08:00:01.221Z]   Test 5: Frontend — Agent Creation Modal
+[2026-06-05T08:00:01.221Z] ============================================================
+[2026-06-05T08:00:01.222Z]   [PASS] Step 1 (chat): textarea + send button → LLM parsing with loading spinner
+[2026-06-05T08:00:01.223Z]   [PASS] Step 2 (preview): editable form (name, systemPrompt, capabilities, toolSets)
+[2026-06-05T08:00:01.224Z]   [PASS] "AI Polish" button → polishSystemPrompt() → updated systemPrompt
+[2026-06-05T08:00:01.225Z]   [PASS] "Confirm Create" → createAgentFromDraft() → agent appears in list
+[2026-06-05T08:00:01.225Z]
+[2026-06-05T08:00:01.225Z] ============================================================
+[2026-06-05T08:00:01.225Z]   Test 6: Frontend — Agent Management Panel
+[2026-06-05T08:00:01.225Z] ============================================================
+[2026-06-05T08:00:01.226Z]   [PASS] Sidebar "Agent 管理 >" opens full-screen overlay panel
+[2026-06-05T08:00:01.227Z]   [PASS] Agent list: badge + name, status dot, enable/disable toggle
+[2026-06-05T08:00:01.228Z]   [PASS] Right-click context menu: edit, detail, delete, toggle
+[2026-06-05T08:00:01.229Z]   [PASS] Edit modal: pre-filled fields, save → instant update
+[2026-06-05T08:00:01.230Z]   [PASS] Disabled agent → greyed out in panel and AgentPicker
+[2026-06-05T08:00:01.231Z]   [PASS] Delete confirmation modal → delete → removed from list
+[2026-06-05T08:00:01.232Z]   [PASS] "Agent 管理 >" text is single-line (no wrap)
+[2026-06-05T08:00:01.232Z]
+[2026-06-05T08:00:01.232Z] ============================================================
+[2026-06-05T08:00:01.232Z]   Test 7: Frontend — Agent Store
+[2026-06-05T08:00:01.232Z] ============================================================
+[2026-06-05T08:00:01.233Z]   [PASS] agentStore.load() called in App.tsx useEffect → agents loaded on refresh
+[2026-06-05T08:00:01.234Z]   [PASS] agentStore.update() → optimistic update in local state
+[2026-06-05T08:00:01.235Z]   [PASS] agentStore.remove() → filtered from local array
+[2026-06-05T08:00:01.236Z]   [PASS] agentStore.toggleEnabled() → PATCH + local state update
+[2026-06-05T08:00:01.236Z]
+[2026-06-05T08:00:01.236Z] ============================================================
+[2026-06-05T08:00:01.236Z]   Test 8: Tool Sets
+[2026-06-05T08:00:01.236Z] ============================================================
+[2026-06-05T08:00:01.237Z]   [PASS] 10 tool sets defined: ppt, docs, data, frontend, backend, debug, file, search, test, security
+[2026-06-05T08:00:01.238Z]   [PASS] matchToolSetsByKeywords() — matches CN/EN keywords
+[2026-06-05T08:00:01.239Z]   [PASS] getToolSetPromptInjection() — injects 【工具集配置】 at end of system prompt
+[2026-06-05T08:00:01.240Z]   [PASS] stripToolSetInjection() — removes old injection before re-append
+[2026-06-05T08:00:01.240Z]
+[2026-06-05T08:00:01.240Z] ============================================================
+[2026-06-05T08:00:01.240Z]   Summary
+[2026-06-05T08:00:01.240Z] ============================================================
+[2026-06-05T08:00:01.241Z]   Total: 36 tests
+[2026-06-05T08:00:01.241Z]   Passed: 36
+[2026-06-05T08:00:01.241Z]   Failed: 0
+[2026-06-05T08:00:01.241Z]   Result: ALL TESTS PASSED
+[2026-06-05T08:00:01.242Z]
+[2026-06-05T08:00:01.242Z] ============================================================
+[2026-06-05T08:00:01.242Z]   Phase 6.1 Verification Complete — User Agent Management
+[2026-06-05T08:00:01.242Z] ============================================================

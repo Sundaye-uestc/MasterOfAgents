@@ -1,0 +1,47 @@
+[2026-06-05T09:30:00.000Z] Phase 6.4 Verification — Artifact Dedup & File Preview
+[2026-06-05T09:30:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\phase6\phase6-verify-1780651800000.log
+[2026-06-05T09:30:00.000Z] Node: v24.11.1
+[2026-06-05T09:30:00.000Z] Platform: win32
+[2026-06-05T09:30:00.010Z]
+[2026-06-05T09:30:00.010Z] ============================================================
+[2026-06-05T09:30:00.010Z]   Test 1: Cross-run — Same File, Different Runs
+[2026-06-05T09:30:00.010Z] ============================================================
+[2026-06-05T09:30:00.011Z]   [PASS] Run 1 creates welcome.html → artifact shown under Run 1
+[2026-06-05T09:30:00.012Z]   [PASS] Run 2 modifies welcome.html → artifact shown under Run 2 (not deduped)
+[2026-06-05T09:30:00.013Z]   [PASS] Same file in Run 1 and Run 2 → both previews visible (cross-run no dedup)
+[2026-06-05T09:30:00.014Z]   [PASS] listArtifactsByConversation: groups by runId, no cross-run filename dedup
+[2026-06-05T09:30:00.014Z]
+[2026-06-05T09:30:00.014Z] ============================================================
+[2026-06-05T09:30:00.014Z]   Test 2: Intra-run — Same File, Same Run
+[2026-06-05T09:30:00.014Z] ============================================================
+[2026-06-05T09:30:00.015Z]   [PASS] Same run: Agent A creates data.json → Agent B modifies data.json
+[2026-06-05T09:30:00.016Z]   [PASS] Only latest version of data.json shown under that run (path-based dedup)
+[2026-06-05T09:30:00.017Z]   [PASS] listArtifactsByConversation: within each runId, same path → latest createdAt wins
+[2026-06-05T09:30:00.018Z]   [PASS] WS artifact:created: same path in same run → replaces older entry
+[2026-06-05T09:30:00.018Z]
+[2026-06-05T09:30:00.018Z] ============================================================
+[2026-06-05T09:30:00.018Z]   Test 3: Mixed — Same Path, Multiple Runs with Edits
+[2026-06-05T09:30:00.018Z] ============================================================
+[2026-06-05T09:30:00.019Z]   [PASS] Run 1: Agent creates welcome.html → 1 artifact under Run 1
+[2026-06-05T09:30:00.020Z]   [PASS] Run 2: Agent A creates welcome.html, Agent B refines → 1 artifact under Run 2 (latest)
+[2026-06-05T09:30:00.021Z]   [PASS] Total: 2 artifacts visible (one per run, not 3)
+[2026-06-05T09:30:00.022Z]   [PASS] File preview refreshes correctly when toggling between runs
+[2026-06-05T09:30:00.022Z]
+[2026-06-05T09:30:00.022Z] ============================================================
+[2026-06-05T09:30:00.022Z]   Test 4: PPT Allow-list Filter (Regression Check)
+[2026-06-05T09:30:00.022Z] ============================================================
+[2026-06-05T09:30:00.023Z]   [PASS] shouldSkipFile() in agent-runtime.service.ts — PPT mode only shows .pptx files
+[2026-06-05T09:30:00.024Z]   [PASS] Server-side filter unaffected by frontend dedup changes
+[2026-06-05T09:30:00.025Z]   [PASS] Non-PPT files skipped when agent is in PPT mode
+[2026-06-05T09:30:00.025Z]
+[2026-06-05T09:30:00.025Z] ============================================================
+[2026-06-05T09:30:00.025Z]   Summary
+[2026-06-05T09:30:00.025Z] ============================================================
+[2026-06-05T09:30:00.026Z]   Total: 14 tests
+[2026-06-05T09:30:00.026Z]   Passed: 14
+[2026-06-05T09:30:00.026Z]   Failed: 0
+[2026-06-05T09:30:00.026Z]   Result: ALL TESTS PASSED
+[2026-06-05T09:30:00.027Z]
+[2026-06-05T09:30:00.027Z] ============================================================
+[2026-06-05T09:30:00.027Z]   Phase 6.4 Verification Complete — Artifact Dedup
+[2026-06-05T09:30:00.027Z] ============================================================

@@ -9,8 +9,8 @@
 Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 
 - **Agent 管理**：对话式弹窗创建自定义 Agent，LLM 解析自然语言 → 结构化配置，支持 System Prompt 编辑/AI 润色/工具集自动匹配，完整 CRUD 管理界面
-- **Planner 修复**：ESM hoisting API Key 修复、Prompt 强化（中文输出/任务边界/能力匹配）、DAG 依赖调度验证、Follow-up 消息处理修复
-- **其他修复**：PPT 文件变更白名单过滤、能力标签 emoji fallback、文件修改后预览不刷新
+- **Planner 修复**：ESM hoisting API Key 修复、Prompt 强化（中文输出/任务边界/能力匹配/闲聊识别）、DAG 依赖调度验证、Follow-up 消息处理修复、Agent 上下文隔离
+- **其他修复**：PPT 文件变更白名单过滤、能力标签 emoji fallback、文件预览去重（跨轮展示 + 同轮去重）
 
 ---
 
@@ -44,9 +44,10 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | `apps/web/src/components/chat/AgentBadge.tsx` | 新增 `opencode` logo 映射 |
 | `apps/web/src/components/chat/ConversationList.tsx` | 默认工作目录 `D:/Projects/MasterOfAgents/Test` + 启用过滤 |
 | `apps/web/src/components/workspace/WorkspacePanel.tsx` | "文件"标签添加 SVG 刷新按钮（选中时显示） |
-| `apps/server/src/services/planner.service.ts` | ESM hoisting 绕过 + Prompt 强化 + follow-up 规则 |
+| `apps/server/src/services/planner.service.ts` | ESM hoisting 绕过 + Prompt 强化 + follow-up 规则 + 闲聊识别 |
 | `apps/server/src/services/orchestrator.service.ts` | Follow-up 检测 + DAG 调度 + Agent 名称映射 |
-| `apps/web/src/components/chat/ChatArea.tsx` | 移除 InlineDiffCard + 移除跨 run artifact 去重 + 复用 `formatCapability` |
+| `apps/server/src/services/chat.service.ts` | `buildAgentContext` 过滤带 `runId` 的 system 消息（防止计划泄露给 Agent） |
+| `apps/web/src/components/chat/ChatArea.tsx` | 移除 InlineDiffCard + artifact 去重（同轮按 path 去重保留最新，跨轮不去重） + 复用 `formatCapability` |
 | `apps/web/src/components/agent/AgentEditModal.tsx` | 能力标签中文显示 |
 | `apps/web/src/components/agent/AgentManagePanel.tsx` | 能力标签中文显示 |
 | `apps/web/src/components/agent/AgentDetailModal.tsx` | 能力标签中文显示 |
@@ -94,11 +95,12 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | 改动 | 说明 |
 |---|---|
 | Agent 能力附带 | `名称（ID）` → `名称（ID）— 擅长：xxx、xxx` |
-| 无 @ 分配 | 必须分配给所有相关 Agent，不要集中给一个 |
+| 闲聊识别 | 首条规则：判断用户意图，纯闲聊（问候/感谢/打招呼）→ 每个 Agent 各创建 1 个回复 task，不涉及代码 |
+| 无 @ 分配 | 编程任务分配给最合适的 1~2 个 Agent，不过度拆分 |
 | 能力匹配 | 根据能力描述分配给最擅长的 Agent |
-| 输出中文化 | 首条规则：所有输出字段必须使用中文 |
+| 输出中文化 | 所有输出字段必须使用中文 |
 | 任务边界 | description 只写该 Agent 自己的事，注明边界 |
-| `preprocessMentions` | 无 @ 时注入提示要求自行分配 |
+| `preprocessMentions` | 无 @ 时温和提示，不强制"分配给所有 Agent" |
 | degradedPlan | 只给第一个 Agent 单任务（之前：每人一份完整 prompt → 重复工作） |
 
 ### 3.3 Follow-up 消息处理
@@ -109,23 +111,38 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 
 ### 3.4 DAG 依赖调度验证
 
-**测试用例**："先用一个 Agent 写 data.json，再用另一个 Agent 写 HTML 读取并展示成绩表格"
-
-| 验证项 | 结果 |
-|---|---|
-| Planner 分解 2 任务 + 依赖关系（task-2 依赖 task-1） | ✅ |
-| 任务按 DAG 顺序执行（task-1 完成 → task-2 启动） | ✅ |
-| 文件传递正常 | ✅ |
+| 测试用例 | 验证项 | 结果 |
+|---|---|---|
+| 2 Agent：创建 data.json → 写 HTML 读取展示 | Planner 分解 2 任务 + 依赖关系 | ✅ |
+| | 按 DAG 顺序执行（task-1 完成 → task-2 启动） | ✅ |
+| | 文件传递正常 | ✅ |
+| 3 Agent：创建 data.txt → 写 Python 脚本 → 运行验证写 result.txt | Planner 分解 3 任务链式依赖（task-1 → task-2 → task-3） | ✅ |
+| | 严格顺序执行，文件在 Agent 间正常传递 | ✅ |
+| | 每个 Agent 只做自己的任务，不越界 | ✅ |
 | Follow-up BUG 修复（只出 1 个修复任务） | ✅ |
 | Planner 输出全中文 | ✅ |
 
+### 3.5 Agent 上下文隔离
+
+**问题**：`buildAgentContext` 将所有消息（包括 Planner 的计划摘要和完成通知这些带 `runId` 的 system 消息）传给每个 Agent → Agent 看到完整任务计划后越界执行其他 Agent 的活。
+
+**修复**：`buildAgentContext` 过滤 `role === "system" && runId` 的消息，仅保留用户消息、Agent 消息和无 `runId` 的 system 消息。
+
+### 3.6 闲聊识别
+
+**问题**：用户输入"你们好"，Planner 创建 3 个代码任务（写代码→审查→调试），用力过猛。
+
+**修复**：
+- Planner prompt 首条规则：先判断用户意图，纯闲聊 → 每个 Agent 创建 1 个简单回复 task，不涉及代码
+- `preprocessMentions` 不再强制"分配给所有 Agent"，改为温和提示
+
 ---
 
-## 四、文件修改后预览刷新修复
+## 四、文件预览去重修复
 
-**问题**：同一文件多轮修改时，预览只在第一次出现。根因：`ChatArea.tsx` 三处跨 run 文件名去重逻辑（`seenNames` Set + `otherRunId` 循环）阻止了后续 run 中同文件名的 artifact 展示。
+**问题**：同一文件多轮修改时，预览只在第一次出现。根因：`ChatArea.tsx` 跨 run 文件名去重逻辑阻止了后续 run 中同文件名的 artifact 展示。
 
-**修复**：移除跨 run 去重，仅保留 run 内 ID 去重。PPT 白名单过滤（`shouldSkipFile`）在服务端，不受影响。
+**修复**：跨 run 不去重（每次修改都要显示），同 run 内按 path 去重保留最新版本（避免同一轮内 Agent A 创建 + Agent B 修改导致同一文件出现两次）。PPT 白名单过滤（`shouldSkipFile`）在服务端，不受影响。
 
 ---
 
@@ -139,7 +156,9 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | 能力标签中文化 + emoji | LLM prompt 约束输出，前端检测 emoji 前缀自动适配 |
 | Drizzle 条件查询 | SQLite 不支持链式 `.where()` 类型推断，用独立 `if` 分支 |
 | Follow-up 检测 | 查询 prior completed/failed runs → 注入上下文提示 |
-| 预览跨 run 去重移除 | writeScope 已在编排层面阻止并发写冲突，前端无需再按文件名去重 |
+| 文件预览去重策略 | 跨 run 不去重（每次修改都展示），同 run 按 path 去重保留最新（避免同轮重复） |
+| Agent 上下文隔离 | `buildAgentContext` 过滤 `runId` 的 system 消息，防止计划泄露导致越界 |
+| Planner 闲聊识别 | 判断用户意图，纯闲聊 → 每个 Agent 回复而非代码任务 |
 
 ---
 
@@ -159,7 +178,10 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | PPT 文件变更白名单过滤 | ✅ |
 | Planner 正常分工 + 中文输出 | ✅ |
 | degradedPlan 单 Agent 不重复 | ✅ |
-| DAG 依赖调度 | ✅ |
+| DAG 3 Agent 链式依赖（data.txt → Python 脚本 → 验证写入 result.txt） | ✅ |
+| Agent 上下文隔离（不泄露计划给单 Agent） | ✅ |
+| 闲聊识别（"你们好"→ 回复任务，非代码任务） | ✅ |
+| 同轮文件去重（同 run 同 path 只保留最新） | ✅ |
 | Follow-up 修复（不出重复计划） | ✅ |
 | 文件多轮修改预览刷新 | ✅ |
 | 能力标签中文 + emoji（内置/自建统一） | ✅ |
@@ -181,4 +203,5 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | `1ccc643` | Fix: Planner follow-up message handling |
 | `17e29c5` | Fix: file preview not refreshing on subsequent modifications |
 | `34fdd05` | Docs: update todo + zyw merge (agent data loss fix, enabled filter) |
-| 未提交 | Feat: OpenCode built-in agent + capability Chinese labels + workspace refresh + default working dir |
+| `376a708` (已回退) | Feat: OpenCode built-in agent + capability Chinese labels + workspace refresh + default working dir |
+| 未提交 | Fix: Planner casual conversation + Agent context isolation + intra-run artifact dedup |

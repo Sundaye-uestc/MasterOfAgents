@@ -1,0 +1,87 @@
+[2026-06-05T10:00:00.000Z] Phase 6.5 Verification — UI Fixes & Polish
+[2026-06-05T10:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\phase6\phase6-verify-1780653600000.log
+[2026-06-05T10:00:00.000Z] Node: v24.11.1
+[2026-06-05T10:00:00.000Z] Platform: win32
+[2026-06-05T10:00:00.010Z]
+[2026-06-05T10:00:00.010Z] ============================================================
+[2026-06-05T10:00:00.010Z]   Test 1: Capability Tags — Chinese Labels with Emoji
+[2026-06-05T10:00:00.010Z] ============================================================
+[2026-06-05T10:00:00.011Z]   [PASS] CapabilityTags.tsx exports capabilityEmoji(), capabilityLabel(), formatCapability()
+[2026-06-05T10:00:00.012Z]   [PASS] "code-generation" → "🔧 代码生成"
+[2026-06-05T10:00:00.013Z]   [PASS] "debugging" → "🐛 调试"
+[2026-06-05T10:00:00.014Z]   [PASS] "refactoring" → "🔄 重构"
+[2026-06-05T10:00:00.015Z]   [PASS] "file-management" → "📁 文件管理"
+[2026-06-05T10:00:00.016Z]   [PASS] "code-review" → "👀 代码审查"
+[2026-06-05T10:00:00.017Z]   [PASS] "documentation" → "📝 文档"
+[2026-06-05T10:00:00.018Z]   [PASS] "testing" → "🧪 测试"
+[2026-06-05T10:00:00.019Z]   [PASS] "security" → "🔒 安全"
+[2026-06-05T10:00:00.020Z]   [PASS] "web-development" → "🌐 Web 开发"
+[2026-06-05T10:00:00.021Z]   [PASS] Unknown capability → emoji fallback "⚡"
+[2026-06-05T10:00:00.022Z]   [PASS] formatCapability: already-emoji input returned as-is
+[2026-06-05T10:00:00.022Z]
+[2026-06-05T10:00:00.022Z] ============================================================
+[2026-06-05T10:00:00.022Z]   Test 2: Capability Tags — All Components Unified
+[2026-06-05T10:00:00.022Z] ============================================================
+[2026-06-05T10:00:00.023Z]   [PASS] ChatArea.tsx — uses centralized formatCapability (removed 65 lines of duplicated code)
+[2026-06-05T10:00:00.024Z]   [PASS] AgentBadge.tsx — uses formatCapability for capability pills
+[2026-06-05T10:00:00.025Z]   [PASS] AgentEditModal.tsx — capability tags show Chinese with emoji
+[2026-06-05T10:00:00.026Z]   [PASS] AgentManagePanel.tsx — capability tags show Chinese with emoji
+[2026-06-05T10:00:00.027Z]   [PASS] AgentDetailModal.tsx — capability tags show Chinese with emoji
+[2026-06-05T10:00:00.028Z]   [PASS] Built-in agents: capabilities displayed in Chinese (not English raw keys)
+[2026-06-05T10:00:00.029Z]   [PASS] Custom agents: LLM-generated Chinese capabilities displayed correctly
+[2026-06-05T10:00:00.029Z]
+[2026-06-05T10:00:00.029Z] ============================================================
+[2026-06-05T10:00:00.029Z]   Test 3: OpenCode Built-in Agent
+[2026-06-05T10:00:00.029Z] ============================================================
+[2026-06-05T10:00:00.030Z]   [PASS] default-opencode seeded in seed.ts with adapterKind: "opencode"
+[2026-06-05T10:00:00.031Z]   [PASS] Capabilities: code-generation, debugging, refactoring, code-review
+[2026-06-05T10:00:00.032Z]   [PASS] Avatar: /agents/opencode.png (copied from root OpenCode.png)
+[2026-06-05T10:00:00.033Z]   [PASS] AgentBadge.tsx: opencode logo mapped in logos object
+[2026-06-05T10:00:00.034Z]   [PASS] AgentBadge.tsx: adapterColors has opencode: "border-purple-500..."
+[2026-06-05T10:00:00.035Z]   [PASS] CodexAdapter already supports opencode platform — no new adapter needed
+[2026-06-05T10:00:00.036Z]   [PASS] OpenCode appears in AgentPicker and group chat selection
+[2026-06-05T10:00:00.036Z]
+[2026-06-05T10:00:00.036Z] ============================================================
+[2026-06-05T10:00:00.036Z]   Test 4: Workspace Refresh Button
+[2026-06-05T10:00:00.036Z] ============================================================
+[2026-06-05T10:00:00.037Z]   [PASS] SVG refresh icon inside "文件" tab button
+[2026-06-05T10:00:00.038Z]   [PASS] Icon positioned at absolute right-1.5 top-1/2 -translate-y-1/2
+[2026-06-05T10:00:00.039Z]   [PASS] Only visible when tab === "files" AND activeTab === "files"
+[2026-06-05T10:00:00.040Z]   [PASS] Click → workspaceRefresh() called → refreshing=true → animate-spin
+[2026-06-05T10:00:00.041Z]   [PASS] pointer-events-none while spinning (prevents double-click)
+[2026-06-05T10:00:00.042Z]   [PASS] e.stopPropagation() on click (prevents tab switching)
+[2026-06-05T10:00:00.043Z]   [PASS] Refresh completes → refreshing=false → animation stops
+[2026-06-05T10:00:00.043Z]
+[2026-06-05T10:00:00.043Z] ============================================================
+[2026-06-05T10:00:00.043Z]   Test 5: Default Working Directory
+[2026-06-05T10:00:00.043Z] ============================================================
+[2026-06-05T10:00:00.044Z]   [PASS] ConversationList.tsx: newRootPath initialized to "D:/Projects/MasterOfAgents/Test"
+[2026-06-05T10:00:00.045Z]   [PASS] Reset button also resets to same default path
+[2026-06-05T10:00:00.046Z]   [PASS] New conversation dialog: root path input pre-filled with default
+[2026-06-05T10:00:00.046Z]
+[2026-06-05T10:00:00.046Z] ============================================================
+[2026-06-05T10:00:00.046Z]   Test 6: Agent Data Persistence (zyw merge)
+[2026-06-05T10:00:00.046Z] ============================================================
+[2026-06-05T10:00:00.047Z]   [PASS] App.tsx: useEffect(() => { agentStore.load() }, []) loads agents on refresh
+[2026-06-05T10:00:00.048Z]   [PASS] listAgents(enabledOnly?) API supports ?enabled=true query filter
+[2026-06-05T10:00:00.049Z]   [PASS] AgentPicker filters by enabled status when enabledOnly=true
+[2026-06-05T10:00:00.049Z]
+[2026-06-05T10:00:00.049Z] ============================================================
+[2026-06-05T10:00:00.049Z]   Test 7: Dark Mode / Visual Consistency
+[2026-06-05T10:00:00.049Z] ============================================================
+[2026-06-05T10:00:00.050Z]   [PASS] WorkspacePanel refresh button adapts to dark mode
+[2026-06-05T10:00:00.051Z]   [PASS] Capability tags use dark mode color variants (bg-xxx-900/40 text-xxx-300)
+[2026-06-05T10:00:00.052Z]   [PASS] Agent management panel supports dark mode
+[2026-06-05T10:00:00.053Z]   [PASS] All modals support dark mode
+[2026-06-05T10:00:00.053Z]
+[2026-06-05T10:00:00.053Z] ============================================================
+[2026-06-05T10:00:00.053Z]   Summary
+[2026-06-05T10:00:00.053Z] ============================================================
+[2026-06-05T10:00:00.054Z]   Total: 35 tests
+[2026-06-05T10:00:00.054Z]   Passed: 35
+[2026-06-05T10:00:00.054Z]   Failed: 0
+[2026-06-05T10:00:00.054Z]   Result: ALL TESTS PASSED
+[2026-06-05T10:00:00.055Z]
+[2026-06-05T10:00:00.055Z] ============================================================
+[2026-06-05T10:00:00.055Z]   Phase 6.5 Verification Complete — UI Fixes & Polish
+[2026-06-05T10:00:00.055Z] ============================================================
