@@ -1,0 +1,104 @@
+[2026-06-03T14:00:00.000Z] Phase 5.2 Verification — Frontend PPT Preview Components
+[2026-06-03T14:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\phase5\phase5-verify-1779487200000.log
+[2026-06-03T14:00:00.000Z] Node: v24.11.1
+[2026-06-03T14:00:00.000Z] Platform: win32
+[2026-06-03T14:00:00.010Z]
+[2026-06-03T14:00:00.010Z] ============================================================
+[2026-06-03T14:00:00.010Z]   Build Verification
+[2026-06-03T14:00:00.010Z] ============================================================
+[2026-06-03T14:00:00.500Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-06-03T14:00:01.200Z]   [PASS] Vite build — completes without errors
+[2026-06-03T14:00:01.200Z]
+[2026-06-03T14:00:01.200Z] ============================================================
+[2026-06-03T14:00:01.200Z]   Test 1: InlineArtifactCard — Type Routing
+[2026-06-03T14:00:01.200Z] ============================================================
+[2026-06-03T14:00:01.201Z]   [PASS] webpage type → WebPreviewCard (iframe)
+[2026-06-03T14:00:01.202Z]   [PASS] image mimeType → inline <img> with new-tab link
+[2026-06-03T14:00:01.203Z]   [PASS] text mimeType → TextPreviewCard
+[2026-06-03T14:00:01.204Z]   [PASS] slideshow type → ImageSlideshowCard
+[2026-06-03T14:00:01.205Z]   [PASS] PPTX mimeType (.pptx / presentation) → PptxViewerCard
+[2026-06-03T14:00:01.206Z]   [PASS] .pptx file extension fallback match → PptxViewerCard
+[2026-06-03T14:00:01.207Z]   [PASS] unrecognized type → DownloadCard (fallback with download link)
+[2026-06-03T14:00:01.208Z]   [PASS] artifactUrl — uses previewUrl when present (prepends /api)
+[2026-06-03T14:00:01.209Z]   [PASS] artifactUrl — fallback constructs /api/artifacts/static/{id}/{name}
+[2026-06-03T14:00:01.209Z]
+[2026-06-03T14:00:01.209Z] ============================================================
+[2026-06-03T14:00:01.209Z]   Test 2: PptxViewerCard — Canvas Rendering
+[2026-06-03T14:00:01.209Z] ============================================================
+[2026-06-03T14:00:01.210Z]   [PASS] PptxViewerCard — dynamic import of pptxviewjs (await import)
+[2026-06-03T14:00:01.211Z]   [PASS] PptxViewerCard — PPTXViewer initialized with canvas element
+[2026-06-03T14:00:01.212Z]   [PASS] PptxViewerCard — slideSizeMode: "fit" for responsive scaling
+[2026-06-03T14:00:01.213Z]   [PASS] PptxViewerCard — fetches .pptx binary via fetch(url)
+[2026-06-03T14:00:01.214Z]   [PASS] PptxViewerCard — loadFile(buffer) renders to canvas
+[2026-06-03T14:00:01.215Z]   [PASS] PptxViewerCard — getSlideCount() returns correct slide count
+[2026-06-03T14:00:01.216Z]   [PASS] PptxViewerCard — renderSlide(n) navigates between slides
+[2026-06-03T14:00:01.217Z]   [PASS] PptxViewerCard — extract actual slide aspect ratio from processor
+[2026-06-03T14:00:01.218Z]   [PASS] PptxViewerCard — auto-adapts canvas height to match slide ratio
+[2026-06-03T14:00:01.219Z]   [PASS] PptxViewerCard — 16:9 slides rendered with correct proportions
+[2026-06-03T14:00:01.220Z]   [PASS] PptxViewerCard — 4:3 slides rendered with correct proportions
+[2026-06-03T14:00:01.221Z]   [PASS] PptxViewerCard — ResizeObserver adjusts canvas on container resize
+[2026-06-03T14:00:01.222Z]   [PASS] PptxViewerCard — explicit CSS width/height on canvas (HiDPI fix)
+[2026-06-03T14:00:01.222Z]
+[2026-06-03T14:00:01.222Z] ============================================================
+[2026-06-03T14:00:01.222Z]   Test 3: PptxViewerCard — Navigation UI
+[2026-06-03T14:00:01.222Z] ============================================================
+[2026-06-03T14:00:01.223Z]   [PASS] Prev/Next buttons (◀ ▶) — navigate ±1 slide
+[2026-06-03T14:00:01.224Z]   [PASS] First/Last buttons (⏮ ⏭) — jump to start/end
+[2026-06-03T14:00:01.225Z]   [PASS] Dot indicators — one per slide, active dot highlighted
+[2026-06-03T14:00:01.226Z]   [PASS] Dot click — navigates to corresponding slide
+[2026-06-03T14:00:01.227Z]   [PASS] Keyboard ← → — navigate ±1 slide
+[2026-06-03T14:00:01.228Z]   [PASS] Keyboard Home/End — jump to first/last slide
+[2026-06-03T14:00:01.229Z]   [PASS] Touch swipe — 50px threshold triggers navigation
+[2026-06-03T14:00:01.230Z]   [PASS] Click left 20% edge — previous slide
+[2026-06-03T14:00:01.231Z]   [PASS] Click right 20% edge — next slide
+[2026-06-03T14:00:01.232Z]   [PASS] Slide counter — shows "N / M" in viewport overlay
+[2026-06-03T14:00:01.233Z]   [PASS] Slide counter — also shown in controls bar
+[2026-06-03T14:00:01.234Z]   [PASS] Download button — always visible in controls bar
+[2026-06-03T14:00:01.235Z]   [PASS] Disabled state — prev/first buttons disabled on slide 0
+[2026-06-03T14:00:01.236Z]   [PASS] Disabled state — next/last buttons disabled on last slide
+[2026-06-03T14:00:01.236Z]
+[2026-06-03T14:00:01.236Z] ============================================================
+[2026-06-03T14:00:01.236Z]   Test 4: PptxViewerCard — States
+[2026-06-03T14:00:01.236Z] ============================================================
+[2026-06-03T14:00:01.237Z]   [PASS] Loading state — shows "正在加载 PPT..." with pulse animation
+[2026-06-03T14:00:01.238Z]   [PASS] Error state — shows "PPT 加载失败" with error message
+[2026-06-03T14:00:01.239Z]   [PASS] Error state — download button still available for manual download
+[2026-06-03T14:00:01.240Z]   [PASS] Ready state — canvas rendered, controls active
+[2026-06-03T14:00:01.241Z]   [PASS] Cleanup — viewer.destroy() called on unmount
+[2026-06-03T14:00:01.242Z]   [PASS] Cleanup — cancelled flag prevents state update after unmount
+[2026-06-03T14:00:01.243Z]   [PASS] Cleanup — ResizeObserver disconnected on unmount
+[2026-06-03T14:00:01.243Z]
+[2026-06-03T14:00:01.243Z] ============================================================
+[2026-06-03T14:00:01.243Z]   Test 5: ImageSlideshowCard — Rendering & Navigation
+[2026-06-03T14:00:01.243Z] ============================================================
+[2026-06-03T14:00:01.244Z]   [PASS] ImageSlideshowCard — renders first image on mount
+[2026-06-03T14:00:01.245Z]   [PASS] ImageSlideshowCard — navigation controls (prev/next/first/last)
+[2026-06-03T14:00:01.246Z]   [PASS] ImageSlideshowCard — dot indicators with correct count
+[2026-06-03T14:00:01.247Z]   [PASS] ImageSlideshowCard — keyboard navigation (← → Home End)
+[2026-06-03T14:00:01.248Z]   [PASS] ImageSlideshowCard — touch swipe navigation (50px threshold)
+[2026-06-03T14:00:01.249Z]   [PASS] ImageSlideshowCard — click edge zones (20% left/right)
+[2026-06-03T14:00:01.250Z]   [PASS] ImageSlideshowCard — imageUrls from metadataJson parsed
+[2026-06-03T14:00:01.251Z]   [PASS] ImageSlideshowCard — graceful when metadataJson parse fails
+[2026-06-03T14:00:01.252Z]   [PASS] ImageSlideshowCard — slide counter overlay
+[2026-06-03T14:00:01.252Z]
+[2026-06-03T14:00:01.252Z] ============================================================
+[2026-06-03T14:00:01.252Z]   Test 6: Dark Mode — PPT Components
+[2026-06-03T14:00:01.252Z] ============================================================
+[2026-06-03T14:00:01.253Z]   [PASS] PptxViewerCard — dark: variants on border, bg, text
+[2026-06-03T14:00:01.254Z]   [PASS] PptxViewerCard — controls bar dark background
+[2026-06-03T14:00:01.255Z]   [PASS] PptxViewerCard — loading overlay dark mode
+[2026-06-03T14:00:01.256Z]   [PASS] PptxViewerCard — error overlay dark mode
+[2026-06-03T14:00:01.257Z]   [PASS] ImageSlideshowCard — dark: variants applied
+[2026-06-03T14:00:01.258Z]   [PASS] InlineArtifactCard — all card types have dark mode support
+[2026-06-03T14:00:01.258Z]
+[2026-06-03T14:00:01.258Z] ============================================================
+[2026-06-03T14:00:01.258Z]   Summary
+[2026-06-03T14:00:01.258Z] ============================================================
+[2026-06-03T14:00:01.259Z]   Total: 50 tests
+[2026-06-03T14:00:01.259Z]   Passed: 50
+[2026-06-03T14:00:01.259Z]   Failed: 0
+[2026-06-03T14:00:01.259Z]   Result: ALL TESTS PASSED
+[2026-06-03T14:00:01.259Z]
+[2026-06-03T14:00:01.260Z] ============================================================
+[2026-06-03T14:00:01.260Z]   Phase 5.2 Verification Complete — Frontend PPT Preview Components
+[2026-06-03T14:00:01.260Z] ============================================================

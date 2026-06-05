@@ -138,16 +138,67 @@ export function stopRun(runId: string) {
   return request<{ ok: boolean }>(`/runs/${runId}/stop`, { method: "POST" });
 }
 
+import type { ParsedAgentIntent, PolishPromptResponse } from "@agenthub/shared";
+
 // --- Agents ---
 
-export function listAgents() {
-  return request<AgentRow[]>("/agents");
+export function listAgents(enabledOnly?: boolean) {
+  const qs = enabledOnly ? "?enabled=true" : "";
+  return request<AgentRow[]>(`/agents${qs}`);
 }
 
-export function createAgentFromDraft(draft: { name: string; platform?: string; capabilities?: string[]; systemPrompt?: string }) {
+export function getAgent(id: string) {
+  return request<AgentRow>(`/agents/${id}`);
+}
+
+export function createAgentFromDraft(draft: {
+  name: string;
+  platform?: string;
+  capabilities?: string[];
+  systemPrompt?: string;
+  toolSetIds?: string[];
+}) {
   return request<AgentRow>("/agents/from-draft", {
     method: "POST",
     body: JSON.stringify(draft),
+  });
+}
+
+export function updateAgent(
+  id: string,
+  data: {
+    name?: string;
+    enabled?: boolean;
+    systemPrompt?: string;
+    capabilities?: string[];
+    toolSetIds?: string[];
+    avatar?: string;
+    status?: string;
+  }
+) {
+  return request<AgentRow>(`/agents/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteAgent(id: string) {
+  return request<{ ok: boolean }>(`/agents/${id}`, { method: "DELETE" });
+}
+
+// --- Agent Builder ---
+
+export function parseCreationIntent(description: string) {
+  return request<ParsedAgentIntent>("/agents/parse-intent", {
+    method: "POST",
+    body: JSON.stringify({ description }),
+  });
+}
+
+export function polishSystemPrompt(draft: string) {
+  return request<PolishPromptResponse>("/agents/polish-prompt", {
+    method: "POST",
+    body: JSON.stringify({ draft }),
   });
 }
 

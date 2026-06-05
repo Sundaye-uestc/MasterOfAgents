@@ -134,7 +134,17 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
     listArtifactsByConversation(conversationId)
       .then((arts) => {
         const grouped: Record<string, ArtifactRow[]> = {};
-        for (const art of arts) {
+        const seenNames = new Set<string>();
+        // Sort by createdAt ASC so the FIRST agent to create each file
+        // "owns" it — avoids later runs stealing artifacts from earlier ones.
+        const sorted = [...arts].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        for (const art of sorted) {
+          // Cross-run dedup by name: same filename discovered by multiple
+          // concurrent agents only appears under the earliest run.
+          if (seenNames.has(art.name)) continue;
+          seenNames.add(art.name);
           const rid = art.runId ?? "";
           if (!grouped[rid]) grouped[rid] = [];
           grouped[rid].push(art);
@@ -303,7 +313,20 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           setRunArtifacts((prev) => {
             const runId = art.runId ?? "";
             const existing = prev[runId] ?? [];
+            // Intra-run dedup by id
             if (existing.some((a) => a.id === art.id)) return prev;
+            // Cross-run dedup: only skip if same name + type exists in another run
+            // (multi-agent discovering same file). PPT modifications create new
+            // artifacts with the same name but different id → allow them.
+            for (const otherRunId of Object.keys(prev)) {
+              if (otherRunId === runId) continue;
+              const dup = prev[otherRunId]!.find((a) => a.name === art.name && a.type === art.type);
+              if (dup) {
+                // Same file, same type — but this is a NEW run's artifact (modification).
+                // Remove the old one from other run so the new one takes its place.
+                prev[otherRunId] = prev[otherRunId]!.filter((a) => a.id !== dup.id);
+              }
+            }
             return { ...prev, [runId]: [art, ...existing] };
           });
           break;
@@ -495,8 +518,35 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
     return "⚡";
   };
 
+  // Check if a string starts with an emoji
+  const startsWithEmoji = (s: string): boolean => /^\p{Emoji}/u.test(s);
+
   // Capability → Chinese label mapping
   const capabilityLabel = (cap: string): string => {
+    // If already Chinese/emoji-rich (AI-generated), use as-is
+    if (startsWithEmoji(cap)) {
+      // Strip emoji prefix to check for known English labels
+      const withoutEmoji = cap.replace(/^\p{Emoji}\s*/u, "");
+      const labels: Record<string, string> = {
+        "code-generation": "代码生成",
+        debugging: "调试",
+        testing: "测试",
+        analysis: "分析",
+        review: "审查",
+        "file-management": "文件管理",
+        "web-scraping": "网络爬取",
+        security: "安全",
+        refactoring: "重构",
+        "code-review": "代码审查",
+        documentation: "文档",
+      };
+      const key = withoutEmoji.toLowerCase();
+      for (const [k, v] of Object.entries(labels)) {
+        if (key.includes(k) || k.includes(key)) return v;
+      }
+      return withoutEmoji || cap;
+    }
+    // Old-style English labels
     const labels: Record<string, string> = {
       "code-generation": "代码生成",
       debugging: "调试",
@@ -539,7 +589,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
                   key={cap}
                   className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[10px] bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700/50"
                 >
-                  {capabilityEmoji(cap)} {capabilityLabel(cap)}
+                  {startsWithEmoji(cap) ? cap : `${capabilityEmoji(cap)} ${capabilityLabel(cap)}`}
                 </span>
               ))}
             </div>

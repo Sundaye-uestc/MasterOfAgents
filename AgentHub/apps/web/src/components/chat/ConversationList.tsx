@@ -122,7 +122,7 @@ export function ConversationList({
 
   const handleNewClick = async () => {
     try {
-      const list = await listAgents();
+      const list = await listAgents(true);
       setAgents(list);
     } catch { /* ignore */ }
     setShowNewModal(true);

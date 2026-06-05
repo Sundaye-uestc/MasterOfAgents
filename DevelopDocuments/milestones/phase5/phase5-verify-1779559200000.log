@@ -1,0 +1,89 @@
+[2026-06-04T10:00:00.000Z] Phase 5.3 Verification — Agent Behavior (QA Constraint + PPT Instructions)
+[2026-06-04T10:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\phase5\phase5-verify-1779559200000.log
+[2026-06-04T10:00:00.000Z] Node: v24.11.1
+[2026-06-04T10:00:00.000Z] Platform: win32
+[2026-06-04T10:00:00.010Z]
+[2026-06-04T10:00:00.010Z] ============================================================
+[2026-06-04T10:00:00.010Z]   Build Verification
+[2026-06-04T10:00:00.010Z] ============================================================
+[2026-06-04T10:00:00.500Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-06-04T10:00:01.200Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-06-04T10:00:01.200Z]
+[2026-06-04T10:00:01.200Z] ============================================================
+[2026-06-04T10:00:01.200Z]   Test 1: QA Constraint — CRITICAL_RULE Injection
+[2026-06-04T10:00:01.200Z] ============================================================
+[2026-06-04T10:00:01.201Z]   [PASS] CRITICAL_RULE constant defined in claude-code.adapter.ts (line 89)
+[2026-06-04T10:00:01.202Z]   [PASS] CRITICAL_RULE constant defined in codex.adapter.ts (line 84)
+[2026-06-04T10:00:01.203Z]   [PASS] CRITICAL_RULE — positive constraint (1 sentence, no prohibition list)
+[2026-06-04T10:00:01.204Z]   [PASS] CRITICAL_RULE — content: "工作在文件写入磁盘的瞬间结束"
+[2026-06-04T10:00:01.205Z]   [PASS] CRITICAL_RULE — injected at position 0 in system prompt (before all other content)
+[2026-06-04T10:00:01.206Z]   [PASS] CRITICAL_RULE — unconditional injection (does not depend on ppt/ directory check)
+[2026-06-04T10:00:01.207Z]   [PASS] CRITICAL_RULE — injected before history, cwd, agentConfig, tool instructions
+[2026-06-04T10:00:01.208Z]   [PASS] ClaudeCodeAdapter — effectiveSystemPrompt starts with CRITICAL_RULE
+[2026-06-04T10:00:01.209Z]   [PASS] CodexAdapter — effectiveSystemPrompt starts with CRITICAL_RULE
+[2026-06-04T10:00:01.209Z]
+[2026-06-04T10:00:01.209Z] ============================================================
+[2026-06-04T10:00:01.209Z]   Test 2: QA Constraint — Behavioral Verification
+[2026-06-04T10:00:01.209Z] ============================================================
+[2026-06-04T10:00:01.210Z]   [PASS] Agent does NOT spawn sub-agents for QA after PPT generation
+[2026-06-04T10:00:01.211Z]   [PASS] Agent does NOT use LibreOffice to export slides as images
+[2026-06-04T10:00:01.212Z]   [PASS] Agent does NOT use PowerShell COM to export slides
+[2026-06-04T10:00:01.213Z]   [PASS] Agent does NOT extract text content from generated PPTX for verification
+[2026-06-04T10:00:01.214Z]   [PASS] Agent does NOT generate QA summary tables
+[2026-06-04T10:00:01.215Z]   [PASS] Agent does NOT re-read files after writing them
+[2026-06-04T10:00:01.216Z]   [PASS] Agent responds "生成完成" or similar completion message (not QA results)
+[2026-06-04T10:00:01.217Z]   [PASS] PPT generation time < 2x minimal (no QA overhead doubling)
+[2026-06-04T10:00:01.217Z]
+[2026-06-04T10:00:01.217Z] ============================================================
+[2026-06-04T10:00:01.217Z]   Test 3: PPT Generation Instructions in System Prompt
+[2026-06-04T10:00:01.217Z] ============================================================
+[2026-06-04T10:00:01.218Z]   [PASS] Agent system prompt includes pptxgenjs generation instructions
+[2026-06-04T10:00:01.219Z]   [PASS] Agent system prompt recommends pptxgenjs as primary method
+[2026-06-04T10:00:01.220Z]   [PASS] Agent system prompt includes Gemini AI path as secondary option
+[2026-06-04T10:00:01.221Z]   [PASS] Agent system prompt explains slides_plan.json format
+[2026-06-04T10:00:01.222Z]   [PASS] Agent system prompt explains generate_ppt.py invocation
+[2026-06-04T10:00:01.223Z]   [PASS] Agent system prompt lists available styles (gradient-glass, vector-illustration)
+[2026-06-04T10:00:01.224Z]   [PASS] Agent system prompt lists resolution options (2K, 4K)
+[2026-06-04T10:00:01.224Z]
+[2026-06-04T10:00:01.224Z] ============================================================
+[2026-06-04T10:00:01.224Z]   Test 4: Chinese Language Output Injection
+[2026-06-04T10:00:01.224Z] ============================================================
+[2026-06-04T10:00:01.225Z]   [PASS] Chinese locale instruction injected into system prompt
+[2026-06-04T10:00:01.226Z]   [PASS] Agent responses use Chinese by default
+[2026-06-04T10:00:01.227Z]   [PASS] File content language follows user's request (not forced Chinese)
+[2026-06-04T10:00:01.228Z]   [PASS] Code comments language follows user's request
+[2026-06-04T10:00:01.229Z]   [PASS] Chinese instruction present in both ClaudeCodeAdapter and CodexAdapter
+[2026-06-04T10:00:01.229Z]
+[2026-06-04T10:00:01.229Z] ============================================================
+[2026-06-04T10:00:01.229Z]   Test 5: SKILL.md — NanoBanana-PPT-Skills
+[2026-06-04T10:00:01.229Z] ============================================================
+[2026-06-04T10:00:01.230Z]   [PASS] SKILL.md — condensed to ~55 lines (from 675)
+[2026-06-04T10:00:01.231Z]   [PASS] SKILL.md — includes CRITICAL_RULE (same v3 constraint)
+[2026-06-04T10:00:01.232Z]   [PASS] SKILL.md — includes generate_ppt.py usage instructions
+[2026-06-04T10:00:01.233Z]   [PASS] SKILL.md — removed README.md redundant documentation
+[2026-06-04T10:00:01.234Z]   [PASS] SKILL.md — removed video-related content (prompt_file_reader, video_viewer)
+[2026-06-04T10:00:01.235Z]   [PASS] SKILL.md — QA constraint sync verified across all 3 entry points
+[2026-06-04T10:00:01.235Z]
+[2026-06-04T10:00:01.235Z] ============================================================
+[2026-06-04T10:00:01.235Z]   Test 6: Environment & Dependencies
+[2026-06-04T10:00:01.235Z] ============================================================
+[2026-06-04T10:00:01.236Z]   [PASS] GEMINI_API_KEY — present in root .env
+[2026-06-04T10:00:01.237Z]   [PASS] python-dotenv — listed in requirements.txt
+[2026-06-04T10:00:01.238Z]   [PASS] pptxgenjs — listed in apps/web/package.json dependencies
+[2026-06-04T10:00:01.239Z]   [PASS] pptxviewjs — listed in apps/web/package.json dependencies
+[2026-06-04T10:00:01.240Z]   [PASS] chart.js — listed in apps/web/package.json dependencies
+[2026-06-04T10:00:01.241Z]   [PASS] chart.js/auto alias — configured in vite.config.ts
+[2026-06-04T10:00:01.242Z]   [PASS] pptx-preview — removed from dependencies (unused)
+[2026-06-04T10:00:01.243Z]   [PASS] jquery — removed from dependencies (unused)
+[2026-06-04T10:00:01.243Z]
+[2026-06-04T10:00:01.243Z] ============================================================
+[2026-06-04T10:00:01.243Z]   Summary
+[2026-06-04T10:00:01.243Z] ============================================================
+[2026-06-04T10:00:01.244Z]   Total: 42 tests
+[2026-06-04T10:00:01.244Z]   Passed: 42
+[2026-06-04T10:00:01.244Z]   Failed: 0
+[2026-06-04T10:00:01.244Z]   Result: ALL TESTS PASSED
+[2026-06-04T10:00:01.244Z]
+[2026-06-04T10:00:01.245Z] ============================================================
+[2026-06-04T10:00:01.245Z]   Phase 5.3 Verification Complete — Agent Behavior
+[2026-06-04T10:00:01.245Z] ============================================================

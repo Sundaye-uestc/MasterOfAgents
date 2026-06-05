@@ -217,12 +217,23 @@ export class AgentRuntimeService {
             const changes = await workspaceSvc.diffSnapshots(beforeSnapshotId, afterSnap.id);
             crashLog(`diffSnapshots: ${changes.length} changes: ${changes.map(c => `${c.changeType}:${c.path}`).join(', ') || '(none)'}`);
 
+            // Detect PPT mode: if any .pptx file was created/modified, switch
+            // to allow-list mode (only show .pptx). PPT operations touch many
+            // internal files (XML, scripts, metadata) that are noise to the user.
+            const isPPTMode = changes.some((c) => {
+              if (c.changeType === "delete") return false;
+              return /\.pptx?$/i.test(c.path);
+            });
+
             // Helper: check if a path should be hidden from chat UI.
-            // PPT internal files (slide images, metadata) are covered by the
-            // index.html viewer; JS scripts generated alongside PPT are noise.
             const shouldSkipFile = (filePath: string): boolean => {
               const normalized = filePath.replace(/\\/g, "/");
-              // PPT slide images — merged into a single slideshow artifact below
+              if (isPPTMode) {
+                // Allow-list: only show .pptx / .ppt files
+                return !/\.pptx?$/i.test(normalized);
+              }
+              // Deny-list for non-PPT runs:
+              // Slide images — merged into a single slideshow artifact below
               if (/(^|\/)slide-?\d*\.(png|jpg|jpeg|webp)$/i.test(normalized)) return true;
               // PPT metadata / input plans
               if (/\/(prompts|slides_plan)\.json$/i.test(normalized)) return true;
@@ -251,7 +262,7 @@ export class AgentRuntimeService {
 
               for (const fc of changes) {
                 if (fc.changeType === "delete") continue;
-                // Skip PPT internal files — the index.html viewer covers the slides
+                // Skip internal files (PPT mode → non-pptx; non-PPT → known noise)
                 if (shouldSkipFile(fc.path)) {
                   crashLog(`Artifact skipped (hidden): ${fc.path}`);
                   continue;

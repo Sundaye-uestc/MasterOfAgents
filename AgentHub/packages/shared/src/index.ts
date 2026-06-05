@@ -9,3 +9,4 @@ export { type WorkspaceRef, type FileEntry, type Manifest, type Snapshot, type F
 export * from "./schemas/artifact.schema.js";
 export * from "./schemas/workspace.schema.js";
 export * from "./constants.js";
+export * from "./tool-sets.js";
