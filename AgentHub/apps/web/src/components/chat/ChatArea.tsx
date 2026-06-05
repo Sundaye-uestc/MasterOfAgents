@@ -8,6 +8,7 @@ import { MessageInput } from "./MessageInput.js";
 import { PermissionModal } from "./PermissionModal.js";
 
 import { AgentBadge } from "./AgentBadge.js";
+import { formatCapability } from "./CapabilityTags.js";
 import { ToolInvocationCard } from "./ToolInvocationCard.js";
 import { MessageBubble, isMessagePinned } from "./MessageBubble.js";
 import { ReplyPreviewCard } from "./ReplyPreviewCard.js";
@@ -478,74 +479,6 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
 
   const isOrchestrating = orch.runId && orch.tasks.length > 0;
 
-  // Capability → emoji mapping
-  const capabilityEmoji = (cap: string): string => {
-    const emojis: Record<string, string> = {
-      debugging: "🐛",
-      testing: "🧪",
-      analysis: "🔍",
-      review: "👀",
-      "code-generation": "🔧",
-      "file-management": "📁",
-      "web-scraping": "🌐",
-      security: "🔒",
-    };
-    const key = (cap ?? "").toLowerCase();
-    for (const [k, v] of Object.entries(emojis)) {
-      if (key.includes(k) || k.includes(key)) return v;
-    }
-    return "⚡";
-  };
-
-  // Check if a string starts with an emoji
-  const startsWithEmoji = (s: string): boolean => /^\p{Emoji}/u.test(s);
-
-  // Capability → Chinese label mapping
-  const capabilityLabel = (cap: string): string => {
-    // If already Chinese/emoji-rich (AI-generated), use as-is
-    if (startsWithEmoji(cap)) {
-      // Strip emoji prefix to check for known English labels
-      const withoutEmoji = cap.replace(/^\p{Emoji}\s*/u, "");
-      const labels: Record<string, string> = {
-        "code-generation": "代码生成",
-        debugging: "调试",
-        testing: "测试",
-        analysis: "分析",
-        review: "审查",
-        "file-management": "文件管理",
-        "web-scraping": "网络爬取",
-        security: "安全",
-        refactoring: "重构",
-        "code-review": "代码审查",
-        documentation: "文档",
-      };
-      const key = withoutEmoji.toLowerCase();
-      for (const [k, v] of Object.entries(labels)) {
-        if (key.includes(k) || k.includes(key)) return v;
-      }
-      return withoutEmoji || cap;
-    }
-    // Old-style English labels
-    const labels: Record<string, string> = {
-      "code-generation": "代码生成",
-      debugging: "调试",
-      testing: "测试",
-      analysis: "分析",
-      review: "审查",
-      "file-management": "文件管理",
-      "web-scraping": "网络爬取",
-      security: "安全",
-      refactoring: "重构",
-      "code-review": "代码审查",
-      documentation: "文档",
-    };
-    const key = (cap ?? "").toLowerCase();
-    for (const [k, v] of Object.entries(labels)) {
-      if (key.includes(k) || k.includes(key)) return v;
-    }
-    return cap;
-  };
-
   // Get member count for group chats
   const memberCount = conversationType === "group" ? members.length : 0;
 
@@ -568,7 +501,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
                   key={cap}
                   className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[10px] bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700/50"
                 >
-                  {startsWithEmoji(cap) ? cap : `${capabilityEmoji(cap)} ${capabilityLabel(cap)}`}
+                  {formatCapability(cap)}
                 </span>
               ))}
             </div>

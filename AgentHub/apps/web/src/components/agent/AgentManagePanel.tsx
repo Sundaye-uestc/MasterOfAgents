@@ -6,6 +6,7 @@
 import { useState } from "react";
 import type { AgentRow } from "@agenthub/shared";
 import { AgentBadge } from "../chat/AgentBadge.js";
+import { formatCapability } from "../chat/CapabilityTags.js";
 import { AgentCreationModal } from "./AgentCreationModal.js";
 import { AgentEditModal } from "./AgentEditModal.js";
 import { AgentDetailModal } from "./AgentDetailModal.js";
@@ -140,7 +141,7 @@ export function AgentManagePanel({ agents, onClose, onAgentUpdated }: AgentManag
                 key={cap}
                 className="px-1.5 py-0.5 text-[10px] rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 truncate"
               >
-                {cap}
+                {formatCapability(cap)}
               </span>
             ))}
             {capabilities.length > 2 && (

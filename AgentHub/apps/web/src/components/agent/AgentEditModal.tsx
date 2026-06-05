@@ -6,6 +6,7 @@ import { useState } from "react";
 import type { AgentRow } from "@agenthub/shared";
 import { TOOL_SETS } from "@agenthub/shared";
 import { AgentBadge } from "../chat/AgentBadge.js";
+import { formatCapability } from "../chat/CapabilityTags.js";
 import { polishSystemPrompt } from "../../lib/api.js";
 
 interface AgentEditModalProps {
@@ -186,7 +187,7 @@ export function AgentEditModal({ agent, onClose, onSave }: AgentEditModalProps) 
                   key={tag}
                   className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
                 >
-                  {tag}
+                  {formatCapability(tag)}
                   <button
                     onClick={() => removeCapability(tag)}
                     className="text-blue-400 hover:text-blue-600 dark:hover:text-blue-200"

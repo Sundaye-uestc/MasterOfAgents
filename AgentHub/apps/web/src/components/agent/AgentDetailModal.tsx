@@ -4,6 +4,7 @@
 
 import type { AgentRow } from "@agenthub/shared";
 import { AgentBadge } from "../chat/AgentBadge.js";
+import { formatCapability } from "../chat/CapabilityTags.js";
 
 interface AgentDetailModalProps {
   agent: AgentRow;
@@ -85,7 +86,7 @@ export function AgentDetailModal({ agent, onClose }: AgentDetailModalProps) {
                   key={cap}
                   className="px-2 py-0.5 text-xs rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
                 >
-                  {cap}
+                  {formatCapability(cap)}
                 </span>
               ))}
             </div>
