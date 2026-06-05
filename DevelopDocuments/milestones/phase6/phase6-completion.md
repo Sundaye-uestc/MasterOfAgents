@@ -26,7 +26,8 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | `apps/web/src/components/agent/AgentEditModal.tsx` | 编辑名称/SystemPrompt/能力标签/工具集 + AI 润色 |
 | `apps/web/src/components/agent/AgentDetailModal.tsx` | 只读详情 |
 | `apps/web/src/components/agent/AgentDeleteConfirmModal.tsx` | 删除确认 |
-| `apps/web/src/components/agent/AgentManagePanel.tsx` | 全屏管理面板（自建/内置分区、启用开关、右键菜单） |
+| `apps/web/src/components/agent/AgentManagePanel.tsx` | 全屏管理面板 |
+| `apps/web/public/agents/opencode.png` | OpenCode 头像（从根目录复制） |
 
 ### 1.2 修改文件
 
@@ -35,12 +36,20 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | `packages/shared/src/types/db.ts` | 新增 `ParsedAgentIntent`、`PolishPromptResponse` 类型 |
 | `packages/shared/src/index.ts` | 导出 `tool-sets.ts` |
 | `apps/server/src/routes/agents.ts` | 8 个端点：GET（`?enabled` 过滤）/ POST / POST from-draft / POST parse-intent / POST polish-prompt / GET :id / PATCH :id / DELETE :id |
-| `apps/web/src/lib/api.ts` | 5 个新 API 函数 |
+| `apps/server/src/db/seed.ts` | 新增 `default-opencode` 内置 Agent |
+| `apps/web/src/lib/api.ts` | `listAgents(enabledOnly?)` 过滤参数 |
 | `apps/web/src/stores/agent.store.ts` | `update()` / `remove()` / `toggleEnabled()` |
-| `apps/web/src/App.tsx` | 侧边栏底部改造："我" + "Agent 管理 >" |
+| `apps/web/src/App.tsx` | 侧边栏 "Agent 管理 >" + `agentStore.load()` 初始化 |
+| `apps/web/src/components/chat/CapabilityTags.tsx` | 集中管理 emoji + 中文标签映射，导出 `formatCapability()` |
+| `apps/web/src/components/chat/AgentBadge.tsx` | 新增 `opencode` logo 映射 |
+| `apps/web/src/components/chat/ConversationList.tsx` | 默认工作目录 `D:/Projects/MasterOfAgents/Test` + 启用过滤 |
+| `apps/web/src/components/workspace/WorkspacePanel.tsx` | "文件"标签添加 SVG 刷新按钮（选中时显示） |
 | `apps/server/src/services/planner.service.ts` | ESM hoisting 绕过 + Prompt 强化 + follow-up 规则 |
 | `apps/server/src/services/orchestrator.service.ts` | Follow-up 检测 + DAG 调度 + Agent 名称映射 |
-| `apps/web/src/components/chat/ChatArea.tsx` | 移除 InlineDiffCard + 移除跨 run artifact 去重 + emoji fallback |
+| `apps/web/src/components/chat/ChatArea.tsx` | 移除 InlineDiffCard + 移除跨 run artifact 去重 + 复用 `formatCapability` |
+| `apps/web/src/components/agent/AgentEditModal.tsx` | 能力标签中文显示 |
+| `apps/web/src/components/agent/AgentManagePanel.tsx` | 能力标签中文显示 |
+| `apps/web/src/components/agent/AgentDetailModal.tsx` | 能力标签中文显示 |
 
 ---
 
@@ -153,6 +162,10 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | DAG 依赖调度 | ✅ |
 | Follow-up 修复（不出重复计划） | ✅ |
 | 文件多轮修改预览刷新 | ✅ |
+| 能力标签中文 + emoji（内置/自建统一） | ✅ |
+| OpenCode 内置 Agent（seed + Badge） | ✅ |
+| 新建对话默认工作目录 | ✅ |
+| 工作区文件刷新按钮 | ✅ |
 | TypeScript 编译 server + web | ✅ |
 
 ---
@@ -167,4 +180,5 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | `4f9d480` | Docs: add bug items |
 | `1ccc643` | Fix: Planner follow-up message handling |
 | `17e29c5` | Fix: file preview not refreshing on subsequent modifications |
-| `a0d02a0` | Merge zyw: Agent data loss fix + enabled filter + Codex CLI skip |
+| `34fdd05` | Docs: update todo + zyw merge (agent data loss fix, enabled filter) |
+| 未提交 | Feat: OpenCode built-in agent + capability Chinese labels + workspace refresh + default working dir |
