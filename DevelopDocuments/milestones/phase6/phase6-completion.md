@@ -166,3 +166,5 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | `9e953e3` | Fix: PPT allow-list filter + capability emoji fallback |
 | `4f9d480` | Docs: add bug items |
 | `1ccc643` | Fix: Planner follow-up message handling |
+| `17e29c5` | Fix: file preview not refreshing on subsequent modifications |
+| `a0d02a0` | Merge zyw: Agent data loss fix + enabled filter + Codex CLI skip |

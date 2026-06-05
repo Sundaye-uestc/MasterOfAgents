@@ -115,6 +115,11 @@ export function App() {
   const openPanel = useUIStore((s) => s.openPanel);
   const togglePanel = useUIStore((s) => s.togglePanel);
 
+  // Load agents on mount — ensures agentStore is populated on refresh
+  useEffect(() => {
+    agentStore.load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load workspace data on conversation switch
   useEffect(() => {
     if (activeConversationId) {
