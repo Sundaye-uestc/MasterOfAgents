@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
-import type { MessageRow, ToolInvocationRow } from "@agenthub/shared";
+import type { MessageRow, ToolInvocationRow, ArtifactRow } from "@agenthub/shared";
 import { MobileMessageBubble } from "./MobileMessageBubble.jsx";
 import { ToolInvocationList } from "../mobile-run-status/ToolInvocationList.jsx";
+import { MobileInlineArtifactCard } from "../mobile-artifact/MobileInlineArtifactCard.jsx";
 
 interface AgentInfo {
   agentId: string;
@@ -12,10 +13,10 @@ interface AgentInfo {
 interface Props {
   messages: MessageRow[];
   nameMap: Record<string, AgentInfo>;
-  memberCapabilities: Record<string, string[]>;
   toolInvocations?: Record<string, ToolInvocationRow[]>;
   streamingMsgId?: string | null;
   userAvatar?: string | null;
+  runArtifacts?: Record<string, ArtifactRow[]>;
 }
 
 function formatDateLabel(iso: string): string {
@@ -30,7 +31,7 @@ function formatDateLabel(iso: string): string {
   return d.toLocaleDateString("zh-CN", { month: "long", day: "numeric" });
 }
 
-export function MobileMessageList({ messages, nameMap, memberCapabilities, toolInvocations, streamingMsgId, userAvatar }: Props) {
+export function MobileMessageList({ messages, nameMap, toolInvocations, streamingMsgId, userAvatar, runArtifacts }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -75,10 +76,17 @@ export function MobileMessageList({ messages, nameMap, memberCapabilities, toolI
               message={msg}
               agentInfo={msg.agentId ? nameMap[msg.agentId] : undefined}
               showSender={showSender}
-              capabilities={msg.agentId ? memberCapabilities[msg.agentId] : undefined}
               isStreaming={streamingMsgId === msg.id}
               userAvatar={userAvatar}
             />
+            {/* Inline artifact preview cards — below agent messages that produced artifacts */}
+            {msg.role === "agent" && msg.runId && runArtifacts?.[msg.runId] && runArtifacts[msg.runId]!.length > 0 && (
+              <div className="ml-10 max-w-[85%] space-y-1">
+                {runArtifacts[msg.runId]!.map((art) => (
+                  <MobileInlineArtifactCard key={art.id} artifact={art} />
+                ))}
+              </div>
+            )}
             {toolInvocations?.[msg.id] && toolInvocations[msg.id]!.length > 0 && (
               <div className="ml-10 mt-1">
                 <ToolInvocationList invocations={toolInvocations[msg.id]!} />

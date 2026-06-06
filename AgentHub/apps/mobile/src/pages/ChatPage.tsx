@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
-import type { MessageRow, AgentRow, ToolInvocationRow } from "@agenthub/shared";
+import type { MessageRow, AgentRow, ToolInvocationRow, ArtifactRow } from "@agenthub/shared";
 import { useWebSocket } from "@agenthub/web/hooks/useWebSocket";
 import type { ServerWsEvent } from "@agenthub/shared";
-import { sendMessage, listAgents, getConversation, listMembers, stopRun as apiStopRun } from "@agenthub/web/lib/api";
-import { useMobileUIStore } from "../stores/mobile-ui.store.js";
+import { sendMessage, listAgents, getConversation, getConversationAgent, listMembers, stopRun as apiStopRun, listArtifactsByConversation } from "@agenthub/web/lib/api";
+import { useMobileUIStore, permissionWsSender } from "../stores/mobile-ui.store.js";
 import { useConversationStore } from "@agenthub/web/stores/conversation.store";
 import { useMessageStore } from "@agenthub/web/stores/message.store";
 import { useAgentStore } from "@agenthub/web/stores/agent.store";
@@ -14,6 +14,8 @@ import { AgentBadge } from "@agenthub/web/components/chat/AgentBadge";
 import { MobileMessageList } from "../components/mobile-chat/MobileMessageList.jsx";
 import { MobilePinnedContext } from "../components/mobile-chat/MobilePinnedContext.jsx";
 import { MobileMessageInput } from "../components/mobile-chat/MobileMessageInput.jsx";
+import { MobileFileChangePopup } from "../components/mobile-chat/MobileFileChangePopup.jsx";
+import { MobileMemberSheet } from "../components/mobile-chat/MobileMemberSheet.jsx";
 import { RunStatusBanner } from "../components/mobile-run-status/RunStatusBanner.jsx";
 
 interface MemberInfo {
@@ -37,6 +39,8 @@ export function ChatPage() {
   const [convTitle, setConvTitle] = useState("");
   const [convType, setConvType] = useState<"direct" | "group">("direct");
   const [convAgentId, setConvAgentId] = useState<string | null>(null);
+  // Agent info for the member sheet (direct chat: fetched from API; group: from listMembers)
+  const [convAgentInfo, setConvAgentInfo] = useState<MemberInfo | null>(null);
   const [members, setMembers] = useState<MemberInfo[]>([]);
   const [pinnedMessages, setPinnedMessages] = useState<MessageRow[]>([]);
   const [memberCapabilities, setMemberCapabilities] = useState<Record<string, string[]>>({});
@@ -52,6 +56,9 @@ export function ChatPage() {
     tasks: Array<{ taskId: string; agentId: string; title: string; status: string }>;
     progress: { completed: number; total: number };
   }>({ runStatus: "", tasks: [], progress: { completed: 0, total: 0 } });
+  const [runArtifacts, setRunArtifacts] = useState<Record<string, ArtifactRow[]>>({});
+  const [showFileChangePopup, setShowFileChangePopup] = useState(false);
+  const [showMemberSheet, setShowMemberSheet] = useState(false);
 
   // Build nameMap: agentId → {agentName, adapterKind} for message bubble avatars
   const nameMap: Record<string, { agentId: string; agentName: string; adapterKind: string }> = {};
@@ -74,6 +81,7 @@ export function ChatPage() {
   useEffect(() => {
     if (!conversationId) return;
     setMessages([]);  // clear while loading
+    setShowFileChangePopup(false);  // reset popup on conversation switch
     loadMessages(conversationId).then(() => {
       // Sync store messages to local state after API completes
       const msgs = useMessageStore.getState().messages;
@@ -86,27 +94,76 @@ export function ChatPage() {
     getConversation(conversationId).then((c) => {
       setConvTitle(c.title);
       setConvType(c.type);
+      // For direct chats, fetch the associated agent for the member sheet
+      if (c.type === "direct") {
+        getConversationAgent(conversationId).then(({ agentId }) => {
+          if (agentId) setConvAgentId(agentId);
+        }).catch(() => {});
+      }
+      // For group chats, load members — must be inside .then() because
+      // the convType state is stale outside (setState hasn't flushed yet)
+      if (c.type === "group") {
+        listMembers(conversationId).then(setMembers).catch(() => {});
+      }
     }).catch(() => {});
 
-    if (convType === "group") {
-      listMembers(conversationId).then(setMembers).catch(() => {});
-    }
+    // Load artifacts and group by runId with intra-run path dedup
+    listArtifactsByConversation(conversationId).then((arts) => {
+      const grouped: Record<string, ArtifactRow[]> = {};
+      const sorted = [...arts].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      for (const art of sorted) {
+        const rid = art.runId ?? "";
+        if (!grouped[rid]) grouped[rid] = [];
+        const existingIdx = grouped[rid]!.findIndex((a) => a.path === art.path);
+        if (existingIdx >= 0) {
+          grouped[rid]![existingIdx] = art; // replace with newer
+        } else {
+          grouped[rid]!.push(art);
+        }
+      }
+      setRunArtifacts(grouped);
+    }).catch(() => {});
   }, [conversationId, loadMessages]);
 
-  // Load agents and capabilities
+  // Load agents and capabilities (for both group and direct chats)
   useEffect(() => {
     if (agents.length === 0) useAgentStore.getState().load();
-    if (convType === "group" && members.length > 0) {
+    const shouldLoad =
+      (convType === "group" && members.length > 0) ||
+      (convType === "direct" && !!(agentMap[conversationId] || convAgentId));
+    if (shouldLoad) {
       listAgents().then((agentList) => {
         const map: Record<string, string[]> = {};
-        agentList.forEach((a) => {
-          try { map[a.id] = JSON.parse(a.configJson || "{}").capabilities || []; }
-          catch { map[a.id] = []; }
-        });
+        for (const a of agentList) {
+          if (a.capabilitiesJson) {
+            try {
+              const caps = JSON.parse(a.capabilitiesJson) as Array<{ label: string; value: string }>;
+              map[a.id] = caps.map((c) => c.label ?? c.value ?? String(c)).slice(0, 5);
+            } catch { map[a.id] = []; }
+          } else {
+            map[a.id] = [];
+          }
+        }
         setMemberCapabilities(map);
       }).catch(() => {});
     }
-  }, [convType, members, agents.length]);
+  }, [convType, members, agents.length, conversationId, agentMap, convAgentId]);
+
+  // Once convAgentId is known and agents are loaded, resolve agent info for the member sheet
+  useEffect(() => {
+    if (convAgentId && !convAgentInfo) {
+      const agent = agents.find((a) => a.id === convAgentId);
+      if (agent) {
+        setConvAgentInfo({
+          agentId: agent.id,
+          agentName: agent.name,
+          adapterKind: agent.adapterKind,
+        });
+      }
+    }
+  }, [convAgentId, convAgentInfo, agents]);
 
   // WebSocket event handler
   const handleWsEvent = useCallback((raw: ServerWsEvent) => {
@@ -137,6 +194,18 @@ export function ChatPage() {
         setCurrentRunId(event.runId);
         break;
       case "run:completed":
+        setRunning(false);
+        setCurrentRunId(null);
+        // Show file-change popup if there are pending changes
+        {
+          const pending = useWorkspaceStore.getState().fileChanges.filter(
+            (c) => c.status === "pending"
+          );
+          if (pending.length > 0) {
+            setShowFileChangePopup(true);
+          }
+        }
+        break;
       case "run:failed":
         setRunning(false);
         setCurrentRunId(null);
@@ -198,10 +267,24 @@ export function ChatPage() {
         }
         break;
       case "artifact:created":
+        // Update global artifact store
         useArtifactStore.setState((s: any) => {
           const exists = s.artifacts.some((a: any) => a.id === event.artifact.id);
           if (exists) return s;
           return { ...s, artifacts: [...s.artifacts, event.artifact] };
+        });
+        // Update per-run local state for inline preview cards
+        setRunArtifacts((prev) => {
+          const art = event.artifact as ArtifactRow;
+          const runId = art.runId ?? "";
+          const existing = prev[runId] ?? [];
+          const samePathIdx = existing.findIndex((a) => a.path === art.path);
+          if (samePathIdx >= 0) {
+            const updated = [...existing];
+            updated[samePathIdx] = art;
+            return { ...prev, [runId]: updated };
+          }
+          return { ...prev, [runId]: [art, ...existing] };
         });
         break;
       case "permission:requested":
@@ -217,6 +300,12 @@ export function ChatPage() {
 
   // Connect WebSocket
   const { send: wsSend } = useWebSocket(conversationId, handleWsEvent);
+
+  // Expose wsSend for ApprovalPage to send permission:respond messages
+  useEffect(() => {
+    permissionWsSender.send = wsSend;
+    return () => { permissionWsSender.send = null; };
+  }, [wsSend]);
 
   // Send handler
   const handleSend = useCallback(async (content: string, replyToId?: string, mentionedAgentId?: string) => {
@@ -268,12 +357,23 @@ export function ChatPage() {
     }
   }, [currentRunId]);
 
-  const convAgentInfo = agentMap[conversationId];
+  const convAgentFromMap = agentMap[conversationId];
+
+  // Build member list for the info sheet (group: real members; direct: single agent)
+  const sheetMembers: MemberInfo[] =
+    convType === "group"
+      ? members
+      : convAgentInfo  // state — reliably fetched via getConversationAgent
+        ? [convAgentInfo]
+        : convAgentFromMap  // fallback — may be populated from conversation store
+          ? [convAgentFromMap]
+          : [];
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 pt-safe" style={{ minHeight: "56px" }}>
+      <div className="flex items-center px-3 py-2 border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 pt-safe" style={{ minHeight: "56px" }}>
+        {/* Left: back button */}
         <button
           onClick={() => pop()}
           className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 touch-target flex-shrink-0"
@@ -281,26 +381,34 @@ export function ChatPage() {
           ←
         </button>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            {convType === "group" ? (
-              <div className="flex items-center gap-1 flex-wrap">
-                {members.slice(0, 3).map((m) => (
-                  <AgentBadge key={m.agentId} agentName={m.agentName} adapterKind={m.adapterKind} size="sm" rounded="full" />
-                ))}
-                {members.length > 3 && <span className="text-xs text-gray-500">+{members.length - 3}</span>}
-              </div>
-            ) : (
-              convAgentInfo && (
-                <AgentBadge agentName={convAgentInfo.agentName} adapterKind={convAgentInfo.adapterKind} size="sm" rounded="full" />
-              )
-            )}
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{convTitle}</h2>
-          </div>
-        </div>
+        {/* Center: title */}
+        <h2 className="flex-1 text-center text-sm font-semibold text-gray-900 dark:text-gray-100 truncate px-1">
+          {convTitle}
+        </h2>
 
-        {running && <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 flex-shrink-0 animate-pulse" />}
+        {/* Right: running indicator + member menu */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {running && (
+            <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse" />
+          )}
+          <button
+            onClick={() => setShowMemberSheet(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 touch-target"
+          >
+            ···
+          </button>
+        </div>
       </div>
+
+      {/* Member info bottom sheet */}
+      {showMemberSheet && (
+        <MobileMemberSheet
+          members={sheetMembers}
+          capabilities={memberCapabilities}
+          conversationType={convType}
+          onClose={() => setShowMemberSheet(false)}
+        />
+      )}
 
       {/* Run status banner */}
       {running && (
@@ -315,15 +423,20 @@ export function ChatPage() {
       {/* Pinned messages */}
       <MobilePinnedContext messages={pinnedMessages} onDismiss={() => setPinnedMessages([])} />
 
+      {/* File change popup — outside scroll area so it stays visible */}
+      {showFileChangePopup && (
+        <MobileFileChangePopup onClose={() => setShowFileChangePopup(false)} />
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
         <MobileMessageList
           messages={messages}
           nameMap={nameMap}
-          memberCapabilities={memberCapabilities}
           toolInvocations={toolInvocations}
           streamingMsgId={streamingMsgId}
           userAvatar={userAvatar}
+          runArtifacts={runArtifacts}
         />
       </div>
 
