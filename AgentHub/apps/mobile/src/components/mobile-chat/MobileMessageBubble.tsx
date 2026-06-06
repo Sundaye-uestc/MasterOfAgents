@@ -1,7 +1,6 @@
 import type { MessageRow } from "@agenthub/shared";
 import { MarkdownContent } from "@agenthub/web/components/chat/MarkdownContent";
 import { AgentBadge } from "@agenthub/web/components/chat/AgentBadge";
-import { CapabilityTags } from "@agenthub/web/components/chat/CapabilityTags";
 
 interface AgentInfo {
   agentId: string;
@@ -13,12 +12,11 @@ interface Props {
   message: MessageRow;
   agentInfo?: AgentInfo;
   showSender: boolean;
-  capabilities?: string[];
   isStreaming?: boolean;
   userAvatar?: string | null;
 }
 
-export function MobileMessageBubble({ message, agentInfo, showSender, capabilities, isStreaming: streamingProp, userAvatar }: Props) {
+export function MobileMessageBubble({ message, agentInfo, showSender, isStreaming: streamingProp, userAvatar }: Props) {
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
   const streaming = streamingProp || message.status === "streaming";
@@ -60,11 +58,6 @@ export function MobileMessageBubble({ message, agentInfo, showSender, capabiliti
             <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
               {agentInfo.agentName}
             </span>
-            {capabilities && capabilities.length > 0 && (
-              <span className="text-[10px] text-gray-400">
-                · <CapabilityTags capabilities={capabilities} />
-              </span>
-            )}
           </div>
         )}
 
