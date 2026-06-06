@@ -6,6 +6,7 @@
   "scripts": {
     "dev:server": "pnpm --filter @agenthub/server dev",
     "dev:web": "pnpm --filter @agenthub/web dev",
+    "dev:mobile": "pnpm --filter @agenthub/mobile dev",
     "build": "pnpm -r build",
     "check": "pnpm -r check",
     "verify": "pnpm --filter @agenthub/server verify"
