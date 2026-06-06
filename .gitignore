@@ -41,5 +41,8 @@ __pycache__/
 # Design documents (PDF)
 *.pdf
 
+# Dev server logs
+.logs/
+
 # Test
 Test/
