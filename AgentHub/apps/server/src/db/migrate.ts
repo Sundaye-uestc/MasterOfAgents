@@ -171,6 +171,12 @@ CREATE TABLE IF NOT EXISTS deployments (
   created_at TEXT NOT NULL,
   completed_at TEXT
 );
+
+CREATE TABLE IF NOT EXISTS user_profile (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  avatar TEXT,
+  updated_at TEXT NOT NULL
+);
 `;
 
 export function runMigrations(sqlDb: SqlJsDb) {

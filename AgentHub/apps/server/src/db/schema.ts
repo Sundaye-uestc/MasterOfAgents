@@ -171,6 +171,13 @@ export const secrets = sqliteTable("secrets", {
   updatedAt: text("updated_at").notNull(),
 });
 
+// --- User Profile ---
+export const userProfile = sqliteTable("user_profile", {
+  id: text("id").primaryKey().default("default"),
+  avatar: text("avatar"),
+  updatedAt: text("updated_at").notNull(),
+});
+
 // --- Deployments ---
 export const deployments = sqliteTable("deployments", {
   id: text("id").primaryKey(),

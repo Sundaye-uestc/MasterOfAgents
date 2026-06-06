@@ -12,6 +12,7 @@ import { fileChangeRoutes } from "./routes/file-changes.js";
 import { artifactRoutes } from "./routes/artifacts.js";
 import { deploymentRoutes } from "./routes/deployments.js";
 import { secretRoutes } from "./routes/secrets.js";
+import { profileRoutes } from "./routes/profile.js";
 import { initWsGateway } from "./ws/gateway.js";
 import { initDb, saveDb } from "./db/index.js";
 import { seedAgents } from "./db/seed.js";
@@ -37,6 +38,7 @@ app.route("/api/file-changes", fileChangeRoutes);
 app.route("/api/artifacts", artifactRoutes);
 app.route("/api/deployments", deploymentRoutes);
 app.route("/api/secrets", secretRoutes);
+app.route("/api/profile", profileRoutes);
 
 export { app };
 
