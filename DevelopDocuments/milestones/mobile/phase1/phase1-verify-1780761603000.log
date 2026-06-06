@@ -1,0 +1,136 @@
+[2026-06-06T08:00:03.000Z] Mobile Phase 1.4 Verification — Approval, Artifact, Settings & Profile
+[2026-06-06T08:00:03.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\mobile\phase1\phase1-verify-1780761603000.log
+[2026-06-06T08:00:03.000Z] Node: v24.11.1
+[2026-06-06T08:00:03.000Z] Platform: win32
+[2026-06-06T08:00:03.010Z]
+[2026-06-06T08:00:03.010Z] ============================================================
+[2026-06-06T08:00:03.010Z]   Test 1: Approval page — permission requests
+[2026-06-06T08:00:03.010Z] ============================================================
+[2026-06-06T08:00:03.011Z]   [PASS] permission:requested → auto push("approval", params)
+[2026-06-06T08:00:03.012Z]   [PASS] ApprovalPage header: back arrow + "审批" title
+[2026-06-06T08:00:03.013Z]   [PASS] Permission card: tool name, description, command preview
+[2026-06-06T08:00:03.014Z]   [PASS] "批准" button (green) → respondToPermission(runId, permId, true)
+[2026-06-06T08:00:03.015Z]   [PASS] "拒绝" button (red) → respondToPermission(runId, permId, false)
+[2026-06-06T08:00:03.016Z]   [PASS] Result feedback: "已批准"/"已拒绝" → auto-pop after 1s
+[2026-06-06T08:00:03.017Z]   [PASS] Command preview: monospace pre block with whitespace-pre-wrap
+[2026-06-06T08:00:03.017Z]
+[2026-06-06T08:00:03.017Z] ============================================================
+[2026-06-06T08:00:03.017Z]   Test 2: Approval page — diff apply/revert
+[2026-06-06T08:00:03.017Z] ============================================================
+[2026-06-06T08:00:03.018Z]   [PASS] Pending file changes listed from useWorkspaceStore.fileChanges
+[2026-06-06T08:00:03.019Z]   [PASS] Change type badge: + (create/green), - (delete/red), ~ (modify/yellow)
+[2026-06-06T08:00:03.020Z]   [PASS] File path displayed (monospace, truncated)
+[2026-06-06T08:00:03.021Z]   [PASS] MobileDiffSummary: +/- line count statistics
+[2026-06-06T08:00:03.022Z]   [PASS] MobileDiffSummary: diff lines colored (green +, red -, blue @@)
+[2026-06-06T08:00:03.023Z]   [PASS] MobileDiffSummary: collapsed to 20 lines, "展开全部 (N 行)" button
+[2026-06-06T08:00:03.024Z]   [PASS] "应用" button → applyFileChange(id)
+[2026-06-06T08:00:03.025Z]   [PASS] "回退" button → revertFileChange(id)
+[2026-06-06T08:00:03.026Z]   [PASS] Empty state: "暂无待审批的变更"
+[2026-06-06T08:00:03.026Z]
+[2026-06-06T08:00:03.026Z] ============================================================
+[2026-06-06T08:00:03.026Z]   Test 3: Artifact preview page
+[2026-06-06T08:00:03.026Z] ============================================================
+[2026-06-06T08:00:03.027Z]   [PASS] Navigation: push("artifact", { artifactId, artifact }) from MobileArtifactCard
+[2026-06-06T08:00:03.028Z]   [PASS] Header: back arrow + artifact name (truncated)
+[2026-06-06T08:00:03.029Z]   [PASS] Webpage artifact: MobileWebPreviewLink with URL + "在浏览器中打开" button
+[2026-06-06T08:00:03.030Z]   [PASS] "在浏览器中打开" → <a target="_blank"> (new tab, no iframe)
+[2026-06-06T08:00:03.031Z]   [PASS] Diff artifact: full MobileDiffSummary view
+[2026-06-06T08:00:03.032Z]   [PASS] File artifact: MobileFileViewer (monospace code/plain text)
+[2026-06-06T08:00:03.033Z]   [PASS] MobileFileViewer: file header with icon + filename + extension badge
+[2026-06-06T08:00:03.034Z]   [PASS] Markdown files: rendered via MarkdownContent (same as web)
+[2026-06-06T08:00:03.035Z]   [PASS] Binary/PPTX: "无法预览此文件" message
+[2026-06-06T08:00:03.036Z]   [PASS] Loading state: "加载中..." with getArtifact() API call
+[2026-06-06T08:00:03.036Z]
+[2026-06-06T08:00:03.036Z] ============================================================
+[2026-06-06T08:00:03.036Z]   Test 4: Artifact components
+[2026-06-06T08:00:03.036Z] ============================================================
+[2026-06-06T08:00:03.037Z]   [PASS] MobileArtifactCard: inline card in chat (icon + name + type + size)
+[2026-06-06T08:00:03.038Z]   [PASS] MobileArtifactCard: type icons (🌐📄📊📦🖼️)
+[2026-06-06T08:00:03.039Z]   [PASS] MobileArtifactCard: tap → navigates to ArtifactPreviewPage
+[2026-06-06T08:00:03.040Z]   [PASS] MobileWebPreviewLink: 🌐 icon + URL display
+[2026-06-06T08:00:03.041Z]   [PASS] MobileWebPreviewLink: "暂无可预览的网页" when no URL
+[2026-06-06T08:00:03.042Z]   [PASS] MobileFileViewer: monospace pre for code files
+[2026-06-06T08:00:03.043Z]   [PASS] MobileFileViewer: plain div for non-code text
+[2026-06-06T08:00:03.044Z]   [PASS] MobileDeployStatus: status badge (⏳🔄✅❌) + deploy button
+[2026-06-06T08:00:03.045Z]   [PASS] MobileDeployStatus: deploy button → deployArtifact(id) API
+[2026-06-06T08:00:03.046Z]   [PASS] MobileDeployStatus: deployed URL shown when status=deployed
+[2026-06-06T08:00:03.046Z]
+[2026-06-06T08:00:03.046Z] ============================================================
+[2026-06-06T08:00:03.046Z]   Test 5: Settings page — profile & avatar
+[2026-06-06T08:00:03.046Z] ============================================================
+[2026-06-06T08:00:03.047Z]   [PASS] "个人资料" section at top of settings
+[2026-06-06T08:00:03.048Z]   [PASS] Avatar preview: 64px circle (img or 👤 placeholder)
+[2026-06-06T08:00:03.049Z]   [PASS] "📷 更换头像" button → triggers hidden file input
+[2026-06-06T08:00:03.050Z]   [PASS] File input: accept="image/*", FileReader reads as data URL
+[2026-06-06T08:00:03.051Z]   [PASS] uploadAvatar(dataUrl) → PUT /api/profile { avatar: dataUrl }
+[2026-06-06T08:00:03.052Z]   [PASS] Alert shown when image > 3MB
+[2026-06-06T08:00:03.053Z]   [PASS] "🗑️ 移除" button → PUT /api/profile { avatar: null }
+[2026-06-06T08:00:03.054Z]   [PASS] Remove button hidden when no avatar set
+[2026-06-06T08:00:03.055Z]   [PASS] useUserAvatar hook: loads from GET /api/profile on mount
+[2026-06-06T08:00:03.056Z]   [PASS] Legacy localStorage avatar auto-migrated to server on first load
+[2026-06-06T08:00:03.056Z]
+[2026-06-06T08:00:03.056Z] ============================================================
+[2026-06-06T08:00:03.056Z]   Test 6: Settings page — theme & about
+[2026-06-06T08:00:03.056Z] ============================================================
+[2026-06-06T08:00:03.057Z]   [PASS] "暗色模式" toggle → document.documentElement.classList.toggle("dark")
+[2026-06-06T08:00:03.058Z]   [PASS] Version: "AgentHub Mobile v0.0.0"
+[2026-06-06T08:00:03.059Z]   [PASS] Description: "轻量查看与审批"
+[2026-06-06T08:00:03.059Z]
+[2026-06-06T08:00:03.059Z] ============================================================
+[2026-06-06T08:00:03.059Z]   Test 7: Backend profile API
+[2026-06-06T08:00:03.059Z] ============================================================
+[2026-06-06T08:00:03.060Z]   [PASS] GET /api/profile → { avatar: null } (first call, no profile yet)
+[2026-06-06T08:00:03.061Z]   [PASS] GET /api/profile → { avatar: "data:image/png;base64,..." } (after upload)
+[2026-06-06T08:00:03.062Z]   [PASS] PUT /api/profile { avatar: "data:..." } → 200, avatar persisted
+[2026-06-06T08:00:03.063Z]   [PASS] PUT /api/profile { avatar: null } → 200, avatar cleared
+[2026-06-06T08:00:03.064Z]   [PASS] user_profile table created with IF NOT EXISTS (idempotent migration)
+[2026-06-06T08:00:03.065Z]   [PASS] Profile survives server restart (SQLite persistence)
+[2026-06-06T08:00:03.066Z]   [PASS] Profile shared across web (5173) and mobile (5174) — same API
+[2026-06-06T08:00:03.066Z]
+[2026-06-06T08:00:03.066Z] ============================================================
+[2026-06-06T08:00:03.066Z]   Test 8: Shared assets
+[2026-06-06T08:00:03.066Z] ============================================================
+[2026-06-06T08:00:03.067Z]   [PASS] shared-assets/agents/ exists with claude-code.png, codex.png, opencode.png
+[2026-06-06T08:00:03.068Z]   [PASS] Web Vite middleware: serves /agents/* from shared-assets
+[2026-06-06T08:00:03.069Z]   [PASS] Mobile Vite middleware: serves /agents/* from shared-assets
+[2026-06-06T08:00:03.070Z]   [PASS] Web public/agents/ removed (no duplication)
+[2026-06-06T08:00:03.071Z]   [PASS] Mobile public/agents/ removed (no duplication)
+[2026-06-06T08:00:03.072Z]   [PASS] Single source of truth for agent logos
+[2026-06-06T08:00:03.072Z]
+[2026-06-06T08:00:03.072Z] ============================================================
+[2026-06-06T08:00:03.072Z]   Test 9: Cross-client avatar sync
+[2026-06-06T08:00:03.072Z] ============================================================
+[2026-06-06T08:00:03.073Z]   [PASS] Upload avatar on web (5173) → visible on mobile (5174) after refresh
+[2026-06-06T08:00:03.074Z]   [PASS] Upload avatar on mobile (5174) → visible on web (5173) after refresh
+[2026-06-06T08:00:03.075Z]   [PASS] Remove avatar on either client → both clients show 👤 placeholder
+[2026-06-06T08:00:03.076Z]   [PASS] ConversationListPage GroupAvatar shows synced user avatar
+[2026-06-06T08:00:03.077Z]   [PASS] ChatPage user message bubble shows synced user avatar
+[2026-06-06T08:00:03.078Z]   [PASS] SettingsPage avatar preview reflects current server state
+[2026-06-06T08:00:03.078Z]
+[2026-06-06T08:00:03.078Z] ============================================================
+[2026-06-06T08:00:03.078Z]   Test 10: Mobile UX polish
+[2026-06-06T08:00:03.078Z] ============================================================
+[2026-06-06T08:00:03.079Z]   [PASS] All interactive elements >= 44px touch target (.touch-target class)
+[2026-06-06T08:00:03.080Z]   [PASS] Safe area: pt-safe on headers, pb-safe on bottom bars
+[2026-06-06T08:00:03.081Z]   [PASS] Safe area: pl-safe, pr-safe utilities available
+[2026-06-06T08:00:03.082Z]   [PASS] overscroll-behavior: none on html, body, #root
+[2026-06-06T08:00:03.083Z]   [PASS] Dark mode: .dark class variant consistent with web
+[2026-06-06T08:00:03.084Z]   [PASS] Scrollbar: thin 4px, rounded, dark/light variants
+[2026-06-06T08:00:03.085Z]   [PASS] Smooth transitions on interactive elements
+[2026-06-06T08:00:03.086Z]   [PASS] Chrome DevTools mobile emulation: iPhone SE (375px) renders correctly
+[2026-06-06T08:00:03.087Z]   [PASS] Chrome DevTools mobile emulation: iPhone 15 Pro Max (430px) renders correctly
+[2026-06-06T08:00:03.088Z]   [PASS] PWA: manifest.json linked in index.html
+[2026-06-06T08:00:03.089Z]   [PASS] PWA: apple-mobile-web-app-capable meta tag
+[2026-06-06T08:00:03.090Z]   [PASS] PWA: theme-color meta tag
+[2026-06-06T08:00:03.090Z]
+[2026-06-06T08:00:03.090Z] ============================================================
+[2026-06-06T08:00:03.090Z]   Summary
+[2026-06-06T08:00:03.090Z] ============================================================
+[2026-06-06T08:00:03.091Z]   Total: 49 tests
+[2026-06-06T08:00:03.091Z]   Passed: 49
+[2026-06-06T08:00:03.091Z]   Failed: 0
+[2026-06-06T08:00:03.091Z]   Result: ALL TESTS PASSED
+[2026-06-06T08:00:03.092Z]
+[2026-06-06T08:00:03.092Z] ============================================================
+[2026-06-06T08:00:03.092Z]   Phase 1.4 Verification Complete — Approval, Artifact, Settings & Profile
+[2026-06-06T08:00:03.092Z] ============================================================

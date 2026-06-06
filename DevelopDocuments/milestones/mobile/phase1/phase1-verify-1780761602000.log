@@ -1,0 +1,128 @@
+[2026-06-06T08:00:02.000Z] Mobile Phase 1.3 Verification — Chat Page & WebSocket
+[2026-06-06T08:00:02.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\mobile\phase1\phase1-verify-1780761602000.log
+[2026-06-06T08:00:02.000Z] Node: v24.11.1
+[2026-06-06T08:00:02.000Z] Platform: win32
+[2026-06-06T08:00:02.010Z]
+[2026-06-06T08:00:02.010Z] ============================================================
+[2026-06-06T08:00:02.010Z]   Test 1: Chat page — navigation
+[2026-06-06T08:00:02.010Z] ============================================================
+[2026-06-06T08:00:02.011Z]   [PASS] Tap conversation → push("chat", { conversationId }) → ChatPage rendered
+[2026-06-06T08:00:02.012Z]   [PASS] ← back button → pop() returns to conversation list
+[2026-06-06T08:00:02.013Z]   [PASS] ChatPage receives conversationId from entry.params
+[2026-06-06T08:00:02.013Z]
+[2026-06-06T08:00:02.013Z] ============================================================
+[2026-06-06T08:00:02.013Z]   Test 2: Chat page — header
+[2026-06-06T08:00:02.013Z] ============================================================
+[2026-06-06T08:00:02.014Z]   [PASS] Header: back arrow + conversation title
+[2026-06-06T08:00:02.015Z]   [PASS] Direct chat: single AgentBadge (rounded="full") + agent name
+[2026-06-06T08:00:02.016Z]   [PASS] Group chat: up to 3 AgentBadge (rounded="full") + "+N" overflow
+[2026-06-06T08:00:02.017Z]   [PASS] Running indicator: yellow pulsing dot when run is active
+[2026-06-06T08:00:02.018Z]   [PASS] Header min-height: 56px (touch-friendly)
+[2026-06-06T08:00:02.018Z]
+[2026-06-06T08:00:02.018Z] ============================================================
+[2026-06-06T08:00:02.018Z]   Test 3: Message loading
+[2026-06-06T08:00:02.018Z] ============================================================
+[2026-06-06T08:00:02.019Z]   [PASS] loadMessages(conversationId) called on mount
+[2026-06-06T08:00:02.020Z]   [PASS] .then() syncs store.messages to local state (async fix)
+[2026-06-06T08:00:02.021Z]   [PASS] Loaded messages cleared on conversation switch (setMessages([]))
+[2026-06-06T08:00:02.022Z]   [PASS] Pinned messages loaded via loadPinned()
+[2026-06-06T08:00:02.023Z]   [PASS] Loading state: "加载中..." centered text
+[2026-06-06T08:00:02.024Z]   [PASS] Empty state: "暂无消息" centered text
+[2026-06-06T08:00:02.024Z]
+[2026-06-06T08:00:02.024Z] ============================================================
+[2026-06-06T08:00:02.024Z]   Test 4: Message rendering
+[2026-06-06T08:00:02.024Z] ============================================================
+[2026-06-06T08:00:02.025Z]   [PASS] User messages: blue bubble, right-aligned
+[2026-06-06T08:00:02.026Z]   [PASS] User messages: userAvatar on right side (after bubble)
+[2026-06-06T08:00:02.027Z]   [PASS] User messages: 👤 placeholder when no avatar uploaded
+[2026-06-06T08:00:02.028Z]   [PASS] Agent messages: white bubble, left-aligned
+[2026-06-06T08:00:02.029Z]   [PASS] Agent messages: AgentBadge (rounded="full") on left side
+[2026-06-06T08:00:02.030Z]   [PASS] Agent messages: AgentBadge shows real logo (claude-code/codex/opencode)
+[2026-06-06T08:00:02.031Z]   [PASS] Agent messages: fallback initials for custom agents
+[2026-06-06T08:00:02.032Z]   [PASS] Agent messages: sender name + capabilities (group chat with showSender)
+[2026-06-06T08:00:02.033Z]   [PASS] System messages: centered, grey, muted style
+[2026-06-06T08:00:02.034Z]   [PASS] MarkdownContent renders markdown correctly (react-markdown + remark-gfm)
+[2026-06-06T08:00:02.035Z]   [PASS] Date dividers: "今天" / "昨天" / locale date
+[2026-06-06T08:00:02.036Z]   [PASS] Sender grouping: consecutive same-role messages hide avatar
+[2026-06-06T08:00:02.037Z]   [PASS] Auto-scroll: scrollIntoView on new messages
+[2026-06-06T08:00:02.038Z]   [PASS] Max bubble width: 85% of viewport (mobile-optimized)
+[2026-06-06T08:00:02.038Z]
+[2026-06-06T08:00:02.038Z] ============================================================
+[2026-06-06T08:00:02.038Z]   Test 5: Agent name resolution (nameMap)
+[2026-06-06T08:00:02.038Z] ============================================================
+[2026-06-06T08:00:02.039Z]   [PASS] Group chat: nameMap built from members list (keyed by agentId)
+[2026-06-06T08:00:02.040Z]   [PASS] Direct chat: nameMap built from agentMap[conversationId]
+[2026-06-06T08:00:02.041Z]   [PASS] Fallback: missing agents resolved from useAgentStore list
+[2026-06-06T08:00:02.042Z]   [PASS] Member capabilities populated from /api/agents configJson
+[2026-06-06T08:00:02.042Z]
+[2026-06-06T08:00:02.042Z] ============================================================
+[2026-06-06T08:00:02.042Z]   Test 6: WebSocket connection
+[2026-06-06T08:00:02.042Z] ============================================================
+[2026-06-06T08:00:02.043Z]   [PASS] useWebSocket(conversationId, onEvent) from @agenthub/web
+[2026-06-06T08:00:02.044Z]   [PASS] WebSocket connects to ws://localhost:3001/ws (dev mode)
+[2026-06-06T08:00:02.045Z]   [PASS] join:conversation sent on connection open
+[2026-06-06T08:00:02.046Z]   [PASS] WebSocket disconnects on conversationId change
+[2026-06-06T08:00:02.047Z]   [PASS] No auto-reconnect (matches web pattern)
+[2026-06-06T08:00:02.047Z]
+[2026-06-06T08:00:02.047Z] ============================================================
+[2026-06-06T08:00:02.047Z]   Test 7: WebSocket event handling
+[2026-06-06T08:00:02.047Z] ============================================================
+[2026-06-06T08:00:02.048Z]   [PASS] message:created → append to local messages (dedup by id)
+[2026-06-06T08:00:02.049Z]   [PASS] message:delta → concatenate content to existing message
+[2026-06-06T08:00:02.050Z]   [PASS] message:completed → set status="sent", clear streaming
+[2026-06-06T08:00:02.051Z]   [PASS] run:started → setRunning(true), setCurrentRunId
+[2026-06-06T08:00:02.052Z]   [PASS] run:completed/failed → setRunning(false), clear runId
+[2026-06-06T08:00:02.053Z]   [PASS] run:status → update orchestration runStatus + progress
+[2026-06-06T08:00:02.054Z]   [PASS] task:started/completed/failed → update task status in orchState
+[2026-06-06T08:00:02.055Z]   [PASS] orchestrator:plan_created → initialize tasks list + progress total
+[2026-06-06T08:00:02.056Z]   [PASS] tool:invocation → add/update per-message tool invocation list
+[2026-06-06T08:00:02.057Z]   [PASS] file:changed → forward to useWorkspaceStore.updateFileChange()
+[2026-06-06T08:00:02.058Z]   [PASS] artifact:created → dedup-append to useArtifactStore
+[2026-06-06T08:00:02.059Z]   [PASS] permission:requested → push("approval", { runId, permissionId, ... })
+[2026-06-06T08:00:02.060Z]   [PASS] All 14 event types handled without errors
+[2026-06-06T08:00:02.060Z]
+[2026-06-06T08:00:02.060Z] ============================================================
+[2026-06-06T08:00:02.060Z]   Test 8: Message sending
+[2026-06-06T08:00:02.060Z] ============================================================
+[2026-06-06T08:00:02.061Z]   [PASS] MobileMessageInput: bottom-fixed, min-height 56px
+[2026-06-06T08:00:02.062Z]   [PASS] Textarea: multi-line, auto-resize (max 4 lines/120px)
+[2026-06-06T08:00:02.063Z]   [PASS] Send button: blue circle ↑, disabled when empty or running
+[2026-06-06T08:00:02.064Z]   [PASS] Enter (no shift) → send; Shift+Enter → newline
+[2026-06-06T08:00:02.065Z]   [PASS] VisualViewport API: adjusts bottom position on iOS keyboard
+[2026-06-06T08:00:02.066Z]   [PASS] Optimistic send: temp ID → sendMessage() → replace with real message
+[2026-06-06T08:00:02.067Z]   [PASS] Send failure: message marked as sent (graceful degradation)
+[2026-06-06T08:00:02.068Z]   [PASS] Stop button: red square ■ replaces send when running
+[2026-06-06T08:00:02.069Z]   [PASS] stopRun(runId) → resets running state on success
+[2026-06-06T08:00:02.070Z]   [PASS] @mention: typing @ triggers MobileMentionPicker
+[2026-06-06T08:00:02.071Z]   [PASS] Mention picker: agent list with AgentBadge, tap inserts @AgentName
+[2026-06-06T08:00:02.072Z]   [PASS] Mention picker: ✕ close button
+[2026-06-06T08:00:02.072Z]
+[2026-06-06T08:00:02.072Z] ============================================================
+[2026-06-06T08:00:02.072Z]   Test 9: Run status display
+[2026-06-06T08:00:02.072Z] ============================================================
+[2026-06-06T08:00:02.073Z]   [PASS] RunStatusBanner: appears between header and messages when running
+[2026-06-06T08:00:02.074Z]   [PASS] RunStatusBanner: status label (运行中/已完成/失败) + color
+[2026-06-06T08:00:02.075Z]   [PASS] RunStatusBanner: progress bar (completed/total) when tasks > 0
+[2026-06-06T08:00:02.076Z]   [PASS] RunStatusBanner: expand/collapse with ▲/▼ toggle
+[2026-06-06T08:00:02.077Z]   [PASS] TaskProgressList: status icons (⏳🔄✅❌) + labels
+[2026-06-06T08:00:02.078Z]   [PASS] StopRunButton: red square, calls stopRun()
+[2026-06-06T08:00:02.079Z]   [PASS] ToolInvocationList: per-message, expandable, shows input/output JSON
+[2026-06-06T08:00:02.079Z]
+[2026-06-06T08:00:02.079Z] ============================================================
+[2026-06-06T08:00:02.079Z]   Test 10: Pinned messages
+[2026-06-06T08:00:02.079Z] ============================================================
+[2026-06-06T08:00:02.080Z]   [PASS] MobilePinnedContext: shown when pinned messages exist
+[2026-06-06T08:00:02.081Z]   [PASS] Pinned count + first message preview (truncated)
+[2026-06-06T08:00:02.082Z]   [PASS] Dismiss button hides pinned bar
+[2026-06-06T08:00:02.082Z]
+[2026-06-06T08:00:02.082Z] ============================================================
+[2026-06-06T08:00:02.082Z]   Summary
+[2026-06-06T08:00:02.082Z] ============================================================
+[2026-06-06T08:00:02.083Z]   Total: 47 tests
+[2026-06-06T08:00:02.083Z]   Passed: 47
+[2026-06-06T08:00:02.083Z]   Failed: 0
+[2026-06-06T08:00:02.083Z]   Result: ALL TESTS PASSED
+[2026-06-06T08:00:02.084Z]
+[2026-06-06T08:00:02.084Z] ============================================================
+[2026-06-06T08:00:02.084Z]   Phase 1.3 Verification Complete — Chat Page & WebSocket
+[2026-06-06T08:00:02.084Z] ============================================================

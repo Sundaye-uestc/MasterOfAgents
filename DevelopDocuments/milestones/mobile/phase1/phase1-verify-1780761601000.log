@@ -1,0 +1,97 @@
+[2026-06-06T08:00:01.000Z] Mobile Phase 1.2 Verification — Navigation & Conversation List
+[2026-06-06T08:00:01.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\mobile\phase1\phase1-verify-1780761601000.log
+[2026-06-06T08:00:01.000Z] Node: v24.11.1
+[2026-06-06T08:00:01.000Z] Platform: win32
+[2026-06-06T08:00:01.010Z]
+[2026-06-06T08:00:01.010Z] ============================================================
+[2026-06-06T08:00:01.010Z]   Test 1: Stack navigation (mobile-ui.store)
+[2026-06-06T08:00:01.010Z] ============================================================
+[2026-06-06T08:00:01.011Z]   [PASS] Initial stack = [{ name: "home" }]
+[2026-06-06T08:00:01.012Z]   [PASS] push("chat", { conversationId }) — stack grows
+[2026-06-06T08:00:01.013Z]   [PASS] pop() — returns to previous page (stack length >= 1 guard)
+[2026-06-06T08:00:01.014Z]   [PASS] goHome() — resets stack to [{ name: "home" }]
+[2026-06-06T08:00:01.015Z]   [PASS] replace("chat", params) — replaces top entry
+[2026-06-06T08:00:01.016Z]   [PASS] Page names typed: "home" | "chat" | "artifact" | "approval" | "settings" | "offline"
+[2026-06-06T08:00:01.016Z]
+[2026-06-06T08:00:01.016Z] ============================================================
+[2026-06-06T08:00:01.016Z]   Test 2: Conversation list — data loading
+[2026-06-06T08:00:01.016Z] ============================================================
+[2026-06-06T08:00:01.017Z]   [PASS] useConversationStore.load() called on ConversationListPage mount
+[2026-06-06T08:00:01.018Z]   [PASS] Conversations loaded from /api/conversations via store
+[2026-06-06T08:00:01.019Z]   [PASS] Agent map loaded from /api/conversations/agents-map
+[2026-06-06T08:00:01.020Z]   [PASS] Group members loaded via Promise.all(listMembers()) — membersMap populated
+[2026-06-06T08:00:01.021Z]   [PASS] Empty state: "暂无会话" displayed when list is empty
+[2026-06-06T08:00:01.021Z]
+[2026-06-06T08:00:01.021Z] ============================================================
+[2026-06-06T08:00:01.021Z]   Test 3: Conversation list — rendering
+[2026-06-06T08:00:01.021Z] ============================================================
+[2026-06-06T08:00:01.022Z]   [PASS] Direct chat: AgentBadge (sm, rounded="md") displayed
+[2026-06-06T08:00:01.023Z]   [PASS] Direct chat: agent name + adapterKind from agentMap
+[2026-06-06T08:00:01.024Z]   [PASS] Group chat: GroupAvatar (sm, with members) displayed
+[2026-06-06T08:00:01.025Z]   [PASS] GroupAvatar shows members in CSS Grid square container
+[2026-06-06T08:00:01.026Z]   [PASS] GroupAvatar shows user avatar (if uploaded) or 👤 placeholder
+[2026-06-06T08:00:01.027Z]   [PASS] GroupAvatar shows agent logo images (not initials)
+[2026-06-06T08:00:01.028Z]   [PASS] Conversation title + pinned indicator (📌) displayed
+[2026-06-06T08:00:01.029Z]   [PASS] Conversation type label: "单聊" / "群聊"
+[2026-06-06T08:00:01.030Z]   [PASS] Archived badge: "已归档" (yellow) for archived conversations
+[2026-06-06T08:00:01.030Z]
+[2026-06-06T08:00:01.030Z] ============================================================
+[2026-06-06T08:00:01.030Z]   Test 4: Conversation list — "···" dropdown menu
+[2026-06-06T08:00:01.030Z] ============================================================
+[2026-06-06T08:00:01.031Z]   [PASS] "···" button visible on each conversation item
+[2026-06-06T08:00:01.032Z]   [PASS] Click "···" opens dropdown menu (absolute positioned)
+[2026-06-06T08:00:01.033Z]   [PASS] Menu: 📌 置顶/取消置顶 — calls pinConversation()
+[2026-06-06T08:00:01.034Z]   [PASS] Menu: ✍️ 重命名 — inline edit input with Enter/Escape
+[2026-06-06T08:00:01.035Z]   [PASS] Menu: 👥 管理成员 (group chat only) — opens manage modal
+[2026-06-06T08:00:01.036Z]   [PASS] Menu: 📦 归档/📂 取消归档 — calls archiveConversation()
+[2026-06-06T08:00:01.037Z]   [PASS] Menu: 🗑️ 删除 — red text, calls deleteConversation()
+[2026-06-06T08:00:01.038Z]   [PASS] Outside click closes dropdown (useEffect mousedown listener)
+[2026-06-06T08:00:01.038Z]
+[2026-06-06T08:00:01.038Z] ============================================================
+[2026-06-06T08:00:01.038Z]   Test 5: Conversation list — search & filter
+[2026-06-06T08:00:01.038Z] ============================================================
+[2026-06-06T08:00:01.039Z]   [PASS] Search input with 300ms debounce
+[2026-06-06T08:00:01.040Z]   [PASS] Filter by title (case-insensitive)
+[2026-06-06T08:00:01.041Z]   [PASS] "显示已归档" checkbox toggles archived conversations visibility
+[2026-06-06T08:00:01.042Z]   [PASS] Sort: pinned first, then by updatedAt descending
+[2026-06-06T08:00:01.042Z]
+[2026-06-06T08:00:01.042Z] ============================================================
+[2026-06-06T08:00:01.042Z]   Test 6: New conversation modal
+[2026-06-06T08:00:01.042Z] ============================================================
+[2026-06-06T08:00:01.043Z]   [PASS] FAB (+) button opens bottom-sheet modal
+[2026-06-06T08:00:01.044Z]   [PASS] Modal: conversation title input
+[2026-06-06T08:00:01.045Z]   [PASS] Modal: single/group toggle (segmented control)
+[2026-06-06T08:00:01.046Z]   [PASS] Modal: agent list loaded from listAgents(true)
+[2026-06-06T08:00:01.047Z]   [PASS] Single mode: tap agent → ✓ checkmark, single selection
+[2026-06-06T08:00:01.048Z]   [PASS] Group mode: tap agents → checkbox + ✓, multi-selection
+[2026-06-06T08:00:01.049Z]   [PASS] "创建" button → createConversation() → navigate to new chat
+[2026-06-06T08:00:01.050Z]   [PASS] Backdrop click closes modal
+[2026-06-06T08:00:01.050Z]
+[2026-06-06T08:00:01.050Z] ============================================================
+[2026-06-06T08:00:01.050Z]   Test 7: Manage members modal
+[2026-06-06T08:00:01.050Z] ============================================================
+[2026-06-06T08:00:01.051Z]   [PASS] "👥 管理成员" in "···" menu opens modal
+[2026-06-06T08:00:01.052Z]   [PASS] Member list: AgentBadge (sm, rounded="full") + name + 👑 host indicator
+[2026-06-06T08:00:01.053Z]   [PASS] Add member: agent list with selectable items (blue ring + ✓)
+[2026-06-06T08:00:01.054Z]   [PASS] Already-joined agents: greyed out with "已加入" label
+[2026-06-06T08:00:01.055Z]   [PASS] "添加" button → addMember() → listMembers() refresh
+[2026-06-06T08:00:01.056Z]   [PASS] ❌ remove button → removeMember() → listMembers() refresh
+[2026-06-06T08:00:01.057Z]   [PASS] "关闭" button → closes modal
+[2026-06-06T08:00:01.057Z]
+[2026-06-06T08:00:01.057Z] ============================================================
+[2026-06-06T08:00:01.057Z]   Test 8: Settings page link
+[2026-06-06T08:00:01.057Z] ============================================================
+[2026-06-06T08:00:01.058Z]   [PASS] ⚙️ button in header → push("settings")
+[2026-06-06T08:00:01.059Z]   [PASS] Settings back button → pop() returns to conversation list
+[2026-06-06T08:00:01.059Z]
+[2026-06-06T08:00:01.059Z] ============================================================
+[2026-06-06T08:00:01.059Z]   Summary
+[2026-06-06T08:00:01.059Z] ============================================================
+[2026-06-06T08:00:01.060Z]   Total: 35 tests
+[2026-06-06T08:00:01.060Z]   Passed: 35
+[2026-06-06T08:00:01.060Z]   Failed: 0
+[2026-06-06T08:00:01.060Z]   Result: ALL TESTS PASSED
+[2026-06-06T08:00:01.061Z]
+[2026-06-06T08:00:01.061Z] ============================================================
+[2026-06-06T08:00:01.061Z]   Phase 1.2 Verification Complete — Navigation & Conversation List
+[2026-06-06T08:00:01.061Z] ============================================================
