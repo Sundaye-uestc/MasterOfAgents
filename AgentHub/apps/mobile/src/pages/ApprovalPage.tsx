@@ -1,6 +1,6 @@
 import { useCallback, useState, useEffect } from "react";
-import { useMobileUIStore } from "../stores/mobile-ui.store.js";
-import { respondToPermission, applyFileChange, revertFileChange } from "@agenthub/web/lib/api";
+import { useMobileUIStore, permissionWsSender } from "../stores/mobile-ui.store.js";
+import { applyFileChange, revertFileChange } from "@agenthub/web/lib/api";
 import { useWorkspaceStore } from "@agenthub/web/stores/workspace.store";
 import { MobileDiffSummary } from "../components/mobile-artifact/MobileDiffSummary.jsx";
 
@@ -13,19 +13,24 @@ export function ApprovalPage() {
   const fileChanges = useWorkspaceStore((s) => s.fileChanges);
   const [result, setResult] = useState<string | null>(null);
 
-  // Handle permission response
+  // Handle permission response — sends via WebSocket (server does NOT have an HTTP route for this)
   const handlePermission = useCallback(
-    async (approved: boolean) => {
+    (approved: boolean) => {
       const runId = params.runId as string;
       const permissionId = params.permissionId as string;
       if (!runId || !permissionId) return;
-      try {
-        await respondToPermission(runId, permissionId, approved);
-        setResult(approved ? "已批准" : "已拒绝");
-        setTimeout(() => pop(), 1000);
-      } catch {
-        setResult("操作失败");
+      if (!permissionWsSender.send) {
+        setResult("WebSocket 未连接");
+        return;
       }
+      permissionWsSender.send({
+        type: "permission:respond",
+        runId,
+        permissionId,
+        approved,
+      });
+      setResult(approved ? "已批准" : "已拒绝");
+      setTimeout(() => pop(), 1000);
     },
     [params.runId, params.permissionId, pop]
   );

@@ -17,6 +17,17 @@ interface MobileUIState {
   setOnline: (v: boolean) => void;
 }
 
+/**
+ * Module-level holder for the active WebSocket send function.
+ * Set by ChatPage when the WebSocket connection is established;
+ * read by ApprovalPage to send `permission:respond` messages.
+ *
+ * NOT part of Zustand state — avoids re-renders on assignment.
+ */
+export const permissionWsSender = {
+  send: null as ((msg: { type: string;[key: string]: unknown }) => void) | null,
+};
+
 export const useMobileUIStore = create<MobileUIState>((set) => ({
   stack: [{ name: "home" }],
   isOnline: true,
