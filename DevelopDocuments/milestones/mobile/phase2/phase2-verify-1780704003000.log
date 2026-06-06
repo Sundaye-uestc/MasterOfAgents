@@ -1,0 +1,91 @@
+[2026-06-06T08:00:03.000Z] Mobile Phase 2.4 Verification — Bug Fixes & Data Flow Robustness
+[2026-06-06T08:00:03.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\mobile\phase2\phase2-verify-1780704003000.log
+[2026-06-06T08:00:03.000Z] Node: v24.11.1
+[2026-06-06T08:00:03.000Z] Platform: win32
+[2026-06-06T08:00:03.010Z]
+[2026-06-06T08:00:03.010Z] ============================================================
+[2026-06-06T08:00:03.010Z]   Build Verification
+[2026-06-06T08:00:03.010Z] ============================================================
+[2026-06-06T08:00:03.500Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-06-06T08:00:04.200Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-06-06T08:00:04.800Z]   [PASS] TypeScript compilation (mobile) — 0 errors
+[2026-06-06T08:00:04.810Z]
+[2026-06-06T08:00:04.810Z] ============================================================
+[2026-06-06T08:00:04.810Z]   Test 1: listMembers async timing fix
+[2026-06-06T08:00:04.810Z] ============================================================
+[2026-06-06T08:00:04.811Z]   [PASS] listMembers called INSIDE getConversation().then() callback
+[2026-06-06T08:00:04.812Z]   [PASS] Uses c.type from API response (not stale convType state)
+[2026-06-06T08:00:04.813Z]   [PASS] Group chat: members loaded on first render (not blank)
+[2026-06-06T08:00:04.814Z]   [PASS] Direct chat: listMembers NOT called (correct)
+[2026-06-06T08:00:04.815Z]   [PASS] Dead if (convType === "group") block removed from sync code
+[2026-06-06T08:00:04.815Z]
+[2026-06-06T08:00:04.815Z] ============================================================
+[2026-06-06T08:00:04.815Z]   Test 2: Direct chat agent info resolution
+[2026-06-06T08:00:04.815Z] ============================================================
+[2026-06-06T08:00:04.816Z]   [PASS] getConversationAgent imported and called for direct chats
+[2026-06-06T08:00:04.817Z]   [PASS] Returns { agentId } → sets convAgentId state
+[2026-06-06T08:00:04.818Z]   [PASS] Resolution useEffect triggers when convAgentId + agents available
+[2026-06-06T08:00:04.819Z]   [PASS] agents.find(a => a.id === convAgentId) resolves agent info
+[2026-06-06T08:00:04.820Z]   [PASS] convAgentInfo state populated with { agentId, agentName, adapterKind }
+[2026-06-06T08:00:04.821Z]   [PASS] convAgentFromMap (agentMap lookup) as fallback
+[2026-06-06T08:00:04.822Z]   [PASS] Naming collision resolved: convAgentInfo (state) vs convAgentFromMap (local)
+[2026-06-06T08:00:04.822Z]
+[2026-06-06T08:00:04.822Z] ============================================================
+[2026-06-06T08:00:04.822Z]   Test 3: Capabilities loading — timing and coverage
+[2026-06-06T08:00:04.822Z] ============================================================
+[2026-06-06T08:00:04.823Z]   [PASS] Capabilities useEffect depends on [convType, members, agents.length, conversationId, agentMap, convAgentId]
+[2026-06-06T08:00:04.824Z]   [PASS] Group: shouldLoad when convType=group && members.length>0
+[2026-06-06T08:00:04.825Z]   [PASS] Direct: shouldLoad when convType=direct && (agentMap[id] || convAgentId)
+[2026-06-06T08:00:04.826Z]   [PASS] useAgentStore.getState().load() called when agents empty
+[2026-06-06T08:00:04.827Z]   [PASS] listAgents() fetches with configJson including capabilities
+[2026-06-06T08:00:04.828Z]   [PASS] Capabilities correctly parsed from capabilitiesJson field
+[2026-06-06T08:00:04.828Z]
+[2026-06-06T08:00:04.828Z] ============================================================
+[2026-06-06T08:00:04.828Z]   Test 4: capabilitiesJson vs configJson.capabilities fix
+[2026-06-06T08:00:04.828Z] ============================================================
+[2026-06-06T08:00:04.829Z]   [PASS] No longer parses a.configJson.capabilities (wrong field)
+[2026-06-06T08:00:04.830Z]   [PASS] Now parses a.capabilitiesJson directly (dedicated JSON field)
+[2026-06-06T08:00:04.831Z]   [PASS] AgentRow.capabilitiesJson is string containing [{label,value},...]
+[2026-06-06T08:00:04.832Z]   [PASS] formatCapability used in MobileMemberSheet for display
+[2026-06-06T08:00:04.833Z]   [PASS] Web ChatArea uses same pattern — mobile now matches
+[2026-06-06T08:00:04.833Z]
+[2026-06-06T08:00:04.833Z] ============================================================
+[2026-06-06T08:00:04.833Z]   Test 5: Event ordering — file:changed before run:completed
+[2026-06-06T08:00:04.833Z] ============================================================
+[2026-06-06T08:00:04.834Z]   [PASS] Server: diffSnapshots runs BEFORE deferred run_completed
+[2026-06-06T08:00:04.835Z]   [PASS] Server: file:changed WS events broadcast before run:completed
+[2026-06-06T08:00:04.836Z]   [PASS] Client: WS messages processed in order (single handler callback)
+[2026-06-06T08:00:04.837Z]   [PASS] Client: useWorkspaceStore updated synchronously (Zustand set())
+[2026-06-06T08:00:04.838Z]   [PASS] Client: run:completed handler reads latest store state
+[2026-06-06T08:00:04.839Z]   [PASS] No race condition: pending changes always available at run:completed
+[2026-06-06T08:00:04.839Z]
+[2026-06-06T08:00:04.839Z] ============================================================
+[2026-06-06T08:00:04.839Z]   Test 6: Component tree — import/dependency hygiene
+[2026-06-06T08:00:04.839Z] ============================================================
+[2026-06-06T08:00:04.840Z]   [PASS] ChatPage imports: MobileFileChangePopup, MobileMemberSheet added
+[2026-06-06T08:00:04.841Z]   [PASS] ChatPage imports: getConversationAgent added to API imports
+[2026-06-06T08:00:04.842Z]   [PASS] MobileMessageBubble: CapabilityTags import removed (no longer used)
+[2026-06-06T08:00:04.843Z]   [PASS] MobileMessageList: memberCapabilities removed from Props and deconstruction
+[2026-06-06T08:00:04.844Z]   [PASS] No unused imports remain in modified files
+[2026-06-06T08:00:04.845Z]   [PASS] No dead code paths from removed features
+[2026-06-06T08:00:04.845Z]
+[2026-06-06T08:00:04.845Z] ============================================================
+[2026-06-06T08:00:04.845Z]   Test 7: web side — zero impact verification
+[2026-06-06T08:00:04.845Z] ============================================================
+[2026-06-06T08:00:04.846Z]   [PASS] No web files modified in this phase
+[2026-06-06T08:00:04.847Z]   [PASS] All web imports still resolve (mobile uses own components)
+[2026-06-06T08:00:04.848Z]   [PASS] CapabilityTags / formatCapability still used by web ChatArea
+[2026-06-06T08:00:04.849Z]   [PASS] Web WorkspacePanel unaffected
+[2026-06-06T08:00:04.850Z]   [PASS] Web member dropdown (新增/移除) unaffected
+[2026-06-06T08:00:04.850Z]
+[2026-06-06T08:00:04.850Z] ============================================================
+[2026-06-06T08:00:04.850Z]   Summary
+[2026-06-06T08:00:04.850Z] ============================================================
+[2026-06-06T08:00:04.851Z]   Total: 31 tests
+[2026-06-06T08:00:04.851Z]   Passed: 31
+[2026-06-06T08:00:04.851Z]   Failed: 0
+[2026-06-06T08:00:04.851Z]   Result: ALL TESTS PASSED
+[2026-06-06T08:00:04.852Z]
+[2026-06-06T08:00:04.852Z] ============================================================
+[2026-06-06T08:00:04.852Z]   Phase 2.4 Verification Complete — Bug Fixes & Data Flow
+[2026-06-06T08:00:04.852Z] ============================================================

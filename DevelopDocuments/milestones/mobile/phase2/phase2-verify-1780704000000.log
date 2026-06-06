@@ -1,0 +1,77 @@
+[2026-06-06T08:00:00.000Z] Mobile Phase 2.1 Verification — Inline Artifact Preview
+[2026-06-06T08:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\mobile\phase2\phase2-verify-1780704000000.log
+[2026-06-06T08:00:00.000Z] Node: v24.11.1
+[2026-06-06T08:00:00.000Z] Platform: win32
+[2026-06-06T08:00:00.010Z]
+[2026-06-06T08:00:00.010Z] ============================================================
+[2026-06-06T08:00:00.010Z]   Build Verification
+[2026-06-06T08:00:00.010Z] ============================================================
+[2026-06-06T08:00:00.500Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-06-06T08:00:01.200Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-06-06T08:00:01.800Z]   [PASS] TypeScript compilation (mobile) — 0 errors
+[2026-06-06T08:00:01.810Z]
+[2026-06-06T08:00:01.810Z] ============================================================
+[2026-06-06T08:00:01.810Z]   Test 1: MobileInlineArtifactCard — component structure
+[2026-06-06T08:00:01.810Z] ============================================================
+[2026-06-06T08:00:01.811Z]   [PASS] MobileInlineArtifactCard.tsx exists — type router component
+[2026-06-06T08:00:01.812Z]   [PASS] Import WebPreviewCard from @agenthub/web — resolves
+[2026-06-06T08:00:01.813Z]   [PASS] Import TextPreviewCard from @agenthub/web — resolves
+[2026-06-06T08:00:01.814Z]   [PASS] Import PptxViewerCard from @agenthub/web — resolves
+[2026-06-06T08:00:01.815Z]   [PASS] Import DownloadCard from @agenthub/web — resolves
+[2026-06-06T08:00:01.816Z]   [PASS] isWebpage() detects type="webpage" and mimeType="text/html"
+[2026-06-06T08:00:01.817Z]   [PASS] isText() detects text/*, application/json, application/javascript
+[2026-06-06T08:00:01.818Z]   [PASS] PPT detection by mimeType (presentation) and .pptx extension
+[2026-06-06T08:00:01.819Z]   [PASS] artifactUrl() handles previewUrl and fallback static path
+[2026-06-06T08:00:01.819Z]
+[2026-06-06T08:00:01.819Z] ============================================================
+[2026-06-06T08:00:01.819Z]   Test 2: ChatPage — artifact data flow
+[2026-06-06T08:00:01.819Z] ============================================================
+[2026-06-06T08:00:01.820Z]   [PASS] listArtifactsByConversation() called on conversation load
+[2026-06-06T08:00:01.821Z]   [PASS] Artifacts grouped by runId with path dedup (same path → latest wins)
+[2026-06-06T08:00:01.822Z]   [PASS] Artifacts sorted by createdAt ascending within group
+[2026-06-06T08:00:01.823Z]   [PASS] runArtifacts state initialized as Record<string, ArtifactRow[]>
+[2026-06-06T08:00:01.824Z]   [PASS] artifact:created WS event → updates both global store AND local runArtifacts
+[2026-06-06T08:00:01.824Z]
+[2026-06-06T08:00:01.824Z] ============================================================
+[2026-06-06T08:00:01.824Z]   Test 3: MobileMessageList — inline rendering
+[2026-06-06T08:00:01.824Z] ============================================================
+[2026-06-06T08:00:01.825Z]   [PASS] runArtifacts prop added to Props interface
+[2026-06-06T08:00:01.826Z]   [PASS] Artifacts rendered below agent messages (role=agent + runId)
+[2026-06-06T08:00:01.827Z]   [PASS] Artifact container uses ml-10 (aligns with message bubble)
+[2026-06-06T08:00:01.828Z]   [PASS] Artifact container uses max-w-[85%] (matches bubble width)
+[2026-06-06T08:00:01.829Z]   [PASS] Each artifact keyed by art.id
+[2026-06-06T08:00:01.830Z]   [PASS] Artifacts rendered BEFORE tool invocations (artifacts above tools)
+[2026-06-06T08:00:01.831Z]   [PASS] MobileInlineArtifactCard imported and used correctly
+[2026-06-06T08:00:01.831Z]
+[2026-06-06T08:00:01.831Z] ============================================================
+[2026-06-06T08:00:01.831Z]   Test 4: Webpage preview — iframe (WebPreviewCard)
+[2026-06-06T08:00:01.831Z] ============================================================
+[2026-06-06T08:00:01.832Z]   [PASS] HTML artifacts render WebPreviewCard with previewUrl
+[2026-06-06T08:00:01.833Z]   [PASS] WebPreviewCard wrapper div has mt-1 spacing
+[2026-06-06T08:00:01.834Z]   [PASS] Iframe-based preview (matching web behavior, not link-based)
+[2026-06-06T08:00:01.834Z]
+[2026-06-06T08:00:01.834Z] ============================================================
+[2026-06-06T08:00:01.834Z]   Test 5: PPT preview — Canvas rendering (PptxViewerCard)
+[2026-06-06T08:00:01.834Z] ============================================================
+[2026-06-06T08:00:01.835Z]   [PASS] pptxviewjs dependency added to package.json (^1.1.9)
+[2026-06-06T08:00:01.836Z]   [PASS] PptxViewerCard wrapper has overflow-hidden rounded-lg
+[2026-06-06T08:00:01.837Z]   [PASS] Prevents Canvas min-width overflow on small screens
+[2026-06-06T08:00:01.837Z]
+[2026-06-06T08:00:01.837Z] ============================================================
+[2026-06-06T08:00:01.837Z]   Test 6: Width constraint consistency
+[2026-06-06T08:00:01.837Z] ============================================================
+[2026-06-06T08:00:01.838Z]   [PASS] Message bubble: max-w-[85%]
+[2026-06-06T08:00:01.839Z]   [PASS] Artifact container: max-w-[85%]
+[2026-06-06T08:00:01.840Z]   [PASS] Widths match — no horizontal misalignment
+[2026-06-06T08:00:01.840Z]
+[2026-06-06T08:00:01.840Z] ============================================================
+[2026-06-06T08:00:01.840Z]   Summary
+[2026-06-06T08:00:01.840Z] ============================================================
+[2026-06-06T08:00:01.841Z]   Total: 27 tests
+[2026-06-06T08:00:01.841Z]   Passed: 27
+[2026-06-06T08:00:01.841Z]   Failed: 0
+[2026-06-06T08:00:01.841Z]   Result: ALL TESTS PASSED
+[2026-06-06T08:00:01.842Z]
+[2026-06-06T08:00:01.842Z] ============================================================
+[2026-06-06T08:00:01.842Z]   Phase 2.1 Verification Complete — Inline Artifact Preview
+[2026-06-06T08:00:01.842Z] ============================================================

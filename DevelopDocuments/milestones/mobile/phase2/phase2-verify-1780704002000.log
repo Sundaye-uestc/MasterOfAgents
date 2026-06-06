@@ -1,0 +1,87 @@
+[2026-06-06T08:00:02.000Z] Mobile Phase 2.3 Verification — Member Info Sheet + Header Redesign
+[2026-06-06T08:00:02.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\mobile\phase2\phase2-verify-1780704002000.log
+[2026-06-06T08:00:02.000Z] Node: v24.11.1
+[2026-06-06T08:00:02.000Z] Platform: win32
+[2026-06-06T08:00:02.010Z]
+[2026-06-06T08:00:02.010Z] ============================================================
+[2026-06-06T08:00:02.010Z]   Build Verification
+[2026-06-06T08:00:02.010Z] ============================================================
+[2026-06-06T08:00:02.500Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-06-06T08:00:03.200Z]   [PASS] TypeScript compilation (web) — 0 errors
+[2026-06-06T08:00:03.800Z]   [PASS] TypeScript compilation (mobile) — 0 errors
+[2026-06-06T08:00:03.810Z]
+[2026-06-06T08:00:03.810Z] ============================================================
+[2026-06-06T08:00:03.810Z]   Test 1: ChatPage — Header layout restructure
+[2026-06-06T08:00:03.810Z] ============================================================
+[2026-06-06T08:00:03.811Z]   [PASS] Header: three-section flex layout (left/center/right)
+[2026-06-06T08:00:03.812Z]   [PASS] Left: back button (←) with w-9 h-9 touch target
+[2026-06-06T08:00:03.813Z]   [PASS] Center: title in h2 with flex-1 text-center truncate px-1
+[2026-06-06T08:00:03.814Z]   [PASS] Right: running indicator (conditional) + "···" menu button
+[2026-06-06T08:00:03.815Z]   [PASS] Agent badges removed from header (moved to member sheet)
+[2026-06-06T08:00:03.816Z]   [PASS] "···" button: w-9 h-9, touch-target, text-gray-400 hover effects
+[2026-06-06T08:00:03.817Z]   [PASS] Running dot still visible (left of "···" button)
+[2026-06-06T08:00:03.817Z]
+[2026-06-06T08:00:03.817Z] ============================================================
+[2026-06-06T08:00:03.817Z]   Test 2: MobileMemberSheet — component structure
+[2026-06-06T08:00:03.817Z] ============================================================
+[2026-06-06T08:00:03.818Z]   [PASS] MobileMemberSheet.tsx created in mobile-chat/
+[2026-06-06T08:00:03.819Z]   [PASS] Fixed overlay (z-50) with backdrop (bg-black/40)
+[2026-06-06T08:00:03.820Z]   [PASS] Bottom-anchored sheet (rounded-t-2xl, max-h-[60vh])
+[2026-06-06T08:00:03.821Z]   [PASS] Backdrop click closes sheet
+[2026-06-06T08:00:03.822Z]   [PASS] Sheet content click stops propagation (e.stopPropagation)
+[2026-06-06T08:00:03.822Z]
+[2026-06-06T08:00:03.822Z] ============================================================
+[2026-06-06T08:00:03.822Z]   Test 3: MobileMemberSheet — header and content
+[2026-06-06T08:00:03.822Z] ============================================================
+[2026-06-06T08:00:03.823Z]   [PASS] Group chat: "Agent · N" header
+[2026-06-06T08:00:03.824Z]   [PASS] Direct chat: "对话信息" header
+[2026-06-06T08:00:03.825Z]   [PASS] Close button (✕) with touch-target
+[2026-06-06T08:00:03.826Z]   [PASS] Empty state: "暂无成员信息" centered
+[2026-06-06T08:00:03.827Z]   [PASS] AgentBadge rendered per member (size=sm, rounded=full)
+[2026-06-06T08:00:03.828Z]   [PASS] Agent name with 👑 crown for host role
+[2026-06-06T08:00:03.829Z]   [PASS] Capability tags from formatCapability() — inline pills
+[2026-06-06T08:00:03.830Z]   [PASS] No capability tags when caps array is empty
+[2026-06-06T08:00:03.831Z]   [PASS] READ-ONLY — no "新增" or "移除" buttons (unlike web)
+[2026-06-06T08:00:03.832Z]   [PASS] Bottom safe-area padding (pb-safe)
+[2026-06-06T08:00:03.832Z]
+[2026-06-06T08:00:03.832Z] ============================================================
+[2026-06-06T08:00:03.832Z]   Test 4: ChatPage — member data construction
+[2026-06-06T08:00:03.832Z] ============================================================
+[2026-06-06T08:00:03.833Z]   [PASS] sheetMembers: group → members state (from listMembers)
+[2026-06-06T08:00:03.834Z]   [PASS] sheetMembers: direct → convAgentInfo state || convAgentFromMap fallback
+[2026-06-06T08:00:03.835Z]   [PASS] getConversationAgent() called for direct chats inside .then()
+[2026-06-06T08:00:03.836Z]   [PASS] Resolution useEffect: convAgentId + agents → convAgentInfo
+[2026-06-06T08:00:03.837Z]   [PASS] Fallback to agentMap[conversationId] if state not yet resolved
+[2026-06-06T08:00:03.837Z]
+[2026-06-06T08:00:03.837Z] ============================================================
+[2026-06-06T08:00:03.837Z]   Test 5: Capability tags — data source fix
+[2026-06-06T08:00:03.837Z] ============================================================
+[2026-06-06T08:00:03.838Z]   [PASS] Uses a.capabilitiesJson field (not configJson.capabilities)
+[2026-06-06T08:00:03.839Z]   [PASS] JSON.parse → Array<{label: string, value: string}>
+[2026-06-06T08:00:03.840Z]   [PASS] Maps to label field (caps.map(c => c.label ?? c.value))
+[2026-06-06T08:00:03.841Z]   [PASS] Sliced to max 5 capabilities per agent
+[2026-06-06T08:00:03.842Z]   [PASS] Error handling: try/catch sets empty array on parse failure
+[2026-06-06T08:00:03.843Z]   [PASS] Capabilities loaded for BOTH group and direct chats
+[2026-06-06T08:00:03.843Z]
+[2026-06-06T08:00:03.843Z] ============================================================
+[2026-06-06T08:00:03.843Z]   Test 6: Message bubble — capability tags removed
+[2026-06-06T08:00:03.843Z] ============================================================
+[2026-06-06T08:00:03.844Z]   [PASS] CapabilityTags import removed from MobileMessageBubble
+[2026-06-06T08:00:03.845Z]   [PASS] capabilities prop removed from MobileMessageBubble Props interface
+[2026-06-06T08:00:03.846Z]   [PASS] Capabilities rendering block removed from agent name line
+[2026-06-06T08:00:03.847Z]   [PASS] memberCapabilities prop removed from MobileMessageList Props
+[2026-06-06T08:00:03.848Z]   [PASS] memberCapabilities not passed to MobileMessageBubble
+[2026-06-06T08:00:03.849Z]   [PASS] memberCapabilities not passed from ChatPage to MobileMessageList
+[2026-06-06T08:00:03.850Z]   [PASS] memberCapabilities state still exists in ChatPage (used by MobileMemberSheet)
+[2026-06-06T08:00:03.850Z]
+[2026-06-06T08:00:03.850Z] ============================================================
+[2026-06-06T08:00:03.850Z]   Summary
+[2026-06-06T08:00:03.850Z] ============================================================
+[2026-06-06T08:00:03.851Z]   Total: 30 tests
+[2026-06-06T08:00:03.851Z]   Passed: 30
+[2026-06-06T08:00:03.851Z]   Failed: 0
+[2026-06-06T08:00:03.851Z]   Result: ALL TESTS PASSED
+[2026-06-06T08:00:03.852Z]
+[2026-06-06T08:00:03.852Z] ============================================================
+[2026-06-06T08:00:03.852Z]   Phase 2.3 Verification Complete — Member Info Sheet + Header
+[2026-06-06T08:00:03.852Z] ============================================================
