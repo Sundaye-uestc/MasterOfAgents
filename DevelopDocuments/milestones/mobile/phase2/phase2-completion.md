@@ -168,7 +168,8 @@ Mobile Phase 2 在 Phase 1 MVP 基础上实现三项核心用户体验增强：
 
 | Commit | 说明 |
 |---|---|
-| 待提交 | Feat: mobile inline artifact preview (WebPreviewCard/TextPreviewCard/PptxViewerCard/DownloadCard) |
-| 待提交 | Feat: mobile file change popup + member info bottom sheet |
-| 待提交 | Fix: capabilitiesJson field + listMembers async timing + agentMap fallback |
-| 待提交 | Fix: permission approval HTTP→WebSocket (permissionWsSender) |
+| `24e3a31` | Feat: mobile inline artifact preview (WebPreviewCard/TextPreviewCard/PptxViewerCard/DownloadCard) |
+| `6bb3c17` | Feat: mobile file change confirmation popup + permission approval WS fix |
+| `eec2f90` | Feat: mobile member info bottom sheet + header redesign |
+| `e3ca4bb` | Docs: mobile phase2 completion + verification logs (121 test points) |
+| `bee9cc1` | Chore: remove completed mobile artifact preview todo item |
