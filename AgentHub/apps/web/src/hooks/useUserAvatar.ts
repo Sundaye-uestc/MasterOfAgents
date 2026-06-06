@@ -1,42 +1,56 @@
 import { useState, useCallback, useEffect } from "react";
+import { getProfile, updateProfile } from "../lib/api.js";
 
-const STORAGE_KEY = "user-avatar";
-const MAX_SIZE = 3 * 1024 * 1024; // 3 MB for localStorage data URL
+const MAX_SIZE = 3 * 1024 * 1024; // 3 MB for data URL
 
 export function useUserAvatar() {
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Load avatar from server on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) setAvatar(stored);
-    } catch {
-      // localStorage not available
-    }
+    getProfile()
+      .then((p) => setAvatar(p.avatar))
+      .catch(() => {
+        // Fallback: try legacy localStorage
+        try {
+          const stored = localStorage.getItem("user-avatar");
+          if (stored) {
+            setAvatar(stored);
+            // Migrate to server
+            updateProfile({ avatar: stored }).catch(() => {});
+          }
+        } catch { /* ignore */ }
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const uploadAvatar = useCallback((dataUrl: string): string | null => {
-    // Check data URL size (base64 is ~1.37x the original binary size)
     if (dataUrl.length > MAX_SIZE * 1.5) {
       return "图片过大，请选择小于 3MB 的文件";
     }
-    try {
-      localStorage.setItem(STORAGE_KEY, dataUrl);
-      setAvatar(dataUrl);
-      return null; // no error = success
-    } catch {
-      return "存储失败，可能空间不足，请清理浏览器存储后重试";
-    }
+    updateProfile({ avatar: dataUrl })
+      .then(() => setAvatar(dataUrl))
+      .catch(() => {
+        // Fallback: localStorage
+        try {
+          localStorage.setItem("user-avatar", dataUrl);
+          setAvatar(dataUrl);
+        } catch {
+          return;
+        }
+      });
+    return null; // no error
   }, []);
 
   const clearAvatar = useCallback(() => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
-    }
-    setAvatar(null);
+    updateProfile({ avatar: null })
+      .then(() => setAvatar(null))
+      .catch(() => {
+        try { localStorage.removeItem("user-avatar"); } catch { /* ignore */ }
+        setAvatar(null);
+      });
   }, []);
 
-  return { avatar, uploadAvatar, clearAvatar };
+  return { avatar, loading, uploadAvatar, clearAvatar };
 }

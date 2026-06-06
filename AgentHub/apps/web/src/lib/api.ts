@@ -317,3 +317,15 @@ export function deployArtifact(id: string, target?: "local-static" | "zip") {
     body: JSON.stringify({ target }),
   });
 }
+
+// --- User Profile ---
+export function getProfile() {
+  return request<{ avatar: string | null }>("/profile");
+}
+
+export function updateProfile(data: { avatar?: string | null }) {
+  return request<{ avatar: string | null }>("/profile", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
