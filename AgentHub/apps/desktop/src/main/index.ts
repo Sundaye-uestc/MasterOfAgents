@@ -20,7 +20,12 @@ const WEB_DIST_DIR = app.isPackaged
 let mainWindow: BrowserWindow | null = null;
 
 async function createMainWindow(): Promise<BrowserWindow> {
-  const serverInfo = await startServer(SERVER_DIR);
+  // Dev mode: reuse the already-running dev server (same as web/mobile).
+  // Packaged mode: start an embedded server on a free port + proxy.
+  const serverInfo = isDev
+    ? { port: 3001, url: "http://127.0.0.1:3001" }
+    : await startServer(SERVER_DIR);
+
   console.log(`[AgentHub] Server: ${serverInfo.url}`);
 
   const uiUrl = isDev
@@ -79,9 +84,13 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
-  Promise.allSettled([
-    stopServer(),
-    stopProxyServer(),
-    stopPreviewServer(),
-  ]).finally(() => app.quit());
+  if (isDev) {
+    app.quit();
+  } else {
+    Promise.allSettled([
+      stopServer(),
+      stopProxyServer(),
+      stopPreviewServer(),
+    ]).finally(() => app.quit());
+  }
 });
