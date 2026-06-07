@@ -1,13 +1,9 @@
 # AgentHub Python Dependencies
 # Install: pip install -r requirements.txt
 
-# PPT generation (start_dev.py + ppt_demo.py)
-python-pptx>=1.0.0
-Pillow>=3.3.2
-lxml>=3.1.0
-XlsxWriter>=0.5.7
-
-# PPT Generator Skill (NanoBanana-PPT-Skills)
-google-genai>=2.7.0
+# PPT slide image generation (AgentHub/ppt/generate_ppt.py)
+google-genai>=1.0.0
 python-dotenv>=1.0.0
-typing-extensions>=4.9.0
+
+# PPTX → HTML preview converter (AgentHub/ppt/pptx_to_preview.py)
+python-pptx>=1.0.0

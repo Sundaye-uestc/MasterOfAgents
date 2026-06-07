@@ -2,7 +2,7 @@
 import subprocess, os
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-APP_DIR = os.path.join(ROOT, "AgentHub", "apps", "desktop")
+MONOREPO = os.path.join(ROOT, "AgentHub")
 
 if __name__ == "__main__":
     print("[start-desktop] AgentHub 桌面端 (Electron dev mode)")
@@ -11,10 +11,7 @@ if __name__ == "__main__":
     env = os.environ.copy()
     env.pop("ELECTRON_RUN_AS_NODE", None)
 
-    # Step 1: TypeScript 编译
-    print("[start-desktop] Step 1/2: tsc...")
-    subprocess.run("npx tsc", cwd=APP_DIR, env=env, shell=True)
-
-    # Step 2: 启动 Electron
-    print("[start-desktop] Step 2/2: electron .")
-    subprocess.run("npx electron .", cwd=APP_DIR, env=env, shell=True)
+    # 使用 pnpm --filter 确保 monorepo 上下文（types, hoisted deps 等）
+    subprocess.run(
+        "pnpm --filter @agenthub/desktop dev",
+        cwd=MONOREPO, env=env, shell=True)
