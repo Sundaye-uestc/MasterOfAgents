@@ -54,6 +54,7 @@ async function main() {
   const server = serve({
     fetch: app.fetch,
     port: PORT,
+    hostname: "0.0.0.0",
   }, (info) => {
     console.log(`[AgentHub Server] REST http://localhost:${info.port}`);
     console.log(`[AgentHub Server] WS   ws://localhost:${info.port}/ws`);

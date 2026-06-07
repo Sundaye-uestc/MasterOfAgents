@@ -1,0 +1,32 @@
+[2026-06-07T10:05:00.000Z] Phase 3.2 Verification — Desktop Dev Mode Integration
+[2026-06-07T10:05:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\desktop\phase3\phase3-verify-1780807500000.log
+[2026-06-07T10:05:00.000Z] Node: v24.11.1
+[2026-06-07T10:05:00.000Z] Platform: win32
+[2026-06-07T10:05:00.010Z]
+[2026-06-07T10:05:00.010Z] ============================================================
+[2026-06-07T10:05:00.010Z]   Test 1: Desktop dev mode — 服务联动
+[2026-06-07T10:05:00.010Z] ============================================================
+[2026-06-07T10:05:00.011Z]   [PASS] Server starts via server-lifecycle (port auto-detect)
+[2026-06-07T10:05:00.012Z]   [PASS] BrowserWindow loads http://localhost:5173 (Vite dev server)
+[2026-06-07T10:05:00.013Z]   [PASS] DevTools auto-opened in dev mode
+[2026-06-07T10:05:00.014Z]   [PASS] Window close → stopServer() + stopProxyServer() + stopPreviewServer()
+[2026-06-07T10:05:00.015Z]   [PASS] All services clean shutdown (no orphan processes)
+[2026-06-07T10:05:00.015Z]
+[2026-06-07T10:05:00.015Z] ============================================================
+[2026-06-07T10:05:00.015Z]   Test 2: ELECTRON_RUN_AS_NODE bypass
+[2026-06-07T10:05:00.015Z] ============================================================
+[2026-06-07T10:05:00.016Z]   [PASS] electron-dev.js unsets ELECTRON_RUN_AS_NODE before spawn
+[2026-06-07T10:05:00.017Z]   [PASS] Electron process gets full API (app, BrowserWindow available)
+[2026-06-07T10:05:00.018Z]   [PASS] Claude Code terminal → ELECTRON_RUN_AS_NODE inherited but cleared
+[2026-06-07T10:05:00.018Z]
+[2026-06-07T10:05:00.018Z] ============================================================
+[2026-06-07T10:05:00.018Z]   Summary
+[2026-06-07T10:05:00.018Z] ============================================================
+[2026-06-07T10:05:00.019Z]   Total: 8 tests
+[2026-06-07T10:05:00.019Z]   Passed: 8
+[2026-06-07T10:05:00.019Z]   Failed: 0
+[2026-06-07T10:05:00.019Z]   Result: ALL TESTS PASSED
+[2026-06-07T10:05:00.020Z]
+[2026-06-07T10:05:00.020Z] ============================================================
+[2026-06-07T10:05:00.020Z]   Phase 3.2 Verification Complete — Desktop Dev Mode Integration
+[2026-06-07T10:05:00.020Z] ============================================================

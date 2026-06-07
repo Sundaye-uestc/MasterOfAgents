@@ -41,5 +41,15 @@ __pycache__/
 # Design documents (PDF)
 *.pdf
 
+# Dev server logs
+.logs/
+
 # Test
 Test/
+
+# Electron build output
+release/
+
+# AgentHub Desktop — portable build artifacts
+AgentHub-Desktop-Portable/
+AgentHub-Desktop-Portable.zip

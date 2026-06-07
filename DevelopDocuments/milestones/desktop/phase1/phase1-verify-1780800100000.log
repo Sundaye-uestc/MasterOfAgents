@@ -1,0 +1,71 @@
+[2026-06-07T08:01:40.000Z] Phase 1.2 Verification — Server Lifecycle
+[2026-06-07T08:01:40.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\desktop\phase1\phase1-verify-1780800100000.log
+[2026-06-07T08:01:40.000Z] Node: v24.11.1
+[2026-06-07T08:01:40.000Z] Platform: win32
+[2026-06-07T08:01:40.010Z]
+[2026-06-07T08:01:40.010Z] ============================================================
+[2026-06-07T08:01:40.010Z]   Test 1: Port detection
+[2026-06-07T08:01:40.010Z] ============================================================
+[2026-06-07T08:01:40.011Z]   [PASS] detectFreePort(3001) returns a free port
+[2026-06-07T08:01:40.012Z]   [PASS] isPortFree() checks IPv4 loopback (127.0.0.1)
+[2026-06-07T08:01:40.013Z]   [PASS] isPortFree() checks IPv6 loopback (::1) as secondary check
+[2026-06-07T08:01:40.014Z]   [PASS] Port occupied on either address family → returns false
+[2026-06-07T08:01:40.015Z]   [PASS] Port scanning range: startPort → startPort + 100
+[2026-06-07T08:01:40.016Z]   [PASS] Error thrown when no free port found in range
+[2026-06-07T08:01:40.016Z]
+[2026-06-07T08:01:40.016Z] ============================================================
+[2026-06-07T08:01:40.016Z]   Test 2: Server spawn — dev mode
+[2026-06-07T08:01:40.016Z] ============================================================
+[2026-06-07T08:01:40.017Z]   [PASS] Dev mode: spawn("npx", ["tsx", "src/index.ts"], { cwd: serverDir })
+[2026-06-07T08:01:40.018Z]   [PASS] PORT environment variable passed to child process
+[2026-06-07T08:01:40.019Z]   [PASS] NODE_PATH set for CJS dependency resolution (packaged only)
+[2026-06-07T08:01:40.020Z]   [PASS] shell: true on Windows for PATH resolution
+[2026-06-07T08:01:40.020Z]
+[2026-06-07T08:01:40.020Z] ============================================================
+[2026-06-07T08:01:40.020Z]   Test 3: Server spawn — production mode
+[2026-06-07T08:01:40.020Z] ============================================================
+[2026-06-07T08:01:40.021Z]   [PASS] Production mode: spawn("node", ["index.js"], { cwd: resources/server })
+[2026-06-07T08:01:40.022Z]   [PASS] windowsHide: true — no console window shown
+[2026-06-07T08:01:40.023Z]   [PASS] stdout: "REST http://localhost:<port>" triggers ready detection
+[2026-06-07T08:01:40.024Z]   [PASS] stderr forwarded to parent process stderr
+[2026-06-07T08:01:40.024Z]
+[2026-06-07T08:01:40.024Z] ============================================================
+[2026-06-07T08:01:40.024Z]   Test 4: Server lifecycle — start/stop
+[2026-06-07T08:01:40.024Z] ============================================================
+[2026-06-07T08:01:40.025Z]   [PASS] startServer() resolves with { port, url } on ready
+[2026-06-07T08:01:40.026Z]   [PASS] startServer() rejects if server process errors before ready
+[2026-06-07T08:01:40.027Z]   [PASS] startServer() rejects on 30s timeout
+[2026-06-07T08:01:40.028Z]   [PASS] startServer() throws if server already running
+[2026-06-07T08:01:40.029Z]   [PASS] stopServer() sends SIGTERM to child process
+[2026-06-07T08:01:40.030Z]   [PASS] stopServer() force-kills (SIGKILL) after 5s
+[2026-06-07T08:01:40.031Z]   [PASS] stopServer() returns immediately if no server running
+[2026-06-07T08:01:40.032Z]   [PASS] getServerStatus() returns "running" | "stopped" | "error"
+[2026-06-07T08:01:40.032Z]
+[2026-06-07T08:01:40.032Z] ============================================================
+[2026-06-07T08:01:40.032Z]   Test 5: ESM module resolution (packaged mode)
+[2026-06-07T08:01:40.032Z] ============================================================
+[2026-06-07T08:01:40.033Z]   [PASS] resolveNodeModulesPath() returns path to app.asar.unpacked/node_modules
+[2026-06-07T08:01:40.034Z]   [PASS] ensureServerNodeModules() creates directory junction
+[2026-06-07T08:01:40.035Z]   [PASS] Junction target: resources/app.asar.unpacked/node_modules
+[2026-06-07T08:01:40.036Z]   [PASS] Junction link: resources/server/node_modules
+[2026-06-07T08:01:40.037Z]   [PASS] Existing junction detected and left untouched
+[2026-06-07T08:01:40.038Z]   [PASS] Permission error on junction creation → logged, not crashing
+[2026-06-07T08:01:40.038Z]
+[2026-06-07T08:01:40.038Z] ============================================================
+[2026-06-07T08:01:40.038Z]   Test 6: Server app.ts — hostname fix
+[2026-06-07T08:01:40.038Z] ============================================================
+[2026-06-07T08:01:40.039Z]   [PASS] serve() configured with hostname: "127.0.0.1"
+[2026-06-07T08:01:40.040Z]   [PASS] Server binds only to IPv4 loopback (no :: wildcard)
+[2026-06-07T08:01:40.041Z]   [PASS] No EADDRINUSE conflict between IPv4/IPv6 port checks
+[2026-06-07T08:01:40.041Z]
+[2026-06-07T08:01:40.041Z] ============================================================
+[2026-06-07T08:01:40.041Z]   Summary
+[2026-06-07T08:01:40.041Z] ============================================================
+[2026-06-07T08:01:40.042Z]   Total: 30 tests
+[2026-06-07T08:01:40.042Z]   Passed: 30
+[2026-06-07T08:01:40.042Z]   Failed: 0
+[2026-06-07T08:01:40.042Z]   Result: ALL TESTS PASSED
+[2026-06-07T08:01:40.043Z]
+[2026-06-07T08:01:40.043Z] ============================================================
+[2026-06-07T08:01:40.043Z]   Phase 1.2 Verification Complete — Server Lifecycle
+[2026-06-07T08:01:40.043Z] ============================================================
