@@ -49,3 +49,8 @@ Test/
 
 # Electron build output
 release/
+
+# AgentHub Desktop — portable build artifacts
+AgentHub-Desktop-Portable/
+AgentHub-Desktop-Portable.zip
+AgentHub-Desktop/
