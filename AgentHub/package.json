@@ -9,7 +9,8 @@
     "dev:mobile": "pnpm --filter @agenthub/mobile dev",
     "build": "pnpm -r build",
     "check": "pnpm -r check",
-    "verify": "pnpm --filter @agenthub/server verify"
+    "verify": "pnpm --filter @agenthub/server verify",
+    "build:portable": "node scripts/build-portable.mjs"
   },
   "engines": {
     "node": ">=20"
