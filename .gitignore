@@ -46,3 +46,6 @@ __pycache__/
 
 # Test
 Test/
+
+# Electron build output
+release/

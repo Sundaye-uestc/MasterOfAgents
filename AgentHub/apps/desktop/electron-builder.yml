@@ -1,0 +1,44 @@
+appId: com.agenthub.desktop
+productName: AgentHub
+directories:
+  output: ../../release
+  buildResources: build
+
+win:
+  target:
+    - target: dir
+      arch: [x64]
+  icon: build/icon.ico
+  sign: null
+  verifyUpdateCodeSignature: false
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  icon: build/icon.icns
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  icon: build/icon.png
+
+# Desktop app compiled code + dependencies
+files:
+  - dist/**/*
+  - node_modules/**/*
+  - package.json
+
+# Server & web builds go outside the asar so the server child process
+# can access them on the real filesystem.
+extraResources:
+  - from: ../server/dist
+    to: server
+  - from: ../web/dist
+    to: web
+
+# Unpack all node_modules so the server child process (Node.js) can
+# resolve its dependencies (hono, ws, sql.js, etc.) from the filesystem.
+asarUnpack:
+  - node_modules/**
