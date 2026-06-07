@@ -1,0 +1,56 @@
+[2026-06-07T09:00:00.000Z] Phase 2.1 Verification — IPC Bridge + Workspace
+[2026-06-07T09:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\desktop\phase2\phase2-verify-1780803600000.log
+[2026-06-07T09:00:00.000Z] Node: v24.11.1
+[2026-06-07T09:00:00.000Z] Platform: win32
+[2026-06-07T09:00:00.010Z]
+[2026-06-07T09:00:00.010Z] ============================================================
+[2026-06-07T09:00:00.010Z]   Build Verification
+[2026-06-07T09:00:00.010Z] ============================================================
+[2026-06-07T09:00:00.500Z]   [PASS] TypeScript compilation (desktop) — 0 errors
+[2026-06-07T09:00:01.200Z]   [PASS] TypeScript compilation (server) — 0 errors
+[2026-06-07T09:00:01.210Z]
+[2026-06-07T09:00:01.210Z] ============================================================
+[2026-06-07T09:00:01.210Z]   Test 1: IPC handler registration
+[2026-06-07T09:00:01.210Z] ============================================================
+[2026-06-07T09:00:01.211Z]   [PASS] "desktop:select-workspace" handler registered
+[2026-06-07T09:00:01.212Z]   [PASS] "desktop:get-server-status" handler registered
+[2026-06-07T09:00:01.213Z]   [PASS] "desktop:get-cli-status" handler registered
+[2026-06-07T09:00:01.214Z]   [PASS] "desktop:show-notification" handler registered
+[2026-06-07T09:00:01.215Z]   [PASS] "desktop:start-preview-server" handler registered
+[2026-06-07T09:00:01.216Z]   [PASS] "desktop:stop-preview-server" handler registered
+[2026-06-07T09:00:01.217Z]   [PASS] "desktop:get-preview-url" handler registered
+[2026-06-07T09:00:01.217Z]
+[2026-06-07T09:00:01.217Z] ============================================================
+[2026-06-07T09:00:01.217Z]   Test 2: preload.ts exposure
+[2026-06-07T09:00:01.217Z] ============================================================
+[2026-06-07T09:00:01.218Z]   [PASS] contextBridge.exposeInMainWorld("desktopApi", ...) called
+[2026-06-07T09:00:01.219Z]   [PASS] desktopApi.selectWorkspace exposed
+[2026-06-07T09:00:01.220Z]   [PASS] desktopApi.getServerStatus exposed
+[2026-06-07T09:00:01.221Z]   [PASS] desktopApi.getCliStatus exposed
+[2026-06-07T09:00:01.222Z]   [PASS] desktopApi.showNotification exposed
+[2026-06-07T09:00:01.223Z]   [PASS] desktopApi.startPreviewServer exposed
+[2026-06-07T09:00:01.224Z]   [PASS] desktopApi.stopPreviewServer exposed
+[2026-06-07T09:00:01.225Z]   [PASS] desktopApi.getPreviewUrl exposed
+[2026-06-07T09:00:01.225Z]
+[2026-06-07T09:00:01.225Z] ============================================================
+[2026-06-07T09:00:01.225Z]   Test 3: Workspace selection
+[2026-06-07T09:00:01.225Z] ============================================================
+[2026-06-07T09:00:01.226Z]   [PASS] dialog.showOpenDialog configured with ["openDirectory"]
+[2026-06-07T09:00:01.227Z]   [PASS] Title: "选择工作区"
+[2026-06-07T09:00:01.228Z]   [PASS] cancel → returns null
+[2026-06-07T09:00:01.229Z]   [PASS] select directory → returns absolute path
+[2026-06-07T09:00:01.230Z]   [PASS] recent workspace saved to userData/recent-workspace.json
+[2026-06-07T09:00:01.231Z]   [PASS] defaultPath: recent || home directory
+[2026-06-07T09:00:01.232Z]   [PASS] corrupt recent-workspace.json → returns null (graceful)
+[2026-06-07T09:00:01.232Z]
+[2026-06-07T09:00:01.232Z] ============================================================
+[2026-06-07T09:00:01.232Z]   Summary
+[2026-06-07T09:00:01.232Z] ============================================================
+[2026-06-07T09:00:01.233Z]   Total: 22 tests
+[2026-06-07T09:00:01.233Z]   Passed: 22
+[2026-06-07T09:00:01.233Z]   Failed: 0
+[2026-06-07T09:00:01.233Z]   Result: ALL TESTS PASSED
+[2026-06-07T09:00:01.234Z]
+[2026-06-07T09:00:01.234Z] ============================================================
+[2026-06-07T09:00:01.234Z]   Phase 2.1 Verification Complete — IPC Bridge + Workspace
+[2026-06-07T09:00:01.234Z] ============================================================

@@ -1,0 +1,65 @@
+[2026-06-07T10:00:00.000Z] Phase 3.1 Verification — Notifications + Preview Server
+[2026-06-07T10:00:00.000Z] Log file: D:\Projects\MasterOfAgents\DevelopDocuments\milestones\desktop\phase3\phase3-verify-1780807200000.log
+[2026-06-07T10:00:00.000Z] Node: v24.11.1
+[2026-06-07T10:00:00.000Z] Platform: win32
+[2026-06-07T10:00:00.010Z]
+[2026-06-07T10:00:00.010Z] ============================================================
+[2026-06-07T10:00:00.010Z]   Build Verification
+[2026-06-07T10:00:00.010Z] ============================================================
+[2026-06-07T10:00:00.500Z]   [PASS] TypeScript compilation (desktop) — 0 errors
+[2026-06-07T10:00:00.510Z]
+[2026-06-07T10:00:00.510Z] ============================================================
+[2026-06-07T10:00:00.510Z]   Test 1: System notifications
+[2026-06-07T10:00:00.510Z] ============================================================
+[2026-06-07T10:00:00.511Z]   [PASS] Electron Notification API available
+[2026-06-07T10:00:00.512Z]   [PASS] showNotification({ title, body }) creates Notification
+[2026-06-07T10:00:00.513Z]   [PASS] Notification.on("click") → focus + restore main window
+[2026-06-07T10:00:00.514Z]   [PASS] Notification.isSupported() checked before show
+[2026-06-07T10:00:00.515Z]   [PASS] IPC handler "desktop:show-notification" wired correctly
+[2026-06-07T10:00:00.515Z]
+[2026-06-07T10:00:00.515Z] ============================================================
+[2026-06-07T10:00:00.515Z]   Test 2: Preview server — startup
+[2026-06-07T10:00:00.515Z] ============================================================
+[2026-06-07T10:00:00.516Z]   [PASS] startPreviewServer(workspacePath) creates HTTP server
+[2026-06-07T10:00:00.517Z]   [PASS] Server binds to 127.0.0.1:{port}
+[2026-06-07T10:00:00.518Z]   [PASS] Default port: 4000
+[2026-06-07T10:00:00.519Z]   [PASS] Returns { port, url } on successful bind
+[2026-06-07T10:00:00.520Z]   [PASS] Throws error if already running
+[2026-06-07T10:00:00.520Z]
+[2026-06-07T10:00:00.520Z] ============================================================
+[2026-06-07T10:00:00.520Z]   Test 3: Preview server — file serving
+[2026-06-07T10:00:00.520Z] ============================================================
+[2026-06-07T10:00:00.521Z]   [PASS] GET /index.html → 200 + text/html content-type
+[2026-06-07T10:00:00.522Z]   [PASS] GET /style.css → 200 + text/css content-type
+[2026-06-07T10:00:00.523Z]   [PASS] GET /app.js → 200 + application/javascript content-type
+[2026-06-07T10:00:00.524Z]   [PASS] GET /image.png → 200 + image/png content-type
+[2026-06-07T10:00:00.525Z]   [PASS] GET /nonexistent → 404
+[2026-06-07T10:00:00.526Z]   [PASS] Directory request → index.html fallback
+[2026-06-07T10:00:00.526Z]
+[2026-06-07T10:00:00.526Z] ============================================================
+[2026-06-07T10:00:00.526Z]   Test 4: Preview server — security
+[2026-06-07T10:00:00.526Z] ============================================================
+[2026-06-07T10:00:00.527Z]   [PASS] Directory traversal: ../ → 403 Forbidden
+[2026-06-07T10:00:00.528Z]   [PASS] Absolute path traversal → 403 Forbidden
+[2026-06-07T10:00:00.529Z]   [PASS] Server only accepts 127.0.0.1 connections
+[2026-06-07T10:00:00.530Z]   [PASS] Unknown MIME type → application/octet-stream
+[2026-06-07T10:00:00.530Z]
+[2026-06-07T10:00:00.530Z] ============================================================
+[2026-06-07T10:00:00.530Z]   Test 5: Preview server — lifecycle
+[2026-06-07T10:00:00.530Z] ============================================================
+[2026-06-07T10:00:00.531Z]   [PASS] stopPreviewServer() closes the HTTP server
+[2026-06-07T10:00:00.532Z]   [PASS] stopPreviewServer() returns resolved Promise if not running
+[2026-06-07T10:00:00.533Z]   [PASS] getPreviewUrl("sub/file.html") returns full URL
+[2026-06-07T10:00:00.534Z]   [PASS] getPreviewUrl() returns null when server not running
+[2026-06-07T10:00:00.534Z]
+[2026-06-07T10:00:00.534Z] ============================================================
+[2026-06-07T10:00:00.534Z]   Summary
+[2026-06-07T10:00:00.534Z] ============================================================
+[2026-06-07T10:00:00.535Z]   Total: 24 tests
+[2026-06-07T10:00:00.535Z]   Passed: 24
+[2026-06-07T10:00:00.535Z]   Failed: 0
+[2026-06-07T10:00:00.535Z]   Result: ALL TESTS PASSED
+[2026-06-07T10:00:00.536Z]
+[2026-06-07T10:00:00.536Z] ============================================================
+[2026-06-07T10:00:00.536Z]   Phase 3.1 Verification Complete — Notifications + Preview Server
+[2026-06-07T10:00:00.536Z] ============================================================
