@@ -1,4 +1,5 @@
 import { spawn, ChildProcess } from "node:child_process";
+import * as fs from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import { app } from "electron";
@@ -15,9 +16,21 @@ function isPortFree(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const server = net.createServer();
     server.once("error", () => resolve(false));
+    // Listen on both IPv4 and IPv6 loopback to catch port conflicts
+    // regardless of which address family the server process will use.
     server.listen(port, "127.0.0.1", () => {
-      server.close();
-      resolve(true);
+      // Also try IPv6 as a secondary check (EADDRINUSE can happen
+      // when the server binds to :: while our check was on 127.0.0.1).
+      const v6 = net.createServer();
+      v6.once("error", () => {
+        server.close();
+        resolve(false);
+      });
+      v6.listen(port, "::1", () => {
+        v6.close();
+        server.close();
+        resolve(true);
+      });
     });
   });
 }
@@ -54,6 +67,58 @@ function resolveNodeModulesPath(): string | undefined {
   return path.join(__dirname, "..", "..", "..", "app.asar.unpacked", "node_modules");
 }
 
+/**
+ * Create a directory junction so the server's ESM imports can resolve dependencies.
+ *
+ * The server is an ESM module ("type": "module"). Unlike CJS `require()`,
+ * ESM **does not use NODE_PATH** for specifier resolution — it only looks
+ * in `node_modules/` directories that are ancestors of the importing file.
+ *
+ * Since the server lives at `resources/server/index.js` and the real
+ * node_modules is at `resources/app.asar.unpacked/node_modules/`, we
+ * bridge them with a directory junction.
+ *
+ * **Note**: Creating junctions on Windows requires either Administrator
+ * privileges or Developer Mode. If the process lacks permission, this
+ * is a best-effort fallback — the build script should have already created
+ * the junction during packaging (where permissions are available).
+ */
+function ensureServerNodeModules(
+  serverDir: string,
+  nodeModulesPath: string,
+): void {
+  const serverNodeModules = path.join(serverDir, "node_modules");
+
+  try {
+    const stat = fs.lstatSync(serverNodeModules);
+    if (stat.isSymbolicLink()) return; // already a junction — done
+    if (stat.isDirectory()) {
+      fs.rmSync(serverNodeModules, { recursive: true });
+    }
+  } catch (err: any) {
+    if (err.code !== "ENOENT") {
+      console.warn(
+        `[AgentHub] Cannot inspect server node_modules: ${err.message}`,
+      );
+      return; // don't risk crashing the app
+    }
+    // ENOENT is fine — we'll create the junction below
+  }
+
+  try {
+    fs.symlinkSync(nodeModulesPath, serverNodeModules, "junction");
+    console.log("[AgentHub] Created server node_modules junction");
+  } catch (err: any) {
+    // Junction creation requires SeCreateSymbolicLinkPrivilege on Windows.
+    // If the build script already created the junction, this is fine.
+    // If not, the server will fail to start — but we log and continue
+    // rather than crashing the entire app.
+    console.warn(
+      `[AgentHub] Cannot create server node_modules junction: ${err.message}`,
+    );
+  }
+}
+
 // ── Server lifecycle ──────────────────────────────────────────────
 
 export interface ServerInfo {
@@ -77,6 +142,12 @@ export function startServer(serverDir: string): Promise<ServerInfo> {
   const isDev = process.argv.includes("--dev");
   const nodeModulesPath = resolveNodeModulesPath();
 
+  // In packaged mode, ensure ESM can resolve dependencies through a
+  // directory junction (NODE_PATH is ignored by ESM specifier resolution).
+  if (nodeModulesPath) {
+    ensureServerNodeModules(serverDir, nodeModulesPath);
+  }
+
   return new Promise<ServerInfo>((resolve, reject) => {
     detectFreePort()
       .then((port) => {
@@ -86,6 +157,7 @@ export function startServer(serverDir: string): Promise<ServerInfo> {
         };
 
         if (nodeModulesPath) {
+          // Keep NODE_PATH for any CJS dependencies that still need it
           env["NODE_PATH"] = nodeModulesPath;
         }
 
