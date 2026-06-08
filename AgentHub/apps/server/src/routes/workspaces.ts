@@ -101,3 +101,19 @@ workspaceRoutes.get("/:id/file-content", async (c) => {
   const result = svc.readFileContent(ws.rootPath, filePath);
   return c.json(result);
 });
+
+// Save file content back to workspace
+workspaceRoutes.put("/:id/file-content", async (c) => {
+  const ws = await svc.getWorkspace(c.req.param("id")!);
+  if (!ws) return c.json({ error: "Workspace not found" }, 404);
+  const filePath = c.req.query("path");
+  if (!filePath) return c.json({ error: "path query parameter required" }, 400);
+  const body = await c.req.json<{ content: string }>();
+  if (typeof body.content !== "string") return c.json({ error: "content required" }, 400);
+  try {
+    svc.writeFileContent(ws.rootPath, filePath, body.content);
+    return c.json({ ok: true });
+  } catch (err) {
+    return c.json({ error: (err as Error).message }, 400);
+  }
+});

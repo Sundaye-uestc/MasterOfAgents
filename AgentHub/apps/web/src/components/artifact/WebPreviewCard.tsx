@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useEditFileStore } from "../../stores/edit-file.store.js";
+import { useUIStore } from "../../stores/ui.store.js";
 
 interface Props {
   previewUrl: string;
@@ -13,6 +15,16 @@ export function WebPreviewCard({ previewUrl, name }: Props) {
       <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
         <span className="text-xs text-gray-500 dark:text-gray-400">🌐</span>
         <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{name}</span>
+        <button
+          onClick={() => {
+            useEditFileStore.getState().editFile(name);
+            useUIStore.getState().openPanel("workspace");
+          }}
+          className="text-xs text-blue-400 hover:text-blue-300 flex-shrink-0"
+          title="在代码编辑器中查看源码"
+        >
+          查看代码
+        </button>
         <a
           href={previewUrl}
           target="_blank"

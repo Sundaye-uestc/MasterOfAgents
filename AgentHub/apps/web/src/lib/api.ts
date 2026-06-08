@@ -275,6 +275,13 @@ export function readWorkspaceFile(workspaceId: string, filePath: string) {
   );
 }
 
+export function writeWorkspaceFile(workspaceId: string, filePath: string, content: string) {
+  return request<{ ok: boolean }>(
+    `/workspaces/${workspaceId}/file-content?path=${encodeURIComponent(filePath)}`,
+    { method: "PUT", body: JSON.stringify({ content }) }
+  );
+}
+
 // --- File Changes ---
 
 export function getFileChange(id: string) {

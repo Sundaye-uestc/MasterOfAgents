@@ -4,8 +4,10 @@ import { applyFileChange, revertFileChange, rollbackSnapshot } from "../../lib/a
 import { DiffCard } from "./DiffCard.js";
 import { FileTree } from "./FileTree.js";
 import { SnapshotList } from "./SnapshotList.js";
+import { CodeEditorPanel } from "./CodeEditorPanel.js";
 import { useUIStore } from "../../stores/ui.store.js";
 import { useWorkspaceStore } from "../../stores/workspace.store.js";
+import { useEditFileStore } from "../../stores/edit-file.store.js";
 
 interface FileNode {
   name: string;
@@ -40,7 +42,19 @@ export function WorkspacePanel({
   onNavigateToRun,
   onFileSelect,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<"files" | "snapshots" | "changes">("files");
+  const [activeTab, setActiveTab] = useState<"files" | "snapshots" | "changes" | "code">("files");
+  const [openFilePath, setOpenFilePath] = useState<string | null>(null);
+
+  // Listen for edit-file requests from TextPreviewCard
+  const editFilePath = useEditFileStore((s) => s.pendingFilePath);
+  const editFileClear = useEditFileStore((s) => s.clear);
+  useEffect(() => {
+    if (editFilePath) {
+      setOpenFilePath(editFilePath);
+      setActiveTab("code");
+      editFileClear();
+    }
+  }, [editFilePath, editFileClear]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
@@ -91,6 +105,8 @@ export function WorkspacePanel({
   const handleFileSelect = useCallback((path: string) => {
     setSelectedPath(path);
     onFileSelect?.(path);
+    setOpenFilePath(path);
+    setActiveTab("code");
   }, [onFileSelect]);
 
   const handleApply = useCallback(async (id: string) => {
@@ -214,7 +230,7 @@ export function WorkspacePanel({
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200/80 dark:border-gray-800/50">
-        {(["files", "snapshots", "changes"] as const).map((tab) => (
+        {(["files", "code", "snapshots", "changes"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -224,7 +240,7 @@ export function WorkspacePanel({
                 : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/30"
             }`}
           >
-            <span>{tab === "files" ? "文件" : tab === "snapshots" ? "快照" : "变更"}</span>
+            <span>{tab === "files" ? "文件" : tab === "code" ? "代码" : tab === "snapshots" ? "快照" : "变更"}</span>
             {tab === "changes" && pendingChanges.length > 0 && (
               <span className="ml-1 text-yellow-400">({pendingChanges.length})</span>
             )}
@@ -255,13 +271,16 @@ export function WorkspacePanel({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className={`flex-1 ${activeTab === "code" ? "overflow-hidden" : "overflow-y-auto"}`}>
         {activeTab === "files" && (
           <FileTree
             files={files}
             selectedPath={selectedPath}
             onSelect={handleFileSelect}
           />
+        )}
+        {activeTab === "code" && workspaceId && (
+          <CodeEditorPanel workspaceId={workspaceId} openFilePath={openFilePath} />
         )}
         {activeTab === "snapshots" && (
           <SnapshotList

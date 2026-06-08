@@ -240,6 +240,17 @@ export class WorkspaceService {
     }
   }
 
+  /** Write text content to a file in the workspace */
+  writeFileContent(rootPath: string, filePath: string, content: string): void {
+    const normalizedRoot = path.resolve(rootPath);
+    const fullPath = path.resolve(normalizedRoot, filePath);
+    // Security: ensure path stays within rootPath
+    if (!fullPath.startsWith(normalizedRoot + path.sep) && fullPath !== normalizedRoot) {
+      throw new Error("Access denied: path outside workspace");
+    }
+    fs.writeFileSync(fullPath, content, "utf-8");
+  }
+
   /** Recursively build a FileNode tree from a directory on disk */
   buildFileTree(rootPath: string): FileNode[] {
     if (!fs.existsSync(rootPath)) return [];

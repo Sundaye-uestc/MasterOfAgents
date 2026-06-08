@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@agenthub/shared": "workspace:*",
+    "@monaco-editor/react": "^4.7.0",
     "chart.js": "^4.5.1",
     "jszip": "^3.10.1",
     "pptxviewjs": "^1.1.9",

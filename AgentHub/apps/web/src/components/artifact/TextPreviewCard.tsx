@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useEditFileStore } from "../../stores/edit-file.store.js";
+import { useUIStore } from "../../stores/ui.store.js";
 
 interface Props {
   /** URL to fetch the raw text content from */
@@ -116,10 +118,20 @@ export function TextPreviewCard({ url, name, mimeType, maxLines = 200, maxChars 
         {lang && (
           <span className="text-xs text-gray-500 dark:text-gray-600 flex-shrink-0 font-mono">{lang}</span>
         )}
+        <button
+          onClick={() => {
+            useEditFileStore.getState().editFile(name);
+            useUIStore.getState().openPanel("workspace");
+          }}
+          className="text-xs text-blue-400 hover:text-blue-300 flex-shrink-0"
+          title="在代码编辑器中查看"
+        >
+          查看代码
+        </button>
         <a
           href={url}
           download={name}
-          className="text-xs text-blue-400 hover:text-blue-300 ml-auto flex-shrink-0"
+          className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex-shrink-0"
         >
           下载
         </a>
