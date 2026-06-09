@@ -5,6 +5,7 @@ interface MemberInfo {
   agentName: string;
   adapterKind: string;
   role?: string;
+  avatar?: string | null;
 }
 
 interface Props {
@@ -26,7 +27,7 @@ export function MobileMentionPicker({ members, onSelect, onClose }: Props) {
           onClick={() => onSelect(m.agentId, m.agentName)}
           className="w-full flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 last:border-0 active:bg-gray-50 dark:active:bg-gray-800/50 touch-target"
         >
-          <AgentBadge agentName={m.agentName} adapterKind={m.adapterKind} size="sm" rounded="full" />
+          <AgentBadge agentName={m.agentName} adapterKind={m.adapterKind} avatar={m.avatar ?? undefined} size="sm" rounded="full" />
           <div className="flex-1 text-left">
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{m.agentName}</div>
             <div className="text-xs text-gray-500">{m.adapterKind}{m.role === "host" ? " · 👑" : ""}</div>

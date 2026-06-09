@@ -6,6 +6,7 @@ interface AgentInfo {
   agentId: string;
   agentName: string;
   adapterKind: string;
+  avatar?: string | null;
 }
 
 interface Props {
@@ -41,6 +42,7 @@ export function MobileMessageBubble({ message, agentInfo, showSender, isStreamin
             <AgentBadge
               agentName={agentInfo.agentName}
               adapterKind={agentInfo.adapterKind}
+              avatar={agentInfo.avatar ?? undefined}
               size="sm"
               rounded="full"
             />

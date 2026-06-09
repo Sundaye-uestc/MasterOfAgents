@@ -35,11 +35,11 @@ export function ConversationListPage() {
   const [showNewModal, setShowNewModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [membersMap, setMembersMap] = useState<Record<string, Array<{ agentId: string; agentName: string; adapterKind: string }>>>({});
+  const [membersMap, setMembersMap] = useState<Record<string, Array<{ agentId: string; agentName: string; adapterKind: string; avatar?: string | null }>>>({});
 
   // Manage members state
   const [manageMembersConvId, setManageMembersConvId] = useState<string | null>(null);
-  const [manageMembersList, setManageMembersList] = useState<Array<{ agentId: string; agentName: string; role: string; adapterKind: string }>>([]);
+  const [manageMembersList, setManageMembersList] = useState<Array<{ agentId: string; agentName: string; role: string; adapterKind: string; avatar?: string | null }>>([]);
   const [manageMembersAgents, setManageMembersAgents] = useState<AgentRow[]>([]);
   const [addMemberAgentId, setAddMemberAgentId] = useState("");
 
@@ -254,7 +254,7 @@ export function ConversationListPage() {
                 <div className="space-y-1">
                   {manageMembersList.map((m) => (
                     <div key={m.agentId} className="flex items-center gap-2 py-2 px-2 rounded-lg">
-                      <AgentBadge agentName={m.agentName} adapterKind={m.adapterKind} size="sm" rounded="full" />
+                      <AgentBadge agentName={m.agentName} adapterKind={m.adapterKind} avatar={m.avatar ?? undefined} size="sm" rounded="full" />
                       <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">{m.agentName}</span>
                       {m.role === "host" && <span className="text-xs text-yellow-500">👑</span>}
                       <button
@@ -287,7 +287,7 @@ export function ConversationListPage() {
                             alreadyMember ? "opacity-40" : isSelected ? "bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500 rounded-lg" : "active:bg-gray-50 dark:active:bg-gray-800/50"
                           }`}
                         >
-                          <AgentBadge agentName={agent.name} adapterKind={agent.adapterKind} size="sm" rounded="md" />
+                          <AgentBadge agentName={agent.name} adapterKind={agent.adapterKind} avatar={agent.avatar ?? undefined} size="sm" rounded="md" />
                           <div className="flex-1 text-left">
                             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{agent.name}</div>
                             <div className="text-xs text-gray-500">{agent.adapterKind}</div>

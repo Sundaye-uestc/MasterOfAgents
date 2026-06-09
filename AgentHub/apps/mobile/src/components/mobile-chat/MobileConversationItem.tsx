@@ -7,12 +7,13 @@ interface AgentInfo {
   agentId: string;
   agentName: string;
   adapterKind: string;
+  avatar?: string | null;
 }
 
 interface Props {
   conversation: ConversationRow;
   agentInfo?: AgentInfo;
-  members?: Array<{ agentId: string; agentName: string; adapterKind: string }>;
+  members?: Array<{ agentId: string; agentName: string; adapterKind: string; avatar?: string | null }>;
   userAvatar?: string | null;
   isSelected: boolean;
   editingId: string | null;
@@ -79,7 +80,7 @@ export function MobileConversationItem({
         {isGroup ? (
           <GroupAvatar members={members ?? []} userAvatar={userAvatar} size="sm" />
         ) : agentInfo ? (
-          <AgentBadge agentName={agentInfo.agentName} adapterKind={agentInfo.adapterKind} size="sm" />
+          <AgentBadge agentName={agentInfo.agentName} adapterKind={agentInfo.adapterKind} avatar={agentInfo.avatar ?? undefined} size="sm" />
         ) : null}
 
         <div className="min-w-0 flex-1">

@@ -8,6 +8,7 @@ interface AgentInfo {
   agentId: string;
   agentName: string;
   adapterKind: string;
+  avatar?: string | null;
 }
 
 interface Props {

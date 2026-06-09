@@ -6,6 +6,7 @@ interface MemberInfo {
   agentName: string;
   adapterKind: string;
   role?: string;
+  avatar?: string | null;
 }
 
 interface Props {
@@ -54,6 +55,7 @@ export function MobileMemberSheet({ members, capabilities, conversationType, onC
                   <AgentBadge
                     agentName={m.agentName}
                     adapterKind={m.adapterKind}
+                    avatar={m.avatar ?? undefined}
                     size="sm"
                     rounded="full"
                   />

@@ -31,6 +31,7 @@ interface MemberInfo {
   agentName: string;
   role: string;
   adapterKind: string;
+  avatar?: string | null;
 }
 
 interface Props {
@@ -61,6 +62,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
   } | null>(null);
   const [orchBarExpanded, setOrchBarExpanded] = useState(false);
   const [agentCapabilities, setAgentCapabilities] = useState<string[]>([]);
+  const [directAgentAvatar, setDirectAgentAvatar] = useState<string | null>(null);
   const [memberCapabilities, setMemberCapabilities] = useState<Record<string, string[]>>({});
   const [showMemberMenu, setShowMemberMenu] = useState(false);
   const memberMenuRef = useRef<HTMLDivElement>(null);
@@ -93,24 +95,28 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
     }
   }, [conversationId, conversationType]);
 
-  // Load agent capabilities for direct chats
+  // Load agent capabilities + avatar for direct chats
   useEffect(() => {
     if (conversationType !== "group" && agentId) {
       listAgents()
         .then((agents) => {
           const agent = agents.find((a) => a.id === agentId);
-          if (agent?.capabilitiesJson) {
-            try {
-              const caps = JSON.parse(agent.capabilitiesJson) as Array<{ label: string; value: string }>;
-              setAgentCapabilities(caps.map((c) => c.label ?? c.value ?? c).slice(0, 5));
-              return;
-            } catch {}
+          if (agent) {
+            setDirectAgentAvatar(agent.avatar ?? null);
+            if (agent.capabilitiesJson) {
+              try {
+                const caps = JSON.parse(agent.capabilitiesJson) as Array<{ label: string; value: string }>;
+                setAgentCapabilities(caps.map((c) => c.label ?? c.value ?? c).slice(0, 5));
+                return;
+              } catch {}
+            }
           }
           setAgentCapabilities([]);
         })
         .catch(() => setAgentCapabilities([]));
     } else {
       setAgentCapabilities([]);
+      setDirectAgentAvatar(null);
     }
   }, [conversationId, conversationType, agentId]);
 
@@ -561,7 +567,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           {conversationType === "group" && members.length > 0 && (
             <div className="flex items-center gap-1">
               {members.slice(0, 3).map((m) => (
-                <AgentBadge key={m.agentId} agentName={m.agentName} adapterKind={m.adapterKind} size="sm" rounded="full" />
+                <AgentBadge key={m.agentId} agentName={m.agentName} adapterKind={m.adapterKind} avatar={m.avatar ?? undefined} size="sm" rounded="full" />
               ))}
               {members.length > 3 && (
                 <span className="text-xs text-gray-400 dark:text-gray-600">+{members.length - 3}</span>
@@ -595,7 +601,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
                           key={m.agentId}
                           className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
                         >
-                          <AgentBadge agentName={m.agentName} adapterKind={m.adapterKind} size="sm" rounded="full" />
+                          <AgentBadge agentName={m.agentName} adapterKind={m.adapterKind} avatar={m.avatar ?? undefined} size="sm" rounded="full" />
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
                               {m.agentName}
@@ -694,6 +700,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           const agentAdapterKind =
             memberInfo?.adapterKind ?? adapterKind ?? "custom";
           const agentName = memberInfo?.agentName ?? conversationTitle ?? "Agent";
+          const agentAvatar = memberInfo?.avatar ?? directAgentAvatar;
           const showAgentName = conversationType === "group" && !!memberInfo;
 
           // System messages: centered, no avatar
@@ -723,6 +730,7 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
                 <AgentBadge
                   agentName={agentName}
                   adapterKind={agentAdapterKind}
+                  avatar={agentAvatar ?? undefined}
                   size="lg"
                 />
               )}

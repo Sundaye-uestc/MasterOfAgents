@@ -23,6 +23,7 @@ interface MemberInfo {
   agentName: string;
   adapterKind: string;
   role?: string;
+  avatar?: string | null;
 }
 
 export function ChatPage() {
@@ -60,20 +61,20 @@ export function ChatPage() {
   const [showFileChangePopup, setShowFileChangePopup] = useState(false);
   const [showMemberSheet, setShowMemberSheet] = useState(false);
 
-  // Build nameMap: agentId → {agentName, adapterKind} for message bubble avatars
-  const nameMap: Record<string, { agentId: string; agentName: string; adapterKind: string }> = {};
+  // Build nameMap: agentId → {agentName, adapterKind, avatar} for message bubble avatars
+  const nameMap: Record<string, { agentId: string; agentName: string; adapterKind: string; avatar?: string | null }> = {};
   const convAgent = agentMap[conversationId];
   if (convType === "group") {
     for (const m of members) {
-      nameMap[m.agentId] = { agentId: m.agentId, agentName: m.agentName, adapterKind: m.adapterKind };
+      nameMap[m.agentId] = { agentId: m.agentId, agentName: m.agentName, adapterKind: m.adapterKind, avatar: m.avatar };
     }
   } else if (convAgent) {
-    nameMap[convAgent.agentId] = convAgent;
+    nameMap[convAgent.agentId] = { ...convAgent, avatar: convAgent.avatar };
   }
   // Fallback: fill in any missing agents from the agents store list
   for (const a of agents) {
     if (!nameMap[a.id]) {
-      nameMap[a.id] = { agentId: a.id, agentName: a.name, adapterKind: a.adapterKind };
+      nameMap[a.id] = { agentId: a.id, agentName: a.name, adapterKind: a.adapterKind, avatar: a.avatar };
     }
   }
 
