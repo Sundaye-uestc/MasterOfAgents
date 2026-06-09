@@ -246,6 +246,7 @@ D:\Projects\MasterOfAgents\
 | **移动端导航** | Zustand stack（push/pop/goHome），与 web 端 useState 条件渲染模式一致，适合 3-4 级页面深度 |
 | **跨端复用** | web package.json `exports` 字段暴露 stores/lib/hooks/components，mobile 通过 `@agenthub/web: workspace:*` 直接引用 |
 | **局域网访问** | 所有服务监听 `0.0.0.0`，手机同 WiFi 可通过局域网 IP 访问移动端/Web 端 |
+| **产物去重 & 归属** | 共享 workspace 导致每 Agent 报告全部文件。前端按轮次计算所有权（`perRoundOwnerMaps`，`createdAt` 最早者胜）+ 轮内文件名去重 + 用户消息触发跨轮重置 |
 
 ## 7. 风险回顾
 

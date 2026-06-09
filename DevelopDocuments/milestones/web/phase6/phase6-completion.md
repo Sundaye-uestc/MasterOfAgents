@@ -2,7 +2,7 @@
 
 **完成日期：** 2026-06-05
 
-> **最后更新：** 2026-06-09 — 6.6 群聊头像拼图 + 成员管理优化 + 代码编辑器（Monaco Editor）
+> **最后更新：** 2026-06-09 — 群聊头像拼图 + 成员管理优化 + 代码编辑器（Monaco Editor）+ 产物去重 & 归属修复 + 自建 Agent 头像修复
 
 ---
 
@@ -13,6 +13,8 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证，以及
 - **Agent 管理**：对话式弹窗创建自定义 Agent，LLM 解析自然语言 → 结构化配置，支持 System Prompt 编辑/AI 润色/工具集自动匹配，完整 CRUD 管理界面
 - **Planner 修复**：ESM hoisting API Key 修复、Prompt 强化（中文输出/任务边界/能力匹配/闲聊识别）、DAG 依赖调度验证、Follow-up 消息处理修复、Agent 上下文隔离
 - **代码编辑器**：Monaco Editor 集成（VS Code 同款引擎），工作区多标签页编辑器，Ctrl+S 保存 + 后端文件写入 API，"查看代码"按钮从产物卡片跳转编辑器
+- **产物去重 & 归属**：修复群聊编排模式下产物跨 Agent 重复播报和归属错误，实现按轮次所有权分配 + 文件名去重 + 跨轮重置的三层过滤
+- **自建 Agent 头像修复**：修复对话页 Header 和消息列表中自建 Agent 头像不显示的问题（Web + Mobile 共 9 个文件）
 - **其他修复**：PPT 文件变更白名单过滤、能力标签 emoji fallback、文件预览去重（跨轮展示 + 同轮去重）
 
 ---
@@ -66,6 +68,16 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证，以及
 | `apps/web/src/components/chat/ConversationList.tsx` | 群聊侧边栏 GroupAvatar + membersMap + 管理面板 AgentPicker 图形选人 |
 | `apps/web/src/components/chat/AgentBadge.tsx` | 导出 logos + rounded 属性（md/full）+ sm 尺寸调整 |
 | `start_dev.py` | 修复 Windows 端口检测死锁（回退到原始 time.sleep 方案） |
+| `apps/web/src/components/chat/ChatArea.tsx` | 产物去重（perRoundOwnerMaps + 文件名去重 + 跨轮重置）+ `MemberInfo` 增加 `avatar` + `directAgentAvatar` state |
+| `apps/mobile/src/pages/ChatPage.tsx` | `MemberInfo` 增加 `avatar`；`nameMap` 增加 `avatar` |
+| `apps/mobile/src/components/mobile-chat/MobileMessageList.tsx` | 产物去重（同 Web）+ `AgentInfo` 增加 `avatar` |
+| `apps/mobile/src/components/mobile-chat/MobileMessageBubble.tsx` | `AgentInfo` 增加 `avatar`；`AgentBadge` 传入 `avatar` |
+| `apps/mobile/src/components/mobile-chat/MobileMemberSheet.tsx` | `MemberInfo` 增加 `avatar`；`AgentBadge` 传入 `avatar` |
+| `apps/mobile/src/components/mobile-chat/MobileConversationItem.tsx` | `AgentInfo`/`members` 增加 `avatar`；`AgentBadge` 传入 `avatar` |
+| `apps/mobile/src/components/mobile-chat/MobileMentionPicker.tsx` | `MemberInfo` 增加 `avatar`；`AgentBadge` 传入 `avatar` |
+| `apps/mobile/src/pages/ConversationListPage.tsx` | `membersMap`/`manageMembersList` 增加 `avatar`；`AgentBadge` 传入 `avatar` |
+| `README.md` | 顶部增加 `[English](README_EN.md)` 语言切换链接 |
+| `README_EN.md` | **新建** — README 完整英文翻译 |
 
 ---
 
@@ -153,11 +165,50 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证，以及
 
 ---
 
-## 四、文件预览去重修复
+## 四、文件预览去重修复（含群聊产物归属）
+
+### 4.1 Phase 6 — 跨轮展示 + 同轮去重
 
 **问题**：同一文件多轮修改时，预览只在第一次出现。根因：`ChatArea.tsx` 跨 run 文件名去重逻辑阻止了后续 run 中同文件名的 artifact 展示。
 
 **修复**：跨 run 不去重（每次修改都要显示），同 run 内按 path 去重保留最新版本（避免同一轮内 Agent A 创建 + Agent B 修改导致同一文件出现两次）。PPT 白名单过滤（`shouldSkipFile`）在服务端，不受影响。
+
+### 4.2 后 Phase 6 — 群聊编排模式产物归属 & 跨 Agent 去重
+
+**问题**：群聊 Orchestrator 模式下，3 个 Agent 各自创建一个文件，但：
+1. 每个 Agent 消息下方展示全部 3 个文件的产物卡片（9 张）
+2. 去重后全部卡片归到第一个 Agent，而非各自展示自己的产物
+3. 迭代对话中同名文件仅第一次展示，后续迭代被屏蔽
+
+**根因**：共享 workspace 下，每个 Agent 运行后的快照对比检测到了 workspace 中所有文件（包括前面 Agent 创建的），服务端为每个 Agent 都生成了全部文件的 artifact。这些 artifact 的 `path` 字段是 `"artifacts/{uuid}/filename"`，每个 artifact 有独立 UUID，导致路径字符串去重失效。
+
+**修复过程**（4 轮迭代）：
+
+| 轮次 | 方案 | 失败原因 |
+|---|---|---|
+| 1 | 路径去重 `a.path` | `a.path = "artifacts/{uuid}/filename"`，UUID 不同 → 路径不等 |
+| 2 | `messageId` 精确匹配 | 服务端为每个 Agent 报全部文件，每个 artifact 绑定当前 Agent 的 `messageId` → 全部 `match=true` |
+| 3 | `a.name` 文件名去重 | 去重成功但全部归到消息列表中第一个 Agent；跨轮同名文件被屏蔽 |
+| **4** | **按轮次所有权 + 文件名去重 + 跨轮重置** | ✅ |
+
+**最终方案 — 三层过滤**：
+
+```
+Layer 1 — perRoundOwnerMaps[currentRound]
+  每条用户消息启动新一轮 → 独立计算所有权
+  轮内按 createdAt 排序，每个文件名分配给最早创建它的 runId
+  → 每个 Agent 只展示自己真正创建的文件
+
+Layer 2 — shownInThisRound
+  轮内文件名去重（防御层）
+
+Layer 3 — 用户消息触发 currentRoundIndex++ + shownInThisRound.clear()
+  跨轮重置 → 迭代后的同名文件（如 PPT 修改）可重新展示
+```
+
+**修改文件**：
+- `ChatArea.tsx` — 预计算 `perRoundOwnerMaps`（按轮次分组 artifact，独立排序分配），渲染时检查 `ownerMap.get(a.name) === msg.runId`
+- `MobileMessageList.tsx` — 同样的预计算和过滤逻辑
 
 ---
 
@@ -192,6 +243,19 @@ CSS Grid 实现的微信风格群聊头像拼接：
 - 导出 `logos` 映射 → `GroupAvatar` 复用 Agent 真实 logo
 - 新增 `rounded` 属性：`"md"`（方角，默认侧边栏）/ `"full"`（圆形，Header）
 - `sm` 尺寸从 `w-5` → `w-7`，与 GroupAvatar 容器对齐
+
+### 5.4 自建 Agent 头像在对话页不显示 — 修复
+
+**问题**：对话列表（ConversationList）中自建 Agent 的 avatar 正确显示（`agent.avatar` 传入了 `AgentBadge`），但对话页（ChatArea）Header、成员菜单和消息列表中的 `AgentBadge` 始终只显示平台默认 logo。
+
+**根因**：
+- Web `ChatArea.tsx`：`MemberInfo` 接口缺少 `avatar` 字段；三处 `AgentBadge` 调用均未传 `avatar`；单聊模式下也未从 `listAgents()` 中提取 avatar
+- Mobile 整条链路（`ChatPage.tsx` → `MobileMessageList` → `MobileMessageBubble`）：`AgentInfo`/`MemberInfo` 接口和 `nameMap` 均缺少 `avatar` 字段传递
+- 涉及 Web 1 个文件 + Mobile 8 个文件
+
+**修复**：
+- `ChatArea.tsx`：`MemberInfo` 增加 `avatar?: string | null`；新增 `directAgentAvatar` state（单聊从 `listAgents()` 中提取）；Header 成员头像、成员菜单下拉、消息列表三处 `AgentBadge` 均传入 `avatar`
+- Mobile 链路：各级 `AgentInfo`/`MemberInfo` 接口补齐 `avatar`；`nameMap` 取值时携带 `avatar`；所有 `AgentBadge` 调用传入 `avatar`
 
 ---
 
@@ -229,7 +293,8 @@ CSS Grid 实现的微信风格群聊头像拼接：
 | 能力标签中文化 + emoji | LLM prompt 约束输出，前端检测 emoji 前缀自动适配 |
 | Drizzle 条件查询 | SQLite 不支持链式 `.where()` 类型推断，用独立 `if` 分支 |
 | Follow-up 检测 | 查询 prior completed/failed runs → 注入上下文提示 |
-| 文件预览去重策略 | 跨 run 不去重（每次修改都展示），同 run 按 path 去重保留最新（避免同轮重复） |
+| 文件预览去重策略（单 Agent） | 跨 run 不去重（每次修改都展示），同 run 按 path 去重保留最新（避免同轮重复） |
+| 产物归属分配（群聊编排） | 前端按轮次计算所有权（`perRoundOwnerMaps`）：轮内 artifact 按 `createdAt` 排序，每个文件名分配给最早创建它的 `runId` → 每 Agent 只展示自己创建的产物。用户消息触发跨轮重置 → 迭代同名文件可重新展示 |
 | Agent 上下文隔离 | `buildAgentContext` 过滤 `runId` 的 system 消息，防止计划泄露导致越界 |
 | Planner 闲聊识别 | 判断用户意图，纯闲聊 → 每个 Agent 回复而非代码任务 |
 | Monaco 懒加载 | `React.lazy(() => import("@monaco-editor/react"))` + Suspense fallback，避免 5MB 阻塞首屏 |
@@ -278,6 +343,13 @@ CSS Grid 实现的微信风格群聊头像拼接：
 | 路径穿越防护 | ✅ |
 | 二进制文件降级提示 | ✅ |
 | 懒加载（Suspense fallback） | ✅ |
+| 自建 Agent 头像在单聊对话页 Header 显示 | ✅ |
+| 自建 Agent 头像在群聊对话页 Header + 成员菜单 + 消息列表显示 | ✅ |
+| Mobile 链路自建 Agent 头像（ConversationList + Chat + MemberSheet + MentionPicker） | ✅ |
+| 群聊编排每 Agent 只展示自己创建的产物 | ✅ |
+| 同一轮内同名文件只展示一次 | ✅ |
+| 迭代对话中同名文件（PPT 等）跨轮可重新展示 | ✅ |
+| 产物归属 `perRoundOwnerMaps` 计算正确（按 createdAt 最早者分配） | ✅ |
 
 ---
 
@@ -297,3 +369,6 @@ CSS Grid 实现的微信风格群聊头像拼接：
 | 未提交 | Feat: 群聊头像拼图 + 成员管理菜单 + AgentPicker 图形化选人 + 管理面板复用 |
 | 未提交 | Fix: start_dev.py 回退到原始简单方案（time.sleep + netstat port cleanup） |
 | `f3f30e1` (PR #4) | Feat: Monaco Editor — 代码编辑器 + 查看代码按钮 + 后端文件写入 API |
+| `7df04f3` | Docs: add English README with language switcher |
+| `89e6dc8` | Fix: Agent custom avatar not shown in chat page header and message list |
+| （待提交） | Fix: artifact dedup — per-round ownership + name-based dedup |
