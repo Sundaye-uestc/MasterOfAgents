@@ -31,7 +31,7 @@ export class ChatService {
   }
 
   /** Get agent info for all conversations (batch) */
-  async getConversationAgentsMap(): Promise<Record<string, { agentId: string; agentName: string; adapterKind: string }>> {
+  async getConversationAgentsMap(): Promise<Record<string, { agentId: string; agentName: string; adapterKind: string; avatar?: string | null }>> {
     const db = getDb();
     const members = db
       .select()
@@ -47,6 +47,7 @@ export class ChatService {
           agentId: agent.id,
           agentName: agent.name,
           adapterKind: agent.adapterKind ?? agent.adapter_kind,
+          avatar: agent.avatar ?? null,
         };
       }
     }
@@ -135,13 +136,14 @@ export class ChatService {
     }));
   }
 
-  async getMembersForConversation(conversationId: string): Promise<Array<{ agentId: string; agentName: string; role: string; adapterKind: string }>> {
+  async getMembersForConversation(conversationId: string): Promise<Array<{ agentId: string; agentName: string; role: string; adapterKind: string; avatar?: string | null }>> {
     const members = await this.listMembers(conversationId);
     return members.map((m) => ({
       agentId: m.agent?.id ?? m.member?.agentId ?? m.member?.agent_id,
       agentName: m.agent?.name ?? "",
       role: m.member?.role ?? "participant",
       adapterKind: (m.agent?.adapterKind ?? m.agent?.adapter_kind ?? "custom") as string,
+      avatar: m.agent?.avatar ?? null,
     }));
   }
 

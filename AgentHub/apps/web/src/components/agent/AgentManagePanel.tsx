@@ -86,6 +86,7 @@ export function AgentManagePanel({ agents, onClose, onAgentUpdated }: AgentManag
     systemPrompt: string;
     capabilities: string[];
     toolSetIds: string[];
+    avatar?: string;
   }) => {
     if (!editingAgent) return;
     await updateAgent(editingAgent.id, data);

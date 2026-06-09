@@ -1,19 +1,19 @@
 /**
- * Client-side PPTX viewer card using pptxviewjs (Canvas-based rendering).
+ * Fullscreen PPTX preview modal — reuses pptxviewjs with a viewport-filling canvas.
  *
- * Fetches the .pptx binary from the artifact static URL, renders each
- * slide to a <canvas> via the pptxviewjs library, and provides the
- * same navigation UI as ImageSlideshowCard (keyboard, touch, click edges,
- * dot indicators, prev/next/home/end buttons).
+ * Opened from PptxViewerCard's "全屏" button. Re-fetches the PPTX binary from the
+ * same URL (browser serves it from cache), initializes its own viewer instance,
+ * and sizes the canvas to fill as much of the viewport as the slide aspect ratio
+ * allows (minus room for the control bar).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PPTXViewer as IPPTXViewer } from "pptxviewjs";
-import { PptxFullscreenPreview } from "./PptxFullscreenPreview.js";
 
 interface Props {
   url: string;
   name: string;
+  onClose: () => void;
 }
 
 type LoadState =
@@ -21,19 +21,16 @@ type LoadState =
   | { phase: "error"; message: string }
   | { phase: "ready" };
 
-/** Extract slide dimensions in EMU from the processor (internal API).
- *  The processor returns `{ cx, cy }` in EMU directly. */
+/** Slide dimensions in EMU from the internal processor */
 function getSlideEmu(viewer: IPPTXViewer): { cx: number; cy: number } | null {
   try {
     const proc = (viewer as any).processor;
     if (!proc?.getSlideDimensions) return null;
     const dims = proc.getSlideDimensions();
     if (dims) {
-      // Processor returns { cx, cy } in EMU
       if (typeof dims.cx === "number" && typeof dims.cy === "number") {
         return { cx: dims.cx, cy: dims.cy };
       }
-      // Fallback: some sub-classes return { width, height } in mm
       if (typeof dims.width === "number" && typeof dims.height === "number") {
         return {
           cx: Math.round(dims.width * 36000),
@@ -42,21 +39,21 @@ function getSlideEmu(viewer: IPPTXViewer): { cx: number; cy: number } | null {
       }
     }
   } catch {
-    /* internal API — degrade gracefully */
+    /* degrade gracefully */
   }
   return null;
 }
 
-export function PptxViewerCard({ url, name }: Props) {
-  const viewportRef = useRef<HTMLDivElement>(null);
+const CONTROLS_HEIGHT = 48;
+
+export function PptxFullscreenPreview({ url, name, onClose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<IPPTXViewer | null>(null);
   const [state, setState] = useState<LoadState>({ phase: "loading" });
   const [current, setCurrent] = useState(0);
   const [total, setTotal] = useState(0);
+  const [slideRatio, setSlideRatio] = useState(9 / 16);
   const [canvasSize, setCanvasSize] = useState({ w: 960, h: 540 });
-  const [slideRatio, setSlideRatio] = useState(9 / 16); // default 16:9
-  const [fullscreen, setFullscreen] = useState(false);
   const slideRatioRef = useRef(slideRatio);
   slideRatioRef.current = slideRatio;
   const canvasSizeRef = useRef(canvasSize);
@@ -64,26 +61,30 @@ export function PptxViewerCard({ url, name }: Props) {
   const touchStartX = useRef(0);
   const loadedRef = useRef(false);
 
-  // ResizeObserver — keep canvas internal resolution matched to the
-  // viewport width, height follows the actual slide aspect ratio.
+  // Compute canvas size to fill viewport while preserving slide aspect ratio
   useEffect(() => {
-    const el = viewportRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const cw = entry.contentRect.width;
-        const w = Math.max(400, Math.floor(cw - 40)); // 20 px padding each side
-        const h = Math.round(w * slideRatioRef.current);
-        setCanvasSize((prev) =>
-          prev.w === w && prev.h === h ? prev : { w, h },
-        );
+    const compute = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight - CONTROLS_HEIGHT;
+      const ratio = slideRatioRef.current;
+      let w: number, h: number;
+      if (vw / vh > 1 / ratio) {
+        h = vh;
+        w = Math.round(h / ratio);
+      } else {
+        w = vw;
+        h = Math.round(w * ratio);
       }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
+      setCanvasSize((prev) =>
+        prev.w === w && prev.h === h ? prev : { w, h }
+      );
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
   }, []);
 
-  // Re-render current slide after canvas size or ratio changes
+  // Re-render after canvas size or slide changes
   useEffect(() => {
     if (!loadedRef.current) return;
     const viewer = viewerRef.current;
@@ -98,14 +99,11 @@ export function PptxViewerCard({ url, name }: Props) {
     async function init() {
       try {
         const { PPTXViewer: Viewer } = await import("pptxviewjs");
-
         if (cancelled) return;
 
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        // Set explicit canvas dimensions before handing to the viewer.
-        // Default is 300×150 which produces a tiny, blurry render.
         const { w, h } = canvasSizeRef.current;
         canvas.width = w;
         canvas.height = h;
@@ -113,11 +111,10 @@ export function PptxViewerCard({ url, name }: Props) {
         const viewer = new Viewer({
           canvas,
           slideSizeMode: "fit",
-          backgroundColor: "#1a1a2e",
+          backgroundColor: "#111",
         });
         viewerRef.current = viewer;
 
-        // Fetch and load the PPTX file
         const resp = await fetch(url);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const buffer = await resp.arrayBuffer();
@@ -126,13 +123,10 @@ export function PptxViewerCard({ url, name }: Props) {
         await viewer.loadFile(buffer);
         if (cancelled) return;
 
-        // Extract the actual slide aspect ratio so canvas height matches.
-        // Default EMU: 16:9 = 12192000×6858000, 4:3 = 9144000×6858000
         const emu = getSlideEmu(viewer);
         if (emu) {
-          const ratio = emu.cy / emu.cx; // e.g. 0.5625 for 16:9, 0.75 for 4:3
+          const ratio = emu.cy / emu.cx;
           setSlideRatio(ratio);
-          // Correct canvas height immediately to avoid a flash of wrong ratio
           const cw = canvasSizeRef.current.w;
           const ch = Math.round(cw * ratio);
           if (ch !== canvas.height) {
@@ -153,9 +147,7 @@ export function PptxViewerCard({ url, name }: Props) {
         if (!cancelled) setState({ phase: "ready" });
       } catch (err: unknown) {
         if (!cancelled) {
-          const message =
-            err instanceof Error ? err.message : String(err);
-          setState({ phase: "error", message });
+          setState({ phase: "error", message: err instanceof Error ? err.message : String(err) });
         }
       }
     }
@@ -179,32 +171,24 @@ export function PptxViewerCard({ url, name }: Props) {
       try {
         await viewer.renderSlide(idx);
       } catch {
-        /* ignore transient render errors during navigation */
+        /* ignore transient render errors */
       }
     },
     [total],
   );
 
-  // Keyboard nav
+  // Keyboard nav + Esc
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-        e.preventDefault();
-        goTo(current + 1);
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-        e.preventDefault();
-        goTo(current - 1);
-      } else if (e.key === "Home") {
-        e.preventDefault();
-        goTo(0);
-      } else if (e.key === "End") {
-        e.preventDefault();
-        goTo(total - 1);
-      }
+      if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); goTo(current + 1); }
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); goTo(current - 1); }
+      else if (e.key === "Home") { e.preventDefault(); goTo(0); }
+      else if (e.key === "End") { e.preventDefault(); goTo(total - 1); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [current, total, goTo]);
+  }, [current, total, goTo, onClose]);
 
   // Touch swipe
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -215,15 +199,12 @@ export function PptxViewerCard({ url, name }: Props) {
     const t = e.changedTouches.item(0);
     if (!t) return;
     const dx = t.clientX - touchStartX.current;
-    if (Math.abs(dx) > 50) {
-      dx < 0 ? goTo(current + 1) : goTo(current - 1);
-    }
+    if (Math.abs(dx) > 50) dx < 0 ? goTo(current + 1) : goTo(current - 1);
   };
 
-  // Click edges (20% zones) for prev/next
+  // Click edges (20% zones)
   const handleClick = (e: React.MouseEvent) => {
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
     const relX = e.clientX - rect.left;
     if (relX < rect.width * 0.2) goTo(current - 1);
     else if (relX > rect.width * 0.8) goTo(current + 1);
@@ -232,47 +213,36 @@ export function PptxViewerCard({ url, name }: Props) {
   const isReady = state.phase === "ready";
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-white/50 dark:bg-gray-900/50 overflow-hidden">
-      {/* Viewport */}
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/95">
+      {/* Top bar: title + close */}
+      <div className="flex items-center justify-between px-4 py-2 flex-shrink-0">
+        <span className="text-sm text-gray-400 truncate max-w-[80%]">{name}</span>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-white text-xl leading-none px-2"
+          title="关闭 (Esc)"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Canvas area */}
       <div
-        ref={viewportRef}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onClick={handleClick}
-        style={{
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "20px",
-          overflow: "hidden",
-          cursor: isReady ? "pointer" : "default",
-          minHeight: "320px",
-        }}
+        className="flex-1 flex items-center justify-center overflow-hidden"
+        style={{ cursor: isReady ? "pointer" : "default" }}
       >
-        {/* Loading overlay */}
         {state.phase === "loading" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 z-10">
-            <span className="animate-pulse text-gray-500 dark:text-gray-400">
-              📊 正在加载 PPT...
-            </span>
-          </div>
+          <span className="text-gray-500 animate-pulse">📊 正在加载 PPT...</span>
         )}
-
-        {/* Error overlay */}
         {state.phase === "error" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-900/80 z-10 gap-2">
-            <span className="text-red-400">⚠️ PPT 加载失败</span>
+          <div className="flex flex-col items-center gap-2 text-red-400">
+            <span>⚠️ PPT 加载失败</span>
             <span className="text-xs text-red-400/60">{state.message}</span>
           </div>
         )}
-
-        {/* Canvas — both attributes AND CSS dimensions set explicitly.
-            calculateCanvasRect reads CSS style values; if height is
-            missing it falls back to canvas.height / devicePixelRatio,
-            which halves the logical size on HiDPI screens. Setting
-            both avoids that path entirely. Responsiveness is handled
-            by the ResizeObserver, which recomputes canvasSize. */}
         <canvas
           ref={canvasRef}
           width={canvasSize.w}
@@ -280,64 +250,55 @@ export function PptxViewerCard({ url, name }: Props) {
           style={{
             width: `${canvasSize.w}px`,
             height: `${canvasSize.h}px`,
-            boxShadow: "0 2px 20px rgba(0,0,0,0.4)",
-            borderRadius: "2px",
+            boxShadow: "0 4px 40px rgba(0,0,0,0.6)",
           }}
         />
-
-        {/* Slide number indicator (bottom-right) */}
         {isReady && total > 0 && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: "24px",
-              right: "24px",
-              color: "#666",
-              fontSize: "10px",
-            }}
-          >
+          <div className="absolute bottom-2 right-4 text-gray-500 text-xs">
             {current + 1} / {total}
           </div>
         )}
       </div>
 
-      {/* Controls bar */}
-      <div className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800/60 border-t border-gray-200 dark:border-gray-700">
+      {/* Bottom controls bar */}
+      <div
+        className="flex items-center justify-center gap-2 px-3 flex-shrink-0"
+        style={{ height: CONTROLS_HEIGHT, background: "rgba(0,0,0,0.7)" }}
+      >
         {isReady ? (
           <>
             <button
               onClick={() => goTo(0)}
               disabled={current === 0}
-              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+              className="px-2 py-1 text-xs rounded bg-white/10 text-gray-300 hover:bg-white/20 disabled:opacity-30"
             >
               ⏮
             </button>
             <button
               onClick={() => goTo(current - 1)}
               disabled={current === 0}
-              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+              className="px-2 py-1 text-xs rounded bg-white/10 text-gray-300 hover:bg-white/20 disabled:opacity-30"
             >
               ◀
             </button>
-            <span className="text-xs text-gray-500 dark:text-gray-400 min-w-[60px] text-center">
+            <span className="text-xs text-gray-400 min-w-[60px] text-center">
               {current + 1} / {total}
             </span>
             <button
               onClick={() => goTo(current + 1)}
               disabled={current >= total - 1}
-              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+              className="px-2 py-1 text-xs rounded bg-white/10 text-gray-300 hover:bg-white/20 disabled:opacity-30"
             >
               ▶
             </button>
             <button
               onClick={() => goTo(total - 1)}
               disabled={current >= total - 1}
-              className="px-2 py-1 text-xs rounded bg-gray-200 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 disabled:opacity-30"
+              className="px-2 py-1 text-xs rounded bg-white/10 text-gray-300 hover:bg-white/20 disabled:opacity-30"
             >
               ⏭
             </button>
-            <span className="text-gray-400 dark:text-gray-600 mx-1">|</span>
-            {/* Dot indicators */}
+            <span className="text-gray-600 mx-1">|</span>
             <div className="flex gap-1">
               {Array.from({ length: total }, (_, i) => (
                 <button
@@ -345,21 +306,12 @@ export function PptxViewerCard({ url, name }: Props) {
                   onClick={() => goTo(i)}
                   className="w-2 h-2 rounded-full transition-colors"
                   style={{
-                    background:
-                      i === current
-                        ? "rgba(255,255,255,0.7)"
-                        : "rgba(255,255,255,0.2)",
+                    background: i === current ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.2)",
                   }}
                 />
               ))}
             </div>
-            <span className="text-gray-400 dark:text-gray-600 mx-1">|</span>
-            <button
-              onClick={() => setFullscreen(true)}
-              className="px-2 py-1 text-xs rounded bg-white/10 text-gray-300 hover:bg-white/20"
-            >
-              ⛶ 全屏
-            </button>
+            <span className="text-gray-600 mx-1">|</span>
             <a
               href={url}
               download={name}
@@ -378,15 +330,6 @@ export function PptxViewerCard({ url, name }: Props) {
           </a>
         )}
       </div>
-
-      {/* Fullscreen modal */}
-      {fullscreen && (
-        <PptxFullscreenPreview
-          url={url}
-          name={name}
-          onClose={() => setFullscreen(false)}
-        />
-      )}
     </div>
   );
 }

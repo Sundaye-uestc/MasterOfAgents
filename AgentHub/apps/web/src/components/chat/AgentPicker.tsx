@@ -74,6 +74,7 @@ export function AgentPicker({ agents, selectedIds, onChange, multiSelect = false
               <AgentBadge
                 agentName={agent.name}
                 adapterKind={agent.adapterKind ?? "custom"}
+                avatar={agent.avatar ?? undefined}
                 size="md"
               />
               <div className="min-w-0 flex-1">

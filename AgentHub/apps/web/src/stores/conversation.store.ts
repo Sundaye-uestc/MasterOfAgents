@@ -17,7 +17,7 @@ import {
 
 interface ConversationState {
   conversations: ConversationRow[];
-  agentMap: Record<string, { agentId: string; agentName: string; adapterKind: string }>;
+  agentMap: Record<string, { agentId: string; agentName: string; adapterKind: string; avatar?: string | null }>;
   searchQuery: string;
   showArchived: boolean;
   loading: boolean;

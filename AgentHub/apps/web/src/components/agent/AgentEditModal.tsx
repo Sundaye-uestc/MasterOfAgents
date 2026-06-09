@@ -17,6 +17,7 @@ interface AgentEditModalProps {
     systemPrompt: string;
     capabilities: string[];
     toolSetIds: string[];
+    avatar?: string;
   }) => Promise<void>;
 }
 
@@ -46,6 +47,7 @@ export function AgentEditModal({ agent, onClose, onSave }: AgentEditModalProps) 
   const [systemPrompt, setSystemPrompt] = useState(existingSystemPrompt);
   const [capabilities, setCapabilities] = useState<string[]>(existingCapabilities);
   const [toolSetIds, setToolSetIds] = useState<string[]>(existingToolSetIds);
+  const [avatar, setAvatar] = useState<string | null>(agent.avatar ?? null);
   const [capInput, setCapInput] = useState("");
   const [polishing, setPolishing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -87,10 +89,24 @@ export function AgentEditModal({ agent, onClose, onSave }: AgentEditModalProps) 
     }
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 512 * 1024) {
+      alert("头像文件不能超过 512KB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAvatar(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave({ name: name.trim() || agent.name, systemPrompt, capabilities, toolSetIds });
+      await onSave({ name: name.trim() || agent.name, systemPrompt, capabilities, toolSetIds, avatar: avatar ?? undefined });
       onClose();
     } catch (err) {
       console.error("Save failed:", err);
@@ -105,12 +121,23 @@ export function AgentEditModal({ agent, onClose, onSave }: AgentEditModalProps) 
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <AgentBadge
-              agentName={name || agent.name}
-              adapterKind={agent.adapterKind}
-              avatar={agent.avatar ?? undefined}
-              size="lg"
-            />
+            <label className="relative cursor-pointer group" title="点击更换头像">
+              <AgentBadge
+                agentName={name || agent.name}
+                adapterKind={agent.adapterKind}
+                avatar={avatar ?? undefined}
+                size="lg"
+              />
+              <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <span className="text-white text-xs">📷</span>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
+            </label>
             <div>
               <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">编辑 Agent</h2>
               <p className="text-xs text-gray-400 dark:text-gray-500">{agent.adapterKind}</p>

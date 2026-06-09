@@ -21,6 +21,7 @@ export interface AgentInfo {
   agentId: string;
   agentName: string;
   adapterKind: string;
+  avatar?: string | null;
 }
 
 interface Props {
@@ -73,8 +74,8 @@ export function ConversationList({
   const [agents, setAgents] = useState<AgentRow[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [membersMap, setMembersMap] = useState<Record<string, Array<{ agentId: string; agentName: string; adapterKind: string }>>>({});
-  const [manageMembersList, setManageMembersList] = useState<Array<{ agentId: string; agentName: string; role: string; adapterKind: string }>>([]);
+  const [membersMap, setMembersMap] = useState<Record<string, Array<{ agentId: string; agentName: string; adapterKind: string; avatar?: string | null }>>>({});
+  const [manageMembersList, setManageMembersList] = useState<Array<{ agentId: string; agentName: string; role: string; adapterKind: string; avatar?: string | null }>>([]);
   const [manageMembersAgents, setManageMembersAgents] = useState<AgentRow[]>([]);
   const [addMemberAgentId, setAddMemberAgentId] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -331,6 +332,7 @@ export function ConversationList({
                   <AgentBadge
                     agentName={agent.agentName}
                     adapterKind={agent.adapterKind}
+                    avatar={agent.avatar ?? undefined}
                     size="sm"
                   />
                 ) : null}
@@ -576,6 +578,7 @@ export function ConversationList({
                         <AgentBadge
                           agentName={m.agentName}
                           adapterKind={m.adapterKind}
+                          avatar={m.avatar ?? undefined}
                           size="sm"
                         />
                         <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">{m.role}</span>

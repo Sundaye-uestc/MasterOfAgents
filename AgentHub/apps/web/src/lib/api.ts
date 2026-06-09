@@ -32,7 +32,7 @@ export function createConversation(title: string, type: "direct" | "group" = "di
 }
 
 export function listMembers(conversationId: string) {
-  return request<Array<{ agentId: string; agentName: string; role: string; adapterKind: string }>>(`/conversations/${conversationId}/members`);
+  return request<Array<{ agentId: string; agentName: string; role: string; adapterKind: string; avatar?: string | null }>>(`/conversations/${conversationId}/members`);
 }
 
 export function addMember(conversationId: string, agentId: string, role?: string) {
