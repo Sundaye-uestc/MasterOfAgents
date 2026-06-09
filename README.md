@@ -2,6 +2,8 @@
 
 Multi-Agent Collaboration Platform — 多 Agent 协作平台，覆盖 **Web / 移动端 PWA / Electron 桌面端**，ChatGPT 风格的 UI 设计。
 
+[English](README_EN.md)
+
 ![Web Demo](imgs/web-demo.gif)
 
 ## 环境要求
