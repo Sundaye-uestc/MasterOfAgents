@@ -23,45 +23,45 @@
 
 ```text
 D:\Projects\MasterOfAgents\
-├── AgentHub/                              # pnpm monorepo
+├── AgentHub/                                 # pnpm monorepo
 │   ├── apps/
-│   │   ├── server/src/                    # Hono REST + WebSocket 后端
-│   │   │   ├── adapters/                  #   Agent 平台适配器
-│   │   │   │   ├── base.ts               #     统一接口
-│   │   │   │   ├── claude-code.adapter.ts #     Claude Code CLI
-│   │   │   │   └── codex.adapter.ts       #     Codex / OpenCode CLI
-│   │   │   ├── services/                  #   核心服务
+│   │   ├── server/src/                       # Hono REST + WebSocket 后端
+│   │   │   ├── adapters/                     # Agent 平台适配器
+│   │   │   │   ├── base.ts                   # 统一接口
+│   │   │   │   ├── claude-code.adapter.ts    # Claude Code CLI
+│   │   │   │   └── codex.adapter.ts          # Codex / OpenCode CLI
+│   │   │   ├── services/                     # 核心服务
 │   │   │   │   ├── agent-runtime.service.ts  # Agent 运行时（snapshot/diff/artifact pipeline）
 │   │   │   │   ├── chat.service.ts           # 对话管理 + buildAgentContext()
 │   │   │   │   ├── workspace.service.ts      # 工作区（快照/回滚/文件树）
 │   │   │   │   ├── artifact.service.ts       # 产物（创建/查询/静态文件服务）
 │   │   │   │   ├── orchestrator.service.ts   # 多 Agent 编排
 │   │   │   │   └── planner.service.ts        # 任务规划
-│   │   │   ├── runtime/                  #   进程管理（ProcessSupervisor + stream-json）
-│   │   │   └── ws/                       #   WebSocket 网关 + 连接注册表
-│   │   ├── web/src/                      # React Web 前端 (Vite, 端口 5173)
-│   │   │   ├── components/chat/          #   聊天组件（ChatArea, MarkdownContent, DiffBlock…）
-│   │   │   ├── components/artifact/      #   产物预览（WebPreviewCard, TextPreviewCard…）
-│   │   │   └── stores/                   #   Zustand 状态管理
-│   │   ├── mobile/src/                   # React PWA 移动端 (Vite, 端口 5174)
-│   │   │   ├── pages/                    #   页面（ConversationList, Chat, Approval, Artifact…）
-│   │   │   ├── components/               #   移动端组件（MessageInput, RunStatusBanner…）
-│   │   │   ├── stores/                   #   mobile-ui.store（Zustand stack 导航）
-│   │   │   └── hooks/                    #   useNetworkStatus…
-│   │   └── desktop/src/                  # Electron 桌面端
-│   │       ├── main/                     #   Main process（index, server-lifecycle, ipc-handlers,
-│   │       │                             #     cli-detection, notification, preview-server）
-│   │       └── preload/                  #   contextBridge preload
-│   ├── packages/shared/                  # 共享类型（AgentEvent/AgentConfig/Schema…）
-│   ├── ppt/                              # PPT 生成脚本
-│   └── scripts/                          # build-portable.mjs 一键打包
-├── start-all.py                          # 启动全部服务
-├── start-server.py                       # 启动后端 (端口 3001)
-├── start-web.py                          # 启动 Web 前端 (端口 5173)
-├── start-mobile.py                       # 启动移动端 (端口 5174)
-├── start-desktop.py                      # 启动桌面端 (Electron dev mode)
-├── DevelopDocuments/                     # 文档 & 里程碑
-└── Test/                                 # Agent 默认工作目录
+│   │   │   ├── runtime/                      # 进程管理（ProcessSupervisor + stream-json）
+│   │   │   └── ws/                           # WebSocket 网关 + 连接注册表
+│   │   ├── web/src/                          # React Web 前端 (Vite, 端口 5173)
+│   │   │   ├── components/chat/              # 聊天组件（ChatArea, MarkdownContent, DiffBlock…）
+│   │   │   ├── components/artifact/          # 产物预览（WebPreviewCard, TextPreviewCard…）
+│   │   │   └── stores/                       # Zustand 状态管理
+│   │   ├── mobile/src/                       # React PWA 移动端 (Vite, 端口 5174)
+│   │   │   ├── pages/                        # 页面（ConversationList, Chat, Approval, Artifact…）
+│   │   │   ├── components/                   # 移动端组件（MessageInput, RunStatusBanner…）
+│   │   │   ├── stores/                       # mobile-ui.store（Zustand stack 导航）
+│   │   │   └── hooks/                        # useNetworkStatus…
+│   │   └── desktop/src/                      # Electron 桌面端
+│   │       ├── main/                         # Main process（index, server-lifecycle, ipc-handlers,
+│   │       │                                 # cli-detection, notification, preview-server）
+│   │       └── preload/                      # contextBridge preload
+│   ├── packages/shared/                      # 共享类型（AgentEvent/AgentConfig/Schema…）
+│   ├── ppt/                                  # PPT 生成脚本
+│   └── scripts/                              # build-portable.mjs 一键打包
+├── start-all.py                              # 启动全部服务
+├── start-server.py                           # 启动后端 (端口 3001)
+├── start-web.py                              # 启动 Web 前端 (端口 5173)
+├── start-mobile.py                           # 启动移动端 (端口 5174)
+├── start-desktop.py                          # 启动桌面端 (Electron dev mode)
+├── DevelopDocuments/                         # 文档 & 里程碑
+└── Test/                                     # Agent 默认工作目录
 ```
 
 ## 3. 已交付
