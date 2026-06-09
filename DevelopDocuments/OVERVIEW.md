@@ -1,6 +1,6 @@
 # AgentHub 工作总览
 
-**最后更新：** 2026-06-07
+**最后更新：** 2026-06-09
 
 ## 1. 文档定位
 
@@ -11,6 +11,9 @@
 
 - 各 Phase 完成记录：[milestones/](milestones/)
 - 待办事项：[todo.md](todo.md)
+- AI 协作规范：[项目 Rules](rules.md)
+- 技术规格书：[项目 Spec](designs/Spec技术规格书.md)
+- 系统设计预览：[设计预览](DesignShowcase.html)
 - 设计文档（`designs/`）：
   - `AgentHub-web端系统设计.md` · `AgentHub-web端模块设计.md`
   - `AgentHub-桌面端系统设计.md` · `AgentHub-桌面端模块设计.md`
@@ -52,6 +55,7 @@ D:\Projects\MasterOfAgents\
 │   ├── packages/shared/                  # 共享类型（AgentEvent/AgentConfig/Schema…）
 │   ├── ppt/                              # PPT 生成脚本
 │   └── scripts/                          # build-portable.mjs 一键打包
+├── start-all.py                          # 启动全部服务
 ├── start-server.py                       # 启动后端 (端口 3001)
 ├── start-web.py                          # 启动 Web 前端 (端口 5173)
 ├── start-mobile.py                       # 启动移动端 (端口 5174)
@@ -68,8 +72,7 @@ D:\Projects\MasterOfAgents\
 | 可运行 Demo | Web 端 + 移动端 + 桌面端全覆盖 |
 | 各 Phase 完成记录 | Web 7 份 (phase0-6) + 桌面 4 份 (phase1-4) + 移动 2 份 (phase1-2) |
 | 一键构建脚本 | `pnpm build:portable` → 编译 + 打包 + 部署（~29s） |
-| 开发启动脚本 | 4 个 `start-*.py`，一键启动各服务（均监听 `0.0.0.0`，局域网可访问） |
-| AI 协作开发记录 | 每阶段的 Spec、Skill、Rules 及关键技术决策已沉淀在各 completion 文档中 |
+| 开发启动脚本 | 5 个 `start-*.py`，一键启动各服务（均监听 `0.0.0.0`，局域网可访问） |
 
 ## 4. 开发阶段（已全部完成）
 
