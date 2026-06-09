@@ -2,16 +2,17 @@
 
 **完成日期：** 2026-06-05
 
-> **最后更新：** 2026-06-05 — 6.6 群聊头像拼图 + 成员管理优化
+> **最后更新：** 2026-06-09 — 6.6 群聊头像拼图 + 成员管理优化 + 代码编辑器（Monaco Editor）
 
 ---
 
 ## 概述
 
-Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
+Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证，以及后续工作区代码编辑器。
 
 - **Agent 管理**：对话式弹窗创建自定义 Agent，LLM 解析自然语言 → 结构化配置，支持 System Prompt 编辑/AI 润色/工具集自动匹配，完整 CRUD 管理界面
 - **Planner 修复**：ESM hoisting API Key 修复、Prompt 强化（中文输出/任务边界/能力匹配/闲聊识别）、DAG 依赖调度验证、Follow-up 消息处理修复、Agent 上下文隔离
+- **代码编辑器**：Monaco Editor 集成（VS Code 同款引擎），工作区多标签页编辑器，Ctrl+S 保存 + 后端文件写入 API，"查看代码"按钮从产物卡片跳转编辑器
 - **其他修复**：PPT 文件变更白名单过滤、能力标签 emoji fallback、文件预览去重（跨轮展示 + 同轮去重）
 
 ---
@@ -29,6 +30,8 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | `apps/web/src/components/agent/AgentDetailModal.tsx` | 只读详情 |
 | `apps/web/src/components/agent/AgentDeleteConfirmModal.tsx` | 删除确认 |
 | `apps/web/src/components/agent/AgentManagePanel.tsx` | 全屏管理面板 |
+| `apps/web/src/components/workspace/CodeEditorPanel.tsx` | Monaco 编辑器 + 多标签页 + 脏标记 + Ctrl+S 保存 |
+| `apps/web/src/stores/edit-file.store.ts` | 跨组件编辑文件通信 store（TextPreviewCard → CodeEditorPanel） |
 | `apps/web/public/agents/opencode.png` | OpenCode 头像（从根目录复制） |
 | `apps/web/src/components/chat/GroupAvatar.tsx` | 群聊头像拼图组件（CSS Grid，类微信风格） |
 
@@ -39,14 +42,19 @@ Phase 6 实现 4.5 用户 Agent 管理 + 群聊 Planner 修复与验证。
 | `packages/shared/src/types/db.ts` | 新增 `ParsedAgentIntent`、`PolishPromptResponse` 类型 |
 | `packages/shared/src/index.ts` | 导出 `tool-sets.ts` |
 | `apps/server/src/routes/agents.ts` | 8 个端点：GET（`?enabled` 过滤）/ POST / POST from-draft / POST parse-intent / POST polish-prompt / GET :id / PATCH :id / DELETE :id |
+| `apps/server/src/routes/workspaces.ts` | 新增 `PUT /:id/file-content` 端点 — 接收文件内容写入 workspace 目录 |
+| `apps/server/src/services/workspace.service.ts` | 新增 `writeFileContent()` — 路径穿越防护 + UTF-8 写入 |
 | `apps/server/src/db/seed.ts` | 新增 `default-opencode` 内置 Agent |
-| `apps/web/src/lib/api.ts` | `listAgents(enabledOnly?)` 过滤参数 |
+| `apps/web/src/lib/api.ts` | `listAgents(enabledOnly?)` 过滤参数 + `writeWorkspaceFile()` |
 | `apps/web/src/stores/agent.store.ts` | `update()` / `remove()` / `toggleEnabled()` |
 | `apps/web/src/App.tsx` | 侧边栏 "Agent 管理 >" + `agentStore.load()` 初始化 |
+| `apps/web/package.json` | 添加 `@monaco-editor/react` 依赖 |
 | `apps/web/src/components/chat/CapabilityTags.tsx` | 集中管理 emoji + 中文标签映射，导出 `formatCapability()` |
 | `apps/web/src/components/chat/AgentBadge.tsx` | 新增 `opencode` logo 映射 |
 | `apps/web/src/components/chat/ConversationList.tsx` | 默认工作目录 `D:/Projects/MasterOfAgents/Test` + 启用过滤 |
-| `apps/web/src/components/workspace/WorkspacePanel.tsx` | "文件"标签添加 SVG 刷新按钮（选中时显示） |
+| `apps/web/src/components/workspace/WorkspacePanel.tsx` | "文件"标签添加 SVG 刷新按钮 + 新增「代码」标签页 + 文件树点击打开编辑器 |
+| `apps/web/src/components/artifact/TextPreviewCard.tsx` | 添加"查看代码"按钮 → 跳转工作区编辑器 |
+| `apps/web/src/components/artifact/WebPreviewCard.tsx` | 添加"查看代码"按钮 → 跳转工作区编辑器 |
 | `apps/server/src/services/planner.service.ts` | ESM hoisting 绕过 + Prompt 强化 + follow-up 规则 + 闲聊识别 |
 | `apps/server/src/services/orchestrator.service.ts` | Follow-up 检测 + DAG 调度 + Agent 名称映射 |
 | `apps/server/src/services/chat.service.ts` | `buildAgentContext` 过滤带 `runId` 的 system 消息（防止计划泄露给 Agent） |
@@ -187,7 +195,31 @@ CSS Grid 实现的微信风格群聊头像拼接：
 
 ---
 
-## 六、关键架构决策
+## 六、工作区代码编辑器（Monaco Editor）
+
+`@monaco-editor/react` — VS Code 同款编辑器引擎，仅 5MB（gzip ~1.5MB），React 19 兼容，通过 `React.lazy` 懒加载避免阻塞首屏。
+
+### 6.1 CodeEditorPanel 组件
+
+| 功能 | 实现 |
+|---|---|
+| 多标签页 | 点击文件树打开文件 → 新增标签页，支持切换/关闭（✕），脏标记（蓝色圆点） |
+| 语法高亮 | 根据文件扩展名自动检测语言（TS/JS/Python/Go/HTML/CSS/JSON/YAML 等 20+ 种） |
+| 保存 | Ctrl+S 快捷键 + 标签栏保存按钮 → `PUT /api/workspaces/:id/file-content` → 写入磁盘 |
+| 脏标记 | 内容变更后标签显示蓝点 + 保存按钮出现，保存成功后消失 |
+| 容错 | 二进制文件提示"无法打开"，>500KB 降级为只读，竞态去重防双重加载 |
+
+### 6.2 后端文件写入
+
+`PUT /api/workspaces/:id/file-content?path=xxx`，body `{ content: string }`。`writeFileContent()` 在写入前做路径穿越防护：`path.resolve(rootPath, filePath)` 后校验结果是否以 `rootPath` 为前缀。
+
+### 6.3 跨组件联动
+
+`useEditFileStore`（Zustand）作为信号总线：TextPreviewCard / WebPreviewCard 调用 `editFile(name)` → WorkspacePanel 的 `useEffect` 检测到 `pendingFilePath` 变化 → 切换到「代码」标签页并打开文件 → 调用 `clear()` 重置。
+
+---
+
+## 七、关键架构决策
 
 | 决策 | 说明 |
 |---|---|
@@ -200,10 +232,13 @@ CSS Grid 实现的微信风格群聊头像拼接：
 | 文件预览去重策略 | 跨 run 不去重（每次修改都展示），同 run 按 path 去重保留最新（避免同轮重复） |
 | Agent 上下文隔离 | `buildAgentContext` 过滤 `runId` 的 system 消息，防止计划泄露导致越界 |
 | Planner 闲聊识别 | 判断用户意图，纯闲聊 → 每个 Agent 回复而非代码任务 |
+| Monaco 懒加载 | `React.lazy(() => import("@monaco-editor/react"))` + Suspense fallback，避免 5MB 阻塞首屏 |
+| 路径穿越防护 | 写入前 `path.resolve` + `startsWith` 校验，拒绝越界路径 |
+| 跨组件编辑通信 | Zustand store 信号模式（set → detect → clear），解耦 TextPreviewCard 与 CodeEditorPanel |
 
 ---
 
-## 七、验证结果
+## 八、验证结果
 
 | 验证项 | 状态 |
 |---|---|
@@ -236,10 +271,17 @@ CSS Grid 实现的微信风格群聊头像拼接：
 | 管理面板添加/移除成员 | ✅ |
 | AgentBadge rounded 属性 + 尺寸对齐 | ✅ |
 | start_dev.py 修复（回退到简单 time.sleep 方案） | ✅ |
+| Monaco Editor 多标签页打开/切换/关闭 | ✅ |
+| Ctrl+S 保存 → 后端写入磁盘 | ✅ |
+| 语法高亮（TS/JS/Python/HTML/CSS/JSON 等 20+ 语言） | ✅ |
+| "查看代码"按钮（WebPreviewCard + TextPreviewCard）跳转编辑器 | ✅ |
+| 路径穿越防护 | ✅ |
+| 二进制文件降级提示 | ✅ |
+| 懒加载（Suspense fallback） | ✅ |
 
 ---
 
-## 八、Git 提交记录
+## 九、Git 提交记录
 
 | Commit | 说明 |
 |---|---|
@@ -254,3 +296,4 @@ CSS Grid 实现的微信风格群聊头像拼接：
 | 未提交 | Fix: Planner casual conversation + Agent context isolation + intra-run artifact dedup |
 | 未提交 | Feat: 群聊头像拼图 + 成员管理菜单 + AgentPicker 图形化选人 + 管理面板复用 |
 | 未提交 | Fix: start_dev.py 回退到原始简单方案（time.sleep + netstat port cleanup） |
+| `f3f30e1` (PR #4) | Feat: Monaco Editor — 代码编辑器 + 查看代码按钮 + 后端文件写入 API |

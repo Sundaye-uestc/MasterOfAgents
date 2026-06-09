@@ -131,7 +131,7 @@ export function TextPreviewCard({ url, name, mimeType, maxLines = 200, maxChars 
         <a
           href={url}
           download={name}
-          className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex-shrink-0"
+          className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex-shrink-0 ml-auto"
         >
           下载
         </a>

@@ -89,6 +89,11 @@ export function CodeEditorPanel({ workspaceId, openFilePath }: Props) {
     setLoading(true);
     try {
       const result = await readWorkspaceFile(workspaceId, filePath);
+      if (result.notFound) {
+        setToast("文件已不存在");
+        setTimeout(() => setToast(""), 2000);
+        return;
+      }
       if (result.isBinary || result.text === null) {
         setToast("无法打开二进制文件");
         setTimeout(() => setToast(""), 2000);

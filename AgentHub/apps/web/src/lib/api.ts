@@ -270,7 +270,7 @@ export function rollbackSnapshot(workspaceId: string, snapshotId: string) {
 }
 
 export function readWorkspaceFile(workspaceId: string, filePath: string) {
-  return request<{ text: string | null; isBinary: boolean; size: number }>(
+  return request<{ text: string | null; isBinary: boolean; size: number; notFound?: boolean }>(
     `/workspaces/${workspaceId}/file-content?path=${encodeURIComponent(filePath)}`
   );
 }

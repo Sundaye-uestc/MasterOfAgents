@@ -211,8 +211,8 @@ export class WorkspaceService {
     return crypto.createHash("sha256").update(content).digest("hex");
   }
 
-  /** Try to read a text file from the workspace. Returns { text, isBinary } */
-  readFileContent(rootPath: string, filePath: string): { text: string | null; isBinary: boolean; size: number } {
+  /** Try to read a text file from the workspace. Returns { text, isBinary, notFound } */
+  readFileContent(rootPath: string, filePath: string): { text: string | null; isBinary: boolean; size: number; notFound?: boolean } {
     // Normalize both paths to resolve platform-specific separators (Windows backslash vs forward slash)
     const normalizedRoot = path.resolve(rootPath);
     const fullPath = path.resolve(normalizedRoot, filePath);
@@ -221,7 +221,7 @@ export class WorkspaceService {
       return { text: null, isBinary: true, size: 0 };
     }
     if (!fs.existsSync(fullPath)) {
-      return { text: null, isBinary: false, size: 0 };
+      return { text: null, isBinary: false, size: 0, notFound: true };
     }
     const stat = fs.statSync(fullPath);
     // Reject files larger than 1MB
@@ -230,14 +230,78 @@ export class WorkspaceService {
     }
     try {
       const buf = fs.readFileSync(fullPath);
-      // Check for null bytes (binary indicator)
-      for (let i = 0; i < buf.length && i < 8192; i++) {
-        if (buf[i] === 0) return { text: null, isBinary: true, size: stat.size };
-      }
-      return { text: buf.toString("utf-8"), isBinary: false, size: stat.size };
+      return this.decodeTextBuffer(buf, stat.size);
     } catch {
       return { text: null, isBinary: true, size: stat.size };
     }
+  }
+
+  /**
+   * Decode a Buffer to string, handling common encodings.
+   * - BOM-prefixed (UTF-8 / UTF-16 LE / UTF-16 BE)
+   * - UTF-16 without BOM (PowerShell default on Windows)
+   * - Plain UTF-8
+   * - True binary (null bytes without recognizable text pattern) → isBinary: true
+   */
+  private decodeTextBuffer(buf: Buffer, size: number): { text: string | null; isBinary: boolean; size: number } {
+    if (buf.length === 0) return { text: "", isBinary: false, size };
+
+    // ── BOM detection ──
+    if (buf[0] === 0xff && buf[1] === 0xfe) {
+      // UTF-16 LE with BOM
+      return { text: buf.toString("utf16le", 2), isBinary: false, size };
+    }
+    if (buf[0] === 0xfe && buf[1] === 0xff) {
+      // UTF-16 BE with BOM — Node only supports LE, swap bytes
+      const swapped = Buffer.from(buf.subarray(2));
+      swapped.swap16();
+      return { text: swapped.toString("utf16le"), isBinary: false, size };
+    }
+    if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
+      // UTF-8 with BOM
+      return { text: buf.toString("utf-8", 3), isBinary: false, size };
+    }
+
+    // ── Check for null bytes ──
+    let firstNull = -1;
+    for (let i = 0; i < buf.length && i < 8192; i++) {
+      if (buf[i] === 0) { firstNull = i; break; }
+    }
+    if (firstNull === -1) {
+      // No null bytes → plain UTF-8
+      return { text: buf.toString("utf-8"), isBinary: false, size };
+    }
+
+    // ── Has null bytes — check for UTF-16 LE pattern (every even byte is 0x00 for ASCII-heavy text) ──
+    const sampleEnd = Math.min(buf.length, 512);
+    let evenNulls = 0;
+    let oddNulls = 0;
+    for (let i = 0; i < sampleEnd; i++) {
+      if (buf[i] === 0) {
+        if (i % 2 === 0) evenNulls++;
+        else oddNulls++;
+      }
+    }
+    const totalPairs = Math.floor(sampleEnd / 2);
+    // If ≥80% of even positions are null and odd positions have content → UTF-16 LE without BOM
+    if (evenNulls >= totalPairs * 0.8 && oddNulls <= totalPairs * 0.2) {
+      try {
+        const text = buf.toString("utf16le");
+        if (text.length > 0) return { text, isBinary: false, size };
+      } catch { /* fall through to binary */ }
+    }
+    // If ≥80% of odd positions are null and even positions have content → UTF-16 BE without BOM
+    if (oddNulls >= totalPairs * 0.8 && evenNulls <= totalPairs * 0.2) {
+      try {
+        const swapped = Buffer.from(buf);
+        swapped.swap16();
+        const text = swapped.toString("utf16le");
+        if (text.length > 0) return { text, isBinary: false, size };
+      } catch { /* fall through to binary */ }
+    }
+
+    // True binary — null bytes in a non-text pattern
+    return { text: null, isBinary: true, size };
   }
 
   /** Write text content to a file in the workspace */
