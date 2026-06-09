@@ -538,6 +538,42 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
   // Get member count for group chats
   const memberCount = conversationType === "group" ? members.length : 0;
 
+  // Build per-round artifact ownership maps.  Each user message starts
+  // a new round.  Within each round, the agent with the earliest createdAt
+  // for a given filename "owns" that file — it's shown only under that agent.
+  // This resets every round, so iteration (e.g. PPT refinement) re-shows files.
+  const perRoundOwnerMaps: Array<Map<string, string>> = []; // filename → runId
+  {
+    const userIndices: number[] = [];
+    messages.forEach((m, i) => { if (m.role === "user") userIndices.push(i); });
+    for (let r = 0; r < userIndices.length; r++) {
+      const roundStart = userIndices[r]!;
+      const roundEnd = r + 1 < userIndices.length ? userIndices[r + 1]! : messages.length;
+      const roundRunIds = new Set<string>();
+      for (let j = roundStart + 1; j < roundEnd; j++) {
+        const m = messages[j];
+        if (m && m.role === "agent" && m.runId) roundRunIds.add(m.runId);
+      }
+      const ownerMap = new Map<string, string>();
+      const all: Array<{ art: ArtifactRow; runId: string }> = [];
+      for (const [runId, arts] of Object.entries(runArtifacts)) {
+        if (!roundRunIds.has(runId)) continue;
+        for (const art of arts) all.push({ art, runId });
+      }
+      all.sort((a, b) =>
+        new Date(a.art.createdAt).getTime() - new Date(b.art.createdAt).getTime()
+      );
+      for (const { art, runId } of all) {
+        if (!ownerMap.has(art.name)) ownerMap.set(art.name, runId);
+      }
+      perRoundOwnerMaps.push(ownerMap);
+    }
+  }
+
+  // Per-round filename dedup (reset on each user message).
+  const shownInThisRound = new Set<string>();
+  let currentRoundIndex = -1;
+
   return (
     <>
       {/* Header */}
@@ -697,6 +733,13 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
           const isAgent = msg.role === "agent";
           const isSystem = msg.role === "system";
 
+          // Each user message starts a new round — advance round index
+          // and reset per-round dedup.
+          if (isUser) {
+            currentRoundIndex++;
+            shownInThisRound.clear();
+          }
+
           const agentAdapterKind =
             memberInfo?.adapterKind ?? adapterKind ?? "custom";
           const agentName = memberInfo?.agentName ?? conversationTitle ?? "Agent";
@@ -762,14 +805,30 @@ export function ChatArea({ conversationId, onRefreshList, agentId, conversationT
                   );
                 })()}
                 {isAgent && msg.runId && runFileChanges[msg.runId] && runFileChanges[msg.runId]!.length > 0 && null /* inline file changes removed — workspace panel covers this */}
-                {/* Inline artifact cards (per-run, below agent message) */}
-                {isAgent && msg.runId && runArtifacts[msg.runId] && runArtifacts[msg.runId]!.length > 0 && (
-                  <div className="mt-1.5 space-y-1">
-                    {runArtifacts[msg.runId]!.map((art) => (
-                      <InlineArtifactCard key={art.id} artifact={art} />
-                    ))}
-                  </div>
-                )}
+                {/* Inline artifact cards — only show artifacts produced by THIS message.
+                    messageId is the precise link; path-based Set is a fallback for
+                    legacy artifacts that might lack messageId. */}
+                {isAgent && msg.runId && runArtifacts[msg.runId] && (() => {
+                  const arts = runArtifacts[msg.runId]!;
+                  const own = arts.filter((a) => {
+                    // Only show artifacts that "belong" to this agent
+                    // within the current round (earliest createdAt wins).
+                    const ownerMap = perRoundOwnerMaps[currentRoundIndex];
+                    if (ownerMap && ownerMap.get(a.name) !== msg.runId) return false;
+                    // Per-round dedup: same filename only once per round.
+                    if (shownInThisRound.has(a.name)) return false;
+                    shownInThisRound.add(a.name);
+                    return true;
+                  });
+                  if (own.length === 0) return null;
+                  return (
+                    <div className="mt-1.5 space-y-1">
+                      {own.map((art) => (
+                        <InlineArtifactCard key={art.id} artifact={art} />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* User avatar on the RIGHT */}
